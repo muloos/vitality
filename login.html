@@ -40,10 +40,6 @@
   .pw-strength.ok i:nth-child(1),.pw-strength.ok i:nth-child(2){background:var(--brass)}
   .pw-strength.strong i{background:#4caf6b}
   .pw-strength-label{font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--ink-faint);flex-shrink:0}
-  /* Google "em breve" — honesto, não parece quebrado */
-  .btn.soon{opacity:.75}
-  .soon-pill{font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:var(--brass);
-    border:1px solid rgba(227,192,113,.4);border-radius:6px;padding:2px 6px}
   @media (max-width:440px){ .card{padding:26px 20px} }
 </style>
 </head>
@@ -99,7 +95,7 @@
 
     <div class="divider" id="divider">ou</div>
 
-    <button class="btn gbtn soon" id="google" onclick="googleLogin()">
+    <button class="btn gbtn" id="google" onclick="googleLogin()">
       <svg class="gicon" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z"/>
         <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18z"/>
@@ -107,7 +103,6 @@
         <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"/>
       </svg>
       Continuar com Google
-      <span class="soon-pill">em breve</span>
     </button>
   </div>
 </div>
@@ -128,12 +123,9 @@ const NEXT = (() => {
 const DEST = NEXT ? new URL(NEXT, window.location.href).href : APP_URL;
 let mode = 'signin';
 
-// Vira `true` só depois de habilitar o provider Google no painel do Supabase
-// (Authentication > Providers > Google, com Client ID/Secret do Google Cloud).
-// Enquanto false, o clique nem tenta o redirect — evita o erro cru
-// "Unsupported provider: provider is not enabled" que o Supabase devolve
-// como página de navegação (não dá pra capturar isso com try/catch).
-const GOOGLE_ENABLED = false;
+// Provider Google habilitado no painel do Supabase (Authentication > Providers > Google,
+// com Client ID/Secret do Google Cloud) — ver histórico do commit pro estado "em breve" anterior.
+const GOOGLE_ENABLED = true;
 
 const $ = (id) => document.getElementById(id);
 const msgEl = $('msg');

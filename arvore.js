@@ -451,6 +451,48 @@ window.deleteVia = async (key) => {
 /* ---------- tamanho da esfera ---------- */
 const SIZE_SCALE = { small: 1, medium: 1.4, large: 1.8 };
 
+/* ---------- forma da esfera ----------
+   Ângulos (graus, convenção canvas: x pra direita, y pra baixo) dos vértices de cada polígono,
+   medidos a partir do centro. 'circle' fica de fora do mapa de propósito — é o caso especial
+   tratado à parte (ctx.arc) em vez de um polígono de N lados. */
+const SHAPE_ANGLES = {
+  diamond: [0, 90, 180, 270],
+  square: [45, 135, 225, 315],
+  triangle: [-90, 30, 150],
+  hexagon: [-90, -30, 30, 90, 150, 210],
+};
+function shapeVertices(shape, r) {
+  return (SHAPE_ANGLES[shape] || []).map((deg) => { const a = deg * Math.PI / 180; return { x: Math.cos(a) * r, y: Math.sin(a) * r }; });
+}
+// traça o contorno da forma no ctx já transladado pro centro do nó (ou pro centro do sprite
+// offscreen, ver bodySpriteFor) — círculo continua sendo ctx.arc, as demais formas viram um
+// polígono fechado com os vértices de SHAPE_ANGLES.
+function traceShapePath(ctx, shape, r) {
+  const angles = SHAPE_ANGLES[shape];
+  ctx.beginPath();
+  if (!angles) { ctx.arc(0, 0, r, 0, Math.PI * 2); return; }
+  angles.forEach((deg, i) => {
+    const a = deg * Math.PI / 180, x = Math.cos(a) * r, y = Math.sin(a) * r;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.closePath();
+}
+// teste ponto-dentro-de-polígono-convexo (mesmo lado em relação a todas as arestas) — só roda por
+// clique (hitTestNodeAt), nunca por quadro, então não precisa de sprite/cache como o desenho.
+function pointInShape(shape, dx, dy, r) {
+  const pts = shapeVertices(shape, r);
+  let sign = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[i], b = pts[(i + 1) % pts.length];
+    const cross = (b.x - a.x) * (dy - a.y) - (b.y - a.y) * (dx - a.x);
+    if (cross !== 0) {
+      const s = cross > 0 ? 1 : -1;
+      if (sign === 0) sign = s; else if (sign !== s) return false;
+    }
+  }
+  return true;
+}
+
 /* ---------- boot ---------- */
 // diagnóstico: cada etapa do boot é logada com um prefixo fixo, pra dar pra ver exatamente onde
 // ele parou (F12 → Console) se algo travar sem lançar erro nenhum (ex.: uma promessa que nunca
@@ -842,8 +884,8 @@ function glowSpriteFor(colorHex, r) {
   spriteCache.set(key, cv);
   return cv;
 }
-function bodySpriteFor(r) {
-  const key = 'body|' + r;
+function bodySpriteFor(shape, r) {
+  const key = 'body|' + shape + '|' + r;
   let cv = spriteCache.get(key);
   if (cv) return cv;
   const d = Math.max(2, Math.ceil(r * 2 * DPR));
@@ -851,7 +893,8 @@ function bodySpriteFor(r) {
   const g = cv.getContext('2d');
   const grad = g.createRadialGradient(d*.42, d*.36, 0, d*.5, d*.5, d*.64);
   grad.addColorStop(0, '#15131f'); grad.addColorStop(.55, '#0b0914'); grad.addColorStop(1, '#050308');
-  g.fillStyle = grad; g.beginPath(); g.arc(d/2, d/2, d/2, 0, Math.PI*2); g.fill();
+  g.fillStyle = grad;
+  g.save(); g.translate(d/2, d/2); traceShapePath(g, shape, d/2); g.fill(); g.restore();
   spriteCache.set(key, cv);
   return cv;
 }
@@ -958,20 +1001,27 @@ function drawNode(ctx, n, now) {
     ctx.drawImage(sprite, -glowR, -glowR, glowR * 2, glowR * 2);
     ctx.globalAlpha = 1;
   }
-  // corpo (gradiente escuro, sprite cacheado por raio) + aro finíssimo translúcido na cor da via
-  ctx.drawImage(bodySpriteFor(r), -r, -r, r * 2, r * 2);
+  // corpo (gradiente escuro, sprite cacheado por forma+raio) + aro finíssimo translúcido na cor da via
+  const shape = n.shape || 'circle';
+  ctx.drawImage(bodySpriteFor(shape, r), -r, -r, r * 2, r * 2);
   const [cr, cg, cb] = hexToRgb(color);
   ctx.strokeStyle = `rgba(${cr},${cg},${cb},.25)`; ctx.lineWidth = .6;
-  ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
-  // textura de pontos giratória (sprite cacheado por cor, ver dotSpriteFor)
-  if (!disabled) ctx.drawImage(dotSpriteFor(color), -r, -r, r * 2, r * 2);
+  traceShapePath(ctx, shape, r); ctx.stroke();
+  // textura de pontos giratória (sprite cacheado por cor, ver dotSpriteFor) — recortada na forma da
+  // esfera, senão a imagem quadrada do sprite vazaria nos cantos de formas não-circulares
+  if (!disabled) {
+    ctx.save();
+    traceShapePath(ctx, shape, r); ctx.clip();
+    ctx.drawImage(dotSpriteFor(color), -r, -r, r * 2, r * 2);
+    ctx.restore();
+  }
   // aro de destaque (rim) — dourado grosso se o JOGADOR já desbloqueou de verdade, senão a cor da via
   if (!disabled) {
     ctx.strokeStyle = acquired ? cssVar('--brass', '#18b5c6') : color;
     ctx.lineWidth = acquired ? 3 : 1.8;
     ctx.globalAlpha = .9;
     if (n === linkSrc) ctx.setLineDash([2, 4]);
-    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
+    traceShapePath(ctx, shape, r); ctx.stroke();
     ctx.setLineDash([]); ctx.globalAlpha = 1;
   }
   // flash de desbloqueio — anel branco que expande e some (disparado em doUnlock)
@@ -1042,7 +1092,9 @@ function drawNode(ctx, n, now) {
 function hitTestNodeAt(wx, wy) {
   for (let i = nodes.length - 1; i >= 0; i--) { // de trás pra frente: a última desenhada vence, igual antes
     const n = nodes[i], r = nodeRadius(n), dx = wx - n.x, dy = wy - n.y;
-    if (dx * dx + dy * dy <= r * r) return n;
+    if (dx * dx + dy * dy > r * r) continue; // fora do círculo delimitador — nenhuma forma passa daqui
+    if (SHAPE_ANGLES[n.shape] && !pointInShape(n.shape, dx, dy, r)) continue; // dentro do círculo, mas fora do polígono (canto)
+    return n;
   }
   return null;
 }
@@ -1099,7 +1151,7 @@ async function selectNode(n) {
   if (isGM) openEditor(n); else openViewer(n);
 }
 function snapshotNode(n) {
-  return { name: n.name, kind: n.kind, size: n.size, enabled: n.enabled, fac: n.fac, cost: n.cost, descr: n.descr,
+  return { name: n.name, kind: n.kind, size: n.size, shape: n.shape, enabled: n.enabled, fac: n.fac, cost: n.cost, descr: n.descr,
     modifiers: (n.modifiers || []).map((m) => ({ ...m })) };
 }
 function discardEditorDraft() {
@@ -1117,6 +1169,7 @@ function refreshEditorFields(n) {
   $('e-cost').title = n.kind === 'core' ? 'O Núcleo é a esfera inicial — sempre grátis' : '';
   document.querySelectorAll('#e-type .chip').forEach((c) => c.classList.toggle('on', c.dataset.v === n.kind));
   document.querySelectorAll('#e-size .chip').forEach((c) => c.classList.toggle('on', c.dataset.s === (n.size || 'small')));
+  document.querySelectorAll('#e-shape .chip').forEach((c) => c.classList.toggle('on', c.dataset.sh === (n.shape || 'circle')));
   document.querySelectorAll('#e-enabled .chip').forEach((c) => c.classList.toggle('on', c.dataset.e === (n.enabled === false ? '0' : '1')));
   document.querySelectorAll('#e-fac .chip').forEach((c) => c.classList.toggle('on', c.dataset.f === n.fac));
   renderModRows(n);
@@ -1130,7 +1183,7 @@ function openEditor(n) {
 window.saveNodeEditor = () => {
   if (!isGM || !selected) return;
   const btn = $('node-save-btn'); if (btn) { btn.classList.add('loading'); btn.disabled = true; }
-  const patch = { name: selected.name, kind: selected.kind, size: selected.size, enabled: selected.enabled,
+  const patch = { name: selected.name, kind: selected.kind, size: selected.size, shape: selected.shape, enabled: selected.enabled,
     fac: selected.fac, cost: selected.cost, descr: selected.descr, modifiers: selected.modifiers };
   db.updateTreeNode(selected.id, patch).then(() => {
     editorSnapshot = snapshotNode(selected); editorDirty = false;
@@ -1377,7 +1430,7 @@ stage.addEventListener('pointerdown', async (ev) => {
   }
   if (tool === 'add' && isGM) {
     const snapped = gridSnap(p.x, p.y);
-    const node = { name: '', kind: 'active', fac: vias[0].key, size: 'small', cost: 1, descr: '', x: snapped.x, y: snapped.y };
+    const node = { name: '', kind: 'active', fac: vias[0].key, size: 'small', shape: 'circle', cost: 1, descr: '', x: snapped.x, y: snapped.y };
     try { const saved = await db.insertTreeNode(treeId, node); node.id = saved.id; nodes.push(node); render(); selectNode(node); } catch (e) { showMsg(e.message); }
     return; }
   if (tool === 'area') {
@@ -1500,7 +1553,7 @@ window.duplicateSelection = async (op) => {
       const n = byId(id); if (!n) return null;
       const t = transformPoint(n.x, n.y, core.x, core.y, op);
       const snapped = gridSnap(t.x, t.y);
-      const saved = await db.insertTreeNode(treeId, { name: n.name, kind: n.kind, fac: n.fac, size: n.size, cost: n.cost, descr: n.descr, x: snapped.x, y: snapped.y });
+      const saved = await db.insertTreeNode(treeId, { name: n.name, kind: n.kind, fac: n.fac, size: n.size, shape: n.shape, cost: n.cost, descr: n.descr, x: snapped.x, y: snapped.y });
       return { oldId: id, saved };
     }));
     const idMap = new Map();

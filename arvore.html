@@ -275,6 +275,12 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
       <div class="chip" data-s="small" onclick="patch('size','small')">Pequena</div>
       <div class="chip" data-s="medium" onclick="patch('size','medium')">Média</div>
       <div class="chip" data-s="large" onclick="patch('size','large')">Grande</div></div></div>
+    <div class="fld"><label>Forma</label><div class="chips" id="e-shape">
+      <div class="chip" data-sh="circle" onclick="patch('shape','circle')">Esfera</div>
+      <div class="chip" data-sh="diamond" onclick="patch('shape','diamond')">Losango</div>
+      <div class="chip" data-sh="triangle" onclick="patch('shape','triangle')">Triângulo</div>
+      <div class="chip" data-sh="square" onclick="patch('shape','square')">Quadrado</div>
+      <div class="chip" data-sh="hexagon" onclick="patch('shape','hexagon')">Hexágono</div></div></div>
     <div class="fld"><label>Estado (linhas conectadas ficam vivas/apagadas)</label><div class="chips" id="e-enabled">
       <div class="chip" data-e="1" onclick="patch('enabled',true)">Ativada</div>
       <div class="chip" data-e="0" onclick="patch('enabled',false)">Desativada</div></div></div>
@@ -320,6 +326,12 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
       <div class="chip" onclick="batchSet('size','small')">Pequena</div>
       <div class="chip" onclick="batchSet('size','medium')">Média</div>
       <div class="chip" onclick="batchSet('size','large')">Grande</div></div></div>
+    <div class="fld"><label>Forma</label><div class="chips" id="batch-shape">
+      <div class="chip" onclick="batchSet('shape','circle')">Esfera</div>
+      <div class="chip" onclick="batchSet('shape','diamond')">Losango</div>
+      <div class="chip" onclick="batchSet('shape','triangle')">Triângulo</div>
+      <div class="chip" onclick="batchSet('shape','square')">Quadrado</div>
+      <div class="chip" onclick="batchSet('shape','hexagon')">Hexágono</div></div></div>
     <div class="fld"><label>Estado (linhas ligadas ficam vivas/apagadas)</label><div class="chips" id="batch-enabled">
       <div class="chip" onclick="batchSet('enabled',true)">Ativada</div>
       <div class="chip" onclick="batchSet('enabled',false)">Desativada</div></div></div>

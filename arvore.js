@@ -628,40 +628,116 @@ function seedParts() {
 function fxResize() { fx.width = W*DPR; fx.height = H*DPR; fx.style.width = W+'px'; fx.style.height = H+'px'; fctx.setTransform(DPR,0,0,DPR,0,0); seedParts(); }
 function resizeStage() { stage.width = W*DPR; stage.height = H*DPR; stage.style.width = W+'px'; stage.style.height = H+'px'; }
 
-/* ---------- esfera de pontos 3D (gira) — textura dentro de cada esfera ----------
-   antes era um <g id="dotSphere"> de SVG compartilhado via <use> por TODAS as esferas (repintar a
-   fonte forçava recálculo em cada referência). Agora é um sprite de canvas pré-desenhado, cacheado
-   POR COR DE VIA (poucas cores distintas por árvore) — desenhar a esfera é só um drawImage barato,
-   e o sprite só é regerado quando o ângulo avança (mesmo throttle de antes: 1 em 6 quadros, parado
-   durante interação/modo leve). */
-let dotEls = [], dotAngle = 0;
+/* ---------- sólido 3D de pontos (gira) — textura dentro de cada esfera ----------
+   Cada forma tem seu próprio modelo de pontos 3D estático — esfera, cubo, octaedro, tetraedro ou
+   prisma hexagonal (ver DOT_MODEL_BUILDERS) — pra que a textura giratória combine com a silhueta
+   escolhida em vez de sempre parecer uma esfera cortada nos cantos. Antes era um <g id="dotSphere">
+   de SVG compartilhado via <use> por TODAS as esferas (repintar a fonte forçava recálculo em cada
+   referência). Agora é um sprite de canvas pré-desenhado, cacheado POR FORMA+COR DE VIA (poucas
+   combinações distintas por árvore) — desenhar é só um drawImage barato, e o sprite só é regerado
+   quando o ângulo avança (mesmo throttle de antes: 1 em 6 quadros, parado durante interação/modo
+   leve). */
+let dotModels = {}, dotAngle = 0;
 const TILT = 18 * Math.PI / 180, cT = Math.cos(TILT), sT = Math.sin(TILT);
-const DOT_SPRITE_SIZE = 200; // px — mapeia a esfera de raio 100 (unidades do modelo 3D) pro sprite
-let dotSpriteCache = new Map(); // cor (hex) -> canvas
-function buildDotSphere() {
-  const data = [];
+const DOT_SPRITE_SIZE = 200; // px — mapeia o modelo de raio ~100 (unidades do modelo 3D) pro sprite
+let dotSpriteCache = new Map(); // "forma|cor" -> canvas
+
+// amostra pontos numa grade baricêntrica do triângulo A-B-C, evitando cantos/bordas exatos (que
+// duplicariam entre faces vizinhas de um sólido) — usado pelas faces planas de cada poliedro.
+function trianglePoints(A, B, C, steps) {
+  const pts = [];
+  for (let i = 0; i <= steps; i++) for (let j = 0; j <= steps - i; j++) {
+    const k = steps - i - j, u = i / steps, v = j / steps, w = k / steps;
+    if (u < 0.12 || v < 0.12 || w < 0.12) continue;
+    pts.push({ x: A.x*u + B.x*v + C.x*w, y: A.y*u + B.y*v + C.y*w, z: A.z*u + B.z*v + C.z*w });
+  }
+  return pts;
+}
+function spherePoints() {
+  const pts = [];
   for (let lat = -80; lat <= 80; lat += 13) { const rad = lat * Math.PI/180, cl = Math.cos(rad); const n = Math.max(6, Math.round(17*cl));
-    for (let i = 0; i < n; i++) data.push({ lat: rad, lon0: (i/n)*Math.PI*2 }); }
-  dotEls = data;
+    for (let i = 0; i < n; i++) { const lon = (i/n)*Math.PI*2; pts.push({ x: 100*cl*Math.sin(lon), y: -100*Math.sin(rad), z: 100*cl*Math.cos(lon) }); } }
+  return pts;
+}
+function cubePoints() { // quadrado — cubo girando, pontos numa grade em cada uma das 6 faces
+  const half = 75, n = 4, coords = []; for (let i = 0; i < n; i++) coords.push(-half + (i + .5) * (2*half/n));
+  const faces = [
+    (a, b) => ({ x: half, y: a, z: b }), (a, b) => ({ x: -half, y: a, z: b }),
+    (a, b) => ({ x: a, y: half, z: b }), (a, b) => ({ x: a, y: -half, z: b }),
+    (a, b) => ({ x: a, y: b, z: half }), (a, b) => ({ x: a, y: b, z: -half }),
+  ];
+  const pts = [];
+  for (const f of faces) for (const a of coords) for (const b of coords) pts.push(f(a, b));
+  return pts;
+}
+function octahedronPoints() { // losango — octaedro girando (parece uma gema facetada)
+  const r = 100;
+  const V = { px:{x:r,y:0,z:0}, nx:{x:-r,y:0,z:0}, py:{x:0,y:r,z:0}, ny:{x:0,y:-r,z:0}, pz:{x:0,y:0,z:r}, nz:{x:0,y:0,z:-r} };
+  const faces = [
+    [V.px,V.py,V.pz], [V.px,V.py,V.nz], [V.px,V.ny,V.pz], [V.px,V.ny,V.nz],
+    [V.nx,V.py,V.pz], [V.nx,V.py,V.nz], [V.nx,V.ny,V.pz], [V.nx,V.ny,V.nz],
+  ];
+  let pts = []; for (const f of faces) pts = pts.concat(trianglePoints(f[0], f[1], f[2], 5));
+  return pts;
+}
+function tetrahedronPoints() { // triângulo — tetraedro girando
+  const s = 100 / Math.sqrt(3);
+  const V = [{x:s,y:s,z:s}, {x:s,y:-s,z:-s}, {x:-s,y:s,z:-s}, {x:-s,y:-s,z:s}];
+  const faces = [[V[0],V[1],V[2]], [V[0],V[1],V[3]], [V[0],V[2],V[3]], [V[1],V[2],V[3]]];
+  let pts = []; for (const f of faces) pts = pts.concat(trianglePoints(f[0], f[1], f[2], 7));
+  return pts;
+}
+function hexPrismPoints() { // hexágono — prisma hexagonal girando (topo/base + laterais)
+  const r = 90, halfH = 55, pts = [];
+  for (const y of [halfH, -halfH]) for (const ring of [0.4, 0.75, 1]) {
+    const rot = ring < 1 ? Math.PI / 6 : 0;
+    for (let i = 0; i < 6; i++) { const a = (i/6)*Math.PI*2 + rot; pts.push({ x: r*ring*Math.cos(a), y, z: r*ring*Math.sin(a) }); }
+  }
+  for (let side = 0; side < 6; side++) {
+    const a0 = side * (Math.PI/3), a1 = a0 + Math.PI/3;
+    const x0 = r*Math.cos(a0), z0 = r*Math.sin(a0), x1 = r*Math.cos(a1), z1 = r*Math.sin(a1);
+    for (let i = 1; i < 3; i++) { const t = i/3, x = x0+(x1-x0)*t, z = z0+(z1-z0)*t;
+      for (let j = 1; j < 3; j++) pts.push({ x, y: -halfH + (j/3)*2*halfH, z });
+    }
+  }
+  return pts;
+}
+const DOT_MODEL_BUILDERS = { circle: spherePoints, square: cubePoints, diamond: octahedronPoints, triangle: tetrahedronPoints, hexagon: hexPrismPoints };
+function buildDotSphere() {
+  dotModels = {};
+  for (const shape in DOT_MODEL_BUILDERS) dotModels[shape] = DOT_MODEL_BUILDERS[shape]();
   invalidateDotSprites();
 }
 function invalidateDotSprites() { dotSpriteCache = new Map(); }
-function dotSpriteFor(color) {
-  let cv = dotSpriteCache.get(color);
+function dotSpriteFor(shape, color) {
+  const key = shape + '|' + color;
+  let cv = dotSpriteCache.get(key);
   if (cv) return cv;
   const size = DOT_SPRITE_SIZE, c = size / 2, scale = c / 100;
   cv = document.createElement('canvas'); cv.width = cv.height = size;
   const g = cv.getContext('2d'); g.fillStyle = color;
-  for (const d of dotEls) {
-    const lon = d.lon0 + dotAngle, cl = Math.cos(d.lat);
-    const x = 100*cl*Math.sin(lon), y = -100*Math.sin(d.lat), z = 100*cl*Math.cos(lon);
-    const y2 = y*cT - z*sT, z2 = y*sT + z*cT;
-    if (z2 < -1) continue;
-    g.globalAlpha = 0.16 + 0.84*(z2/100);
-    g.beginPath(); g.arc(c + x*scale, c + y2*scale, Math.max(1.2, 1.7 + 1.2*(z2/100)) * scale, 0, Math.PI * 2); g.fill();
+  const model = dotModels[shape] || dotModels.circle;
+  // gira ao redor do eixo vertical (Y) — mesma rotação de sempre (era lon0+dotAngle numa
+  // parametrização lat/lon só válida pra esfera), agora expressa como uma rotação 2D de (x,z) que
+  // funciona pra qualquer modelo de pontos estático.
+  const cosA = Math.cos(dotAngle), sinA = Math.sin(dotAngle);
+  const projected = model.map((p) => {
+    const x = p.x*cosA + p.z*sinA, z = -p.x*sinA + p.z*cosA;
+    return { x, y2: p.y*cT - z*sT, z2: p.y*sT + z*cT };
+  });
+  // profundidade normalizada pelo alcance real de z do modelo (cada sólido tem uma extensão
+  // diferente da esfera) — esconde a metade de trás do sólido e faz a frente brilhar mais/maior,
+  // exatamente a mesma regra que já valia só pra esfera, generalizada pra qualquer forma convexa.
+  const zs = projected.map((p) => p.z2), zMax = Math.max(...zs), zMin = Math.min(...zs), zRange = Math.max(1, zMax - zMin);
+  for (const p of projected) {
+    const depth = (p.z2 - zMin) / zRange;
+    if (depth < 0.5) continue;
+    const front = (depth - 0.5) * 2;
+    g.globalAlpha = 0.16 + 0.84*front;
+    g.beginPath(); g.arc(c + p.x*scale, c + p.y2*scale, Math.max(1.2, 1.7 + 1.2*front) * scale, 0, Math.PI * 2); g.fill();
   }
   g.globalAlpha = 1;
-  dotSpriteCache.set(color, cv);
+  dotSpriteCache.set(key, cv);
   return cv;
 }
 let last = performance.now();
@@ -1007,12 +1083,13 @@ function drawNode(ctx, n, now) {
   const [cr, cg, cb] = hexToRgb(color);
   ctx.strokeStyle = `rgba(${cr},${cg},${cb},.25)`; ctx.lineWidth = .6;
   traceShapePath(ctx, shape, r); ctx.stroke();
-  // textura de pontos giratória (sprite cacheado por cor, ver dotSpriteFor) — recortada na forma da
-  // esfera, senão a imagem quadrada do sprite vazaria nos cantos de formas não-circulares
+  // textura de pontos giratória (sólido 3D cacheado por forma+cor, ver dotSpriteFor) — recortada
+  // na forma da esfera por segurança (o modelo 3D de cada forma já projeta dentro da silhueta na
+  // maioria dos ângulos, mas o recorte evita qualquer vazamento nos cantos em rotações extremas)
   if (!disabled) {
     ctx.save();
     traceShapePath(ctx, shape, r); ctx.clip();
-    ctx.drawImage(dotSpriteFor(color), -r, -r, r * 2, r * 2);
+    ctx.drawImage(dotSpriteFor(shape, color), -r, -r, r * 2, r * 2);
     ctx.restore();
   }
   // aro de destaque (rim) — dourado grosso se o JOGADOR já desbloqueou de verdade, senão a cor da via

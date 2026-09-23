@@ -295,6 +295,12 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
       <div class="chips" id="e-fac"></div>
       <div class="via-edit" id="via-edit" style="display:none"></div>
     </div>
+    <div class="fld"><label>Cor <span style="font-weight:400;color:var(--ink-faint);text-transform:none">(opcional — sobrescreve a cor da via só nesta habilidade)</span></label>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button type="button" class="color-swatch sm" id="e-color-swatch" style="--sw:#e3c071" onclick="openNodeColorPicker(this)" title="Escolher cor própria" aria-label="Escolher cor própria"></button>
+        <button type="button" class="btn sm auto" id="e-color-reset" onclick="resetNodeColor()" style="display:none">Usar cor da via</button>
+      </div>
+    </div>
     <div class="fld"><label>Custo em pontos</label><input id="e-cost" type="number" min="0" inputmode="numeric" placeholder="0" oninput="patch('cost',Math.max(0,parseInt(this.value)||0))"></div>
     <div class="fld"><label>Descrição</label><textarea id="e-desc" placeholder="O que essa habilidade faz..." oninput="patch('descr',this.value)"
       style="width:100%;min-height:80px;resize:vertical;line-height:1.55;background:rgba(255,255,255,.06);border:1px solid var(--line2);border-radius:10px;color:var(--ink);font-family:var(--serif);font-size:14px;padding:10px 12px"></textarea></div>
@@ -329,6 +335,12 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
     <p id="batch-count" style="font-family:var(--mono);font-size:11px;color:var(--ink-dim);margin:0 0 14px;line-height:1.6">0 habilidades selecionadas</p>
     <div class="section-title" style="margin:0 0 10px">Editar seleção</div>
     <div class="fld"><label>Via / afinidade</label><div class="chips" id="batch-fac"></div></div>
+    <div class="fld"><label>Cor <span style="font-weight:400;color:var(--ink-faint);text-transform:none">(opcional — sobrescreve a via nas selecionadas)</span></label>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button type="button" class="color-swatch sm" id="batch-color-swatch" style="--sw:#e3c071" onclick="openColorPicker(this, '#e3c071', (v)=>batchSet('color',v))" title="Aplicar cor à seleção" aria-label="Aplicar cor à seleção"></button>
+        <button type="button" class="btn sm auto" onclick="batchSet('color', null)">Usar cor da via</button>
+      </div>
+    </div>
     <div class="fld"><label>Tamanho</label><div class="chips" id="batch-size">
       <div class="chip" onclick="batchSet('size','small')">Pequena</div>
       <div class="chip" onclick="batchSet('size','medium')">Média</div>

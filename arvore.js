@@ -1063,7 +1063,7 @@ function drawEdge(ctx, A, B, e, now) {
 }
 function drawNode(ctx, n, now) {
   const r = nodeRadius(n);
-  const color = viaByKey(n.fac).color;
+  const color = n.color || viaByKey(n.fac).color;
   const disabled = n.enabled === false;
   const acquired = !isGM && isNodeUnlocked(n);
   const isSelected = n === selected;
@@ -1228,7 +1228,7 @@ async function selectNode(n) {
   if (isGM) openEditor(n); else openViewer(n);
 }
 function snapshotNode(n) {
-  return { name: n.name, kind: n.kind, size: n.size, shape: n.shape, enabled: n.enabled, fac: n.fac, cost: n.cost, descr: n.descr,
+  return { name: n.name, kind: n.kind, size: n.size, shape: n.shape, color: n.color, enabled: n.enabled, fac: n.fac, cost: n.cost, descr: n.descr,
     modifiers: (n.modifiers || []).map((m) => ({ ...m })) };
 }
 function discardEditorDraft() {
@@ -1249,6 +1249,10 @@ function refreshEditorFields(n) {
   document.querySelectorAll('#e-shape .chip').forEach((c) => c.classList.toggle('on', c.dataset.sh === (n.shape || 'circle')));
   document.querySelectorAll('#e-enabled .chip').forEach((c) => c.classList.toggle('on', c.dataset.e === (n.enabled === false ? '0' : '1')));
   document.querySelectorAll('#e-fac .chip').forEach((c) => c.classList.toggle('on', c.dataset.f === n.fac));
+  // cor própria é opcional — o swatch sempre mostra a cor EFETIVA (própria ou herdada da via), mas
+  // o botão de reset só aparece quando há uma cor própria de verdade pra "esquecer"
+  $('e-color-swatch').style.setProperty('--sw', n.color || viaByKey(n.fac).color);
+  $('e-color-reset').style.display = n.color ? '' : 'none';
   renderModRows(n);
 }
 function openEditor(n) {
@@ -1260,7 +1264,7 @@ function openEditor(n) {
 window.saveNodeEditor = () => {
   if (!isGM || !selected) return;
   const btn = $('node-save-btn'); if (btn) { btn.classList.add('loading'); btn.disabled = true; }
-  const patch = { name: selected.name, kind: selected.kind, size: selected.size, shape: selected.shape, enabled: selected.enabled,
+  const patch = { name: selected.name, kind: selected.kind, size: selected.size, shape: selected.shape, color: selected.color, enabled: selected.enabled,
     fac: selected.fac, cost: selected.cost, descr: selected.descr, modifiers: selected.modifiers };
   db.updateTreeNode(selected.id, patch).then(() => {
     editorSnapshot = snapshotNode(selected); editorDirty = false;
@@ -1349,6 +1353,13 @@ window.patch = async (k, v) => {
   if (coreChanged) { render(); applyView(); }
   refreshEditorFields(selected); markEditorDirty();
 };
+// cor própria da habilidade, independente da via — ver drawNode (color = n.color || via.color)
+window.openNodeColorPicker = (btn) => {
+  if (!isGM || !selected) return;
+  const current = selected.color || viaByKey(selected.fac).color;
+  openColorPicker(btn, current, (hex) => patch('color', hex));
+};
+window.resetNodeColor = () => patch('color', null);
 /* ---------- visão somente-leitura pro jogador — mesmos dados, sem nenhum campo editável ---------- */
 // o Núcleo É a esfera inicial — só pode haver um por árvore (ver patch()) e ele nasce
 // automaticamente desbloqueado, sem precisar de nenhuma marcação separada.
@@ -1630,7 +1641,7 @@ window.duplicateSelection = async (op) => {
       const n = byId(id); if (!n) return null;
       const t = transformPoint(n.x, n.y, core.x, core.y, op);
       const snapped = gridSnap(t.x, t.y);
-      const saved = await db.insertTreeNode(treeId, { name: n.name, kind: n.kind, fac: n.fac, size: n.size, shape: n.shape, cost: n.cost, descr: n.descr, x: snapped.x, y: snapped.y });
+      const saved = await db.insertTreeNode(treeId, { name: n.name, kind: n.kind, fac: n.fac, size: n.size, shape: n.shape, color: n.color, cost: n.cost, descr: n.descr, x: snapped.x, y: snapped.y });
       return { oldId: id, saved };
     }));
     const idMap = new Map();

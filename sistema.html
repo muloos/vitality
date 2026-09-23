@@ -2263,11 +2263,11 @@ async function renderArvores(c) {
   c.innerHTML = `
     <div class="section-title" role="heading" aria-level="2">Árvores de habilidade</div>
     <p style="font-family:var(--mono);font-size:11px;color:var(--ink-dim);line-height:1.6;margin:0 0 14px">
-      Crie árvores, atribua a subclasses e clique em <b>Acessar árvore</b> para montar/editar a Árvore de Esferas dela. Cada árvore é independente.</p>
+      Crie árvores, atribua a subclasses e clique em <b>Acessar árvore</b> para montar/editar a Árvore de Habilidades dela. Cada árvore é independente.</p>
     <div class="list" id="arvores-list">${cards.length ? cards.join('') : emptyState(ICONS.tree, 'Nenhuma árvore ainda',
-      'Árvores de habilidade (esferas) que você desenha no editor visual e atribui a classes. Crie a primeira no campo abaixo ↓')}</div>
+      'Árvores de habilidade que você desenha no editor visual e atribui a classes. Crie a primeira no campo abaixo ↓')}</div>
     <form onsubmit="return addTree(event)" style="margin-top:14px">
-      <div class="fld"><label>Formato da grade <span style="text-transform:none;letter-spacing:0;color:var(--ink-faint)">(define como as esferas se encaixam e como cópias giradas se comportam — dá pra mudar depois no editor)</span></label>
+      <div class="fld"><label>Formato da grade <span style="text-transform:none;letter-spacing:0;color:var(--ink-faint)">(define como as habilidades se encaixam e como cópias giradas se comportam — dá pra mudar depois no editor)</span></label>
         <select id="tr-shape" class="fld-input">
           <option value="octagon">Octógono</option>
           <option value="hexagon">Hexágono</option>
@@ -2282,7 +2282,7 @@ async function renderArvores(c) {
 window.addTree = (ev) => { ev.preventDefault(); const n = $('tr-name').value.trim(); if (!n) return false;
   db.createSystemTree(systemId, n, $('tr-shape').value).then(() => openTab('arvores')).catch((e) => showMsg(e.message)); return false; };
 window.delTree = async (id) => {
-  const ok = await confirmModal({ title: 'Excluir árvore', desc: 'Apaga todas as esferas, conexões e o progresso dos jogadores nela. Não dá pra desfazer.', confirmLabel: 'Excluir' });
+  const ok = await confirmModal({ title: 'Excluir árvore', desc: 'Apaga todas as habilidades, conexões e o progresso dos jogadores nela. Não dá pra desfazer.', confirmLabel: 'Excluir' });
   if (!ok) return;
   db.deleteSystemTree(id).then(() => openTab('arvores')).catch((e) => showMsg(e.message));
 };

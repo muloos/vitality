@@ -1496,7 +1496,7 @@ async function renderArvores(c) {
       c.innerHTML = `
         <div class="arvore-embed-wrap">
           <iframe class="arvore-embed-iframe" src="arvore.html?tree=${_arvoreViewingId}&system=${mesa.system_id}&embed=1&v=4"
-            title="Árvore de esferas"></iframe>
+            title="Árvore de habilidades"></iframe>
         </div>`;
       return;
     }
@@ -1506,7 +1506,7 @@ async function renderArvores(c) {
         <div class="card-tile glass" style="cursor:default"><h3>${esc(t.name)}</h3>
           <button class="btn sm auto" style="margin-top:6px" onclick="viewTreeInline('${t.id}')"><span class="ic">${ICONS.externalLink}</span>${gm ? 'Abrir/editar' : 'Ver árvore'}</button></div>`).join('') : '<div class="empty">Este sistema não tem árvores.</div>'}</div>
       <p style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);line-height:1.6;margin:18px 2px 0">
-        As árvores vêm do sistema da mesa. ${gm ? 'Você edita direto no editor.' : 'Jogar/desbloquear as esferas com pontos entra numa próxima fase.'}</p>`;
+        As árvores vêm do sistema da mesa. ${gm ? 'Você edita direto no editor.' : 'Jogar/desbloquear as habilidades com pontos entra numa próxima fase.'}</p>`;
     return;
   }
   // esta mesa não tem sistema vinculado (só mesas bem antigas — hoje app.html exige um sistema
@@ -1515,9 +1515,9 @@ async function renderArvores(c) {
   // nenhum, então o formulário de criação fica escondido; árvores antigas continuam listadas.
   const trees = await db.listTrees(campaignId);
   c.innerHTML = `
-    <div class="section-title" role="heading" aria-level="2">Árvores de Esferas</div>
+    <div class="section-title" role="heading" aria-level="2">Árvores de Habilidades</div>
     ${emptyState(ICONS.warning, 'Mesa sem sistema vinculado',
-      `O editor de árvores (com esferas, custos e desbloqueio por pontos) não está disponível aqui. ${gm ? 'Vincule um sistema à mesa (ou crie uma mesa nova escolhendo um sistema) pra usar árvores de verdade.' : 'Fale com o Mestre sobre vincular um sistema à mesa.'}`)}
+      `O editor de árvores (com habilidades, custos e desbloqueio por pontos) não está disponível aqui. ${gm ? 'Vincule um sistema à mesa (ou crie uma mesa nova escolhendo um sistema) pra usar árvores de verdade.' : 'Fale com o Mestre sobre vincular um sistema à mesa.'}`)}
     ${trees.length ? `<div class="grid" id="arvores-grid" style="margin-top:18px">${trees.map((t) => treeCardHtml(t, gm)).join('')}</div>` : ''}`;
 }
 function treeCardHtml(t, gm) {

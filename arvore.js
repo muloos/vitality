@@ -440,7 +440,7 @@ window.addVia = () => {
 window.deleteVia = async (key) => {
   if (!isGM) return;
   if (vias.length <= 1) { showMsg('Precisa sobrar pelo menos uma Via.'); return; }
-  if (nodes.some((n) => n.fac === key)) { showMsg('Essa via está em uso — troque a via das esferas antes de excluir.'); return; }
+  if (nodes.some((n) => n.fac === key)) { showMsg('Essa via está em uso — troque a via das habilidades antes de excluir.'); return; }
   const via = vias.find((v) => v.key === key);
   const ok = await confirmModal({ title: 'Excluir via', desc: `Remove "${via?.name || 'esta via'}" das opções de afinidade. Não dá pra desfazer.`, confirmLabel: 'Excluir' });
   if (!ok) return;
@@ -900,7 +900,7 @@ function updateCoreAnchor() {
   if (c) { ringsInner.setAttribute('transform', `translate(${c.x} ${c.y})`); gridPolarInner.setAttribute('transform', `translate(${c.x} ${c.y})`); }
 }
 function toWorld(cx, cy) { const r = stage.getBoundingClientRect(); return { x: (cx-r.left-view.x)/view.s, y: (cy-r.top-view.y)/view.s }; }
-function refreshCount() { const el = $('count'); el.className = 'count'; el.textContent = nodes.length + ' esferas · ' + edges.length + ' conexões'; }
+function refreshCount() { const el = $('count'); el.className = 'count'; el.textContent = nodes.length + ' habilidades · ' + edges.length + ' conexões'; }
 function nodeRadius(n) { const base = n.kind === 'core' ? 22 : (n.kind === 'active' ? 16 : 13); return Math.round(base * (SIZE_SCALE[n.size] || 1)); }
 // culling de viewport: mesmo sem custo de DOM, ainda tem custo real desenhar cada esfera (sprite +
 // alguns traços). Só considerar o que está dentro da tela (mais uma margem folgada, pra não
@@ -1218,7 +1218,7 @@ function startNodeDrag(n, ev) {
 }
 async function selectNode(n) {
   if (isGM && editorDirty && selected && selected.id !== n.id) {
-    const ok = await confirmModal({ title: 'Descartar alterações', desc: `Você tem alterações não salvas em "${selected.name || 'esta esfera'}". Trocar de esfera mesmo assim?`, confirmLabel: 'Descartar' });
+    const ok = await confirmModal({ title: 'Descartar alterações', desc: `Você tem alterações não salvas em "${selected.name || 'esta habilidade'}". Trocar de habilidade mesmo assim?`, confirmLabel: 'Descartar' });
     if (!ok) return;
     discardEditorDraft();
   }
@@ -1243,7 +1243,7 @@ function refreshEditorFields(n) {
   // salvar um custo>0 que nunca seria realmente cobrado
   $('e-cost').value = n.kind === 'core' ? 0 : (n.cost || 0);
   $('e-cost').disabled = n.kind === 'core';
-  $('e-cost').title = n.kind === 'core' ? 'O Núcleo é a esfera inicial — sempre grátis' : '';
+  $('e-cost').title = n.kind === 'core' ? 'O Núcleo é a habilidade inicial — sempre grátis' : '';
   document.querySelectorAll('#e-type .chip').forEach((c) => c.classList.toggle('on', c.dataset.v === n.kind));
   document.querySelectorAll('#e-size .chip').forEach((c) => c.classList.toggle('on', c.dataset.s === (n.size || 'small')));
   document.querySelectorAll('#e-shape .chip').forEach((c) => c.classList.toggle('on', c.dataset.sh === (n.shape || 'circle')));
@@ -1265,7 +1265,7 @@ window.saveNodeEditor = () => {
   db.updateTreeNode(selected.id, patch).then(() => {
     editorSnapshot = snapshotNode(selected); editorDirty = false;
     if (btn) btn.style.display = 'none';
-    showMsg('Esfera salva.', 'ok');
+    showMsg('Habilidade salva.', 'ok');
   }).catch((e) => showMsg(e.message))
     .finally(() => { if (btn) { btn.classList.remove('loading'); btn.disabled = false; } });
 };
@@ -1300,7 +1300,7 @@ window.setNodeModAmount = (i, amount) => { if (!isGM || !selected || !selected.m
   selected.modifiers[i].amount = Number(amount) || 0; markEditorDirty(); };
 window.closePanel = async () => {
   if (editorDirty) {
-    const ok = await confirmModal({ title: 'Descartar alterações', desc: 'As alterações não salvas nesta esfera serão perdidas.', confirmLabel: 'Descartar' });
+    const ok = await confirmModal({ title: 'Descartar alterações', desc: 'As alterações não salvas nesta habilidade serão perdidas.', confirmLabel: 'Descartar' });
     if (!ok) return;
     discardEditorDraft();
   }
@@ -1322,7 +1322,7 @@ window.patch = async (k, v) => {
   if (k === 'kind' && v === 'core') {
     const other = nodes.find((x) => x !== selected && x.kind === 'core');
     if (other) {
-      const ok = await confirmModal({ title: 'Já existe um Núcleo', desc: `"${other.name || 'outra esfera'}" já é o Núcleo desta árvore — só uma pode ser. Trocar o Núcleo pra esta esfera?`, confirmLabel: 'Trocar', danger: false });
+      const ok = await confirmModal({ title: 'Já existe um Núcleo', desc: `"${other.name || 'outra habilidade'}" já é o Núcleo desta árvore — só uma pode ser. Trocar o Núcleo pra esta habilidade?`, confirmLabel: 'Trocar', danger: false });
       if (!ok) { refreshEditorFields(selected); return; }
       other.kind = 'active';
       db.updateTreeNode(other.id, { kind: 'active' }).catch((e) => showMsg(e.message));
@@ -1358,8 +1358,8 @@ function isNodeUnlocked(n) { return n.kind === 'core' || unlockedIds.has(n.id); 
 // como "ver" a cor do aro ou o selo de custo desenhado na esfera, então precisa ouvir essa
 // informação de algum jeito
 function nodeAriaLabel(n) {
-  const kindLabel = n.kind === 'core' ? 'Núcleo' : n.kind === 'active' ? 'esfera ativa' : 'esfera passiva';
-  let label = (n.name || 'Esfera sem nome') + ', ' + kindLabel;
+  const kindLabel = n.kind === 'core' ? 'Núcleo' : n.kind === 'active' ? 'habilidade ativa' : 'habilidade passiva';
+  let label = (n.name || 'Habilidade sem nome') + ', ' + kindLabel;
   if (n.enabled === false) label += ', desativada';
   if (!isGM) label += isNodeUnlocked(n) ? ', desbloqueada' : `, bloqueada, custa ${n.cost || 0} ponto${n.cost === 1 ? '' : 's'}`;
   return label;
@@ -1401,7 +1401,7 @@ function openViewer(n) {
       btn.disabled = !check.ok;
       btn.textContent = `Desbloquear (custo: ${n.cost || 0} ponto${n.cost === 1 ? '' : 's'})`;
       msg.textContent = check.ok ? ''
-        : check.reason === 'connectivity' ? 'Conecte a uma esfera já desbloqueada primeiro.'
+        : check.reason === 'connectivity' ? 'Conecte a uma habilidade já desbloqueada primeiro.'
         : `Pontos insuficientes (você tem ${Math.max(0, check.remaining)} disponível).`;
     }
   }
@@ -1420,7 +1420,7 @@ window.doUnlock = async () => {
     // flash de desbloqueio: um anel branco que expande e some (ver o bloco "_flashStart" em
     // drawNode) — dá o "momento de recompensa" ao desbloquear
     n._flashStart = performance.now();
-    showMsg('Esfera desbloqueada!');
+    showMsg('Habilidade desbloqueada!');
   } catch (e) { showMsg(e.message); btn.disabled = false; }
 };
 window.deleteSelected = async () => {
@@ -1429,9 +1429,9 @@ window.deleteSelected = async () => {
   // apagar em lote (deleteAreaSelection) já pede confirmação — apagar uma esfera avulsa não pedia,
   // então quem aprendeu "excluir em lote confirma" era pego de surpresa nessa aqui
   const desc = n.kind === 'core'
-    ? 'Esta é o Núcleo da árvore — apagar remove o encaixe de grade e a âncora dos anéis até outra esfera virar Núcleo. Não dá pra desfazer.'
+    ? 'Esta é o Núcleo da árvore — apagar remove o encaixe de grade e a âncora dos anéis até outra habilidade virar Núcleo. Não dá pra desfazer.'
     : 'Não dá pra desfazer.';
-  const ok = await confirmModal({ title: 'Excluir esfera', desc, confirmLabel: 'Excluir' });
+  const ok = await confirmModal({ title: 'Excluir habilidade', desc, confirmLabel: 'Excluir' });
   if (!ok) return;
   db.deleteTreeNode(n.id).then(() => { edges = edges.filter((x) => x.a !== n.id && x.b !== n.id); nodes = nodes.filter((x) => x !== n);
     selected = null; editorDirty = false; closePanel(); render(); applyView(); }).catch((e) => showMsg(e.message)); };
@@ -1444,7 +1444,7 @@ function handleLink(n) {
     const ex = edges.some((x) => (x.a === linkSrc.id && x.b === n.id) || (x.a === n.id && x.b === linkSrc.id));
     // antes, clicar num par já ligado não fazia NADA visível — dava pra achar que o clique
     // simplesmente não funcionou, em vez de saber que a conexão já existia
-    if (ex) showMsg('Essas esferas já estão conectadas.');
+    if (ex) showMsg('Essas habilidades já estão conectadas.');
     else db.insertTreeEdge(treeId, linkSrc.id, n.id).then((e) => { if (e) { edges.push({ id: e.id, a: e.a, b: e.b }); render(); } }).catch((er) => showMsg(er.message));
   }
   linkSrc = null;
@@ -1566,7 +1566,7 @@ function finalizeAreaSelection(p1, p2) {
 }
 function updateBatchPanel() {
   const n = areaSelection.size;
-  $('batch-count').textContent = n + (n === 1 ? ' esfera selecionada' : ' esferas selecionadas');
+  $('batch-count').textContent = n + (n === 1 ? ' habilidade selecionada' : ' habilidades selecionadas');
   batchPanelEl.classList.toggle('open', n > 0);
 }
 window.clearAreaSelection = () => { areaSelection = new Set(); batchPanelEl.classList.remove('open'); };
@@ -1578,7 +1578,7 @@ window.batchSet = (key, value) => {
   // canvas lê o campo direto da esfera em todo quadro — não precisa de nenhuma atualização visual manual aqui
   ids.forEach((id) => { const n = byId(id); if (n) n[key] = value; });
   Promise.all(ids.map((id) => db.updateTreeNode(id, { [key]: value })))
-    .then(() => showMsg(`${ids.length} esfera(s) atualizada(s).`))
+    .then(() => showMsg(`${ids.length} habilidade(s) atualizada(s).`))
     .catch((e) => showMsg(e.message));
 };
 
@@ -1650,14 +1650,14 @@ window.duplicateSelection = async (op) => {
     ]);
     [...internalSaved, ...boundarySaved].forEach((saved) => { if (saved) edges.push({ id: saved.id, a: saved.a, b: saved.b }); });
     render(); applyView(); clearAreaSelection();
-    showMsg(`${ids.length} esfera(s) duplicada(s).`);
+    showMsg(`${ids.length} habilidade(s) duplicada(s).`);
   } catch (e) { showMsg('Erro ao duplicar: ' + e.message); }
 };
 window.deleteAreaSelection = async () => {
   if (!isGM) return;
   const ids = [...areaSelection];
   if (!ids.length) return;
-  const ok = await confirmModal({ title: 'Excluir esferas', desc: `Excluir ${ids.length} esfera(s) selecionada(s)? As conexões delas também somem. Não dá pra desfazer.`, confirmLabel: 'Excluir' });
+  const ok = await confirmModal({ title: 'Excluir habilidades', desc: `Excluir ${ids.length} habilidade(s) selecionada(s)? As conexões delas também somem. Não dá pra desfazer.`, confirmLabel: 'Excluir' });
   if (!ok) return;
   showMsg('Excluindo…');
   Promise.all(ids.map((id) => db.deleteTreeNode(id))).then(() => {
@@ -1666,7 +1666,7 @@ window.deleteAreaSelection = async () => {
     nodes = nodes.filter((n) => !idSet.has(n.id));
     if (selected && idSet.has(selected.id)) { selected = null; closePanel(); }
     clearAreaSelection(); render(); applyView();
-    showMsg(`${ids.length} esfera(s) excluída(s).`);
+    showMsg(`${ids.length} habilidade(s) excluída(s).`);
   }).catch((e) => showMsg('Erro ao excluir: ' + e.message));
 };
 stage.addEventListener('wheel', (ev) => { ev.preventDefault(); zoomAt(ev.clientX, ev.clientY, ev.deltaY < 0 ? 1.12 : .89); }, { passive: false });
@@ -1700,7 +1700,7 @@ function focusedNode() { return focusedNodeId != null ? nodeById.get(focusedNode
 function focusedNodeArrayIndex() { return focusedNodeId != null ? nodes.findIndex((n) => n.id === focusedNodeId) : -1; }
 function updateFocusProxyLabel() {
   const n = focusedNode();
-  focusProxy.setAttribute('aria-label', n ? nodeAriaLabel(n) : 'Árvore de esferas — use as setas do teclado para navegar entre as esferas');
+  focusProxy.setAttribute('aria-label', n ? nodeAriaLabel(n) : 'Árvore de habilidades — use as setas do teclado para navegar entre as habilidades');
 }
 // se a navegação por seta levar o foco pra fora da área visível, ajusta a câmera o suficiente pra
 // trazer a esfera de volta pra dentro da tela — senão navegar por seta numa árvore grande seria "às cegas"

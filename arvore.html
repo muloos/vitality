@@ -110,13 +110,19 @@
   .rotgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
   .rotgrid .tool{border-color:var(--line2);text-align:center}
   .rotgrid .tool:hover{border-color:var(--brass);color:var(--bone)}
-  .chips{display:flex;gap:6px}
-  .chip{flex:1;text-align:center;font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;border:1px solid var(--line2);border-radius:9px;padding:9px 4px;cursor:pointer;color:var(--ink-dim);background:rgba(255,255,255,.04)}
+  /* flex-wrap: sem isso, uma linha com mais chips do que cabe (Forma tem 5, Via/afinidade pode ter
+     ainda mais) estourava a largura do painel em vez de quebrar — os chips do fim ficavam fora da
+     área clicável, sem como selecioná-los. min-width no chip evita que o texto quebre dentro do
+     próprio chip antes da linha inteira quebrar. */
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{flex:1 1 auto;min-width:70px;text-align:center;font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;border:1px solid var(--line2);border-radius:9px;padding:9px 4px;cursor:pointer;color:var(--ink-dim);background:rgba(255,255,255,.04)}
   .chip.on{color:#08161a;font-weight:700}
   .chip[data-v="passive"].on{background:var(--bone)}.chip[data-v="active"].on{background:var(--brass)}.chip[data-v="core"].on{background:#ecd9a4}
   .chip[data-s]{color:var(--ink-dim)}.chip[data-s].on{background:var(--maq);color:#08161a}
+  .chip[data-sh]{color:var(--ink-dim)}.chip[data-sh].on{background:var(--maq);color:#08161a}
   /* Estado (Ativada/Desativada) não tinha fundo próprio pro estado .on — herdava o texto escuro
-     genérico (.chip.on) sobre o fundo quase transparente padrão, ficando ilegível */
+     genérico (.chip.on) sobre o fundo quase transparente padrão, ficando ilegível. Forma (data-sh)
+     tinha o mesmo problema: só o texto escuro genérico, sem fundo próprio pro estado selecionado. */
   .chip[data-e="1"].on{background:var(--brass);color:#08161a}
   .chip[data-e="0"].on{background:var(--escarlate);color:#08161a}
   /* Vias — cor livre por via, então o chip lê a cor via custom property em vez de classes fixas */
@@ -196,7 +202,7 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
 <canvas id="worldCanvas"></canvas>
 <!-- acessibilidade por teclado do canvas (ver arvore.js: seção "teclado (canvas)") -->
 <button type="button" id="tree-focus-proxy" class="visually-hidden" aria-describedby="tree-focus-help"></button>
-<p id="tree-focus-help" class="visually-hidden">Use as setas do teclado para navegar entre as esferas da árvore; Enter ou Espaço abre a esfera focada.</p>
+<p id="tree-focus-help" class="visually-hidden">Use as setas do teclado para navegar entre as habilidades da árvore; Enter ou Espaço abre a habilidade focada.</p>
 <div id="tree-live" class="visually-hidden" aria-live="polite"></div>
 
 <div class="topbar">
@@ -234,11 +240,11 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
   </button>
   <div class="tools" role="radiogroup" aria-label="Ferramenta do editor">
     <button class="tool on" role="radio" aria-checked="true" data-tool="select" onclick="setTool('select')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3l6 16 2.5-6.5L20 10 5 3Z"/></svg></span>Selecionar</button>
-    <button class="tool" role="radio" aria-checked="false" data-tool="add" onclick="setTool('add')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg></span>Esfera</button>
+    <button class="tool" role="radio" aria-checked="false" data-tool="add" onclick="setTool('add')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg></span>Habilidade</button>
     <button class="tool" role="radio" aria-checked="false" data-tool="link" onclick="setTool('link')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 15l6-6"/><path d="M14 4.5 16 2.5a3.5 3.5 0 0 1 5 5L19 9.5"/><path d="M10 14.5 8 16.5a3.5 3.5 0 0 1-5-5L5 9.5"/></svg></span>Conectar</button>
     <button class="tool" role="radio" aria-checked="false" data-tool="area" onclick="setTool('area')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="3 2.5" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="1.5"/></svg></span>Área</button>
   </div>
-  <div class="tools" title="Como as esferas se encaixam (não muda cor nenhuma)" style="gap:8px">
+  <div class="tools" title="Como as habilidades se encaixam (não muda cor nenhuma)" style="gap:8px">
     <span style="font-family:var(--mono);font-size:11px;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em">◈ Formato</span>
     <select id="shape-select" onchange="changeGridShape(this.value)"
       style="background:rgba(255,255,255,.06);border:1px solid var(--line2);border-radius:7px;color:var(--ink);font-family:var(--mono);font-size:11px;padding:6px 8px;cursor:pointer">
@@ -253,7 +259,7 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
     <input type="hidden" id="bg-color" value="#1b1536">
     <button class="tool" onclick="saveBg()" style="border-color:var(--brass);color:var(--bone)">Aplicar</button>
   </div>
-  <div class="tools" title="Cor das linhas de conexão quando ambas as esferas estão Ativadas" style="gap:8px">
+  <div class="tools" title="Cor das linhas de conexão quando ambas as habilidades estão Ativadas" style="gap:8px">
     <span style="font-family:var(--mono);font-size:11px;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em;display:inline-flex;align-items:center;gap:5px"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 19 19 4"/><circle cx="4" cy="19" r="1.6" fill="currentColor" stroke="none"/><circle cx="19" cy="4" r="1.6" fill="currentColor" stroke="none"/></svg>Cor das linhas</span>
     <button type="button" class="color-swatch sm" style="--sw:#d6f0ff" onclick="openColorPicker(this, document.getElementById('edge-color').value, (v)=>{ document.getElementById('edge-color').value = v; previewEdgeColor(v); })"></button>
     <input type="hidden" id="edge-color" value="#d6f0ff">
@@ -262,21 +268,21 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
 </div>
 
 <div class="epanel" id="editor">
-  <div class="hd"><span class="eye">Editar esfera</span><button class="x" onclick="closePanel()">×</button></div>
+  <div class="hd"><span class="eye">Editar habilidade</span><button class="x" onclick="closePanel()">×</button></div>
   <div class="bd">
     <div class="fld"><label>Nome</label><input id="e-name" placeholder="Ex.: Sobrecarga" oninput="patch('name',this.value)"></div>
     <div class="fld"><label>Tipo</label><div class="chips" id="e-type">
       <div class="chip" data-v="passive" onclick="patch('kind','passive')">Passiva</div>
       <div class="chip" data-v="active" onclick="patch('kind','active')">Ativa</div>
       <div class="chip" data-v="core" onclick="patch('kind','core')">Núcleo</div></div>
-      <p style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);line-height:1.6;margin:8px 0 0">O Núcleo é a esfera inicial — só pode existir uma por árvore (escolher aqui troca de qual), já desbloqueada de graça pra todo jogador.</p>
+      <p style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);line-height:1.6;margin:8px 0 0">O Núcleo é a habilidade inicial — só pode existir uma por árvore (escolher aqui troca de qual), já desbloqueada de graça pra todo jogador.</p>
     </div>
     <div class="fld"><label>Tamanho</label><div class="chips" id="e-size">
       <div class="chip" data-s="small" onclick="patch('size','small')">Pequena</div>
       <div class="chip" data-s="medium" onclick="patch('size','medium')">Média</div>
       <div class="chip" data-s="large" onclick="patch('size','large')">Grande</div></div></div>
     <div class="fld"><label>Forma</label><div class="chips" id="e-shape">
-      <div class="chip" data-sh="circle" onclick="patch('shape','circle')">Esfera</div>
+      <div class="chip" data-sh="circle" onclick="patch('shape','circle')">Círculo</div>
       <div class="chip" data-sh="diamond" onclick="patch('shape','diamond')">Losango</div>
       <div class="chip" data-sh="triangle" onclick="patch('shape','triangle')">Triângulo</div>
       <div class="chip" data-sh="square" onclick="patch('shape','square')">Quadrado</div>
@@ -289,7 +295,7 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
       <div class="via-edit" id="via-edit" style="display:none"></div>
     </div>
     <div class="fld"><label>Custo em pontos</label><input id="e-cost" type="number" min="0" inputmode="numeric" placeholder="0" oninput="patch('cost',Math.max(0,parseInt(this.value)||0))"></div>
-    <div class="fld"><label>Descrição</label><textarea id="e-desc" placeholder="O que essa esfera faz..." oninput="patch('descr',this.value)"
+    <div class="fld"><label>Descrição</label><textarea id="e-desc" placeholder="O que essa habilidade faz..." oninput="patch('descr',this.value)"
       style="width:100%;min-height:80px;resize:vertical;line-height:1.55;background:rgba(255,255,255,.06);border:1px solid var(--line2);border-radius:10px;color:var(--ink);font-family:var(--serif);font-size:14px;padding:10px 12px"></textarea></div>
     <div class="fld"><label>Modificadores de status <span style="font-weight:400;color:var(--ink-faint);text-transform:none">(aplicado na ficha ao desbloquear)</span></label>
       <div id="e-mods" style="display:flex;flex-direction:column;gap:7px"></div>
@@ -301,7 +307,7 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
 </div>
 
 <div class="epanel" id="viewer">
-  <div class="hd"><span class="eye">Esfera</span><button class="x" onclick="closeViewer()">×</button></div>
+  <div class="hd"><span class="eye">Habilidade</span><button class="x" onclick="closeViewer()">×</button></div>
   <div class="bd">
     <div class="fld"><label>Nome</label><div id="v-name" style="font-family:var(--serif);font-size:16px;color:var(--ink)"></div></div>
     <div class="fld"><label>Tipo</label><div id="v-type" style="font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-dim)"></div></div>
@@ -317,9 +323,9 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
 </div>
 
 <div class="epanel" id="batchpanel">
-  <div class="hd"><span class="eye">Seleção de esferas</span><button class="x" onclick="clearAreaSelection()">×</button></div>
+  <div class="hd"><span class="eye">Seleção de habilidades</span><button class="x" onclick="clearAreaSelection()">×</button></div>
   <div class="bd">
-    <p id="batch-count" style="font-family:var(--mono);font-size:11px;color:var(--ink-dim);margin:0 0 14px;line-height:1.6">0 esferas selecionadas</p>
+    <p id="batch-count" style="font-family:var(--mono);font-size:11px;color:var(--ink-dim);margin:0 0 14px;line-height:1.6">0 habilidades selecionadas</p>
     <div class="section-title" style="margin:0 0 10px">Editar seleção</div>
     <div class="fld"><label>Via / afinidade</label><div class="chips" id="batch-fac"></div></div>
     <div class="fld"><label>Tamanho</label><div class="chips" id="batch-size">
@@ -327,7 +333,7 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
       <div class="chip" onclick="batchSet('size','medium')">Média</div>
       <div class="chip" onclick="batchSet('size','large')">Grande</div></div></div>
     <div class="fld"><label>Forma</label><div class="chips" id="batch-shape">
-      <div class="chip" onclick="batchSet('shape','circle')">Esfera</div>
+      <div class="chip" onclick="batchSet('shape','circle')">Círculo</div>
       <div class="chip" onclick="batchSet('shape','diamond')">Losango</div>
       <div class="chip" onclick="batchSet('shape','triangle')">Triângulo</div>
       <div class="chip" onclick="batchSet('shape','square')">Quadrado</div>

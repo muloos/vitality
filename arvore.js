@@ -1255,7 +1255,15 @@ function refreshEditorFields(n) {
   $('e-color-reset').style.display = n.color ? '' : 'none';
   renderModRows(n);
 }
+// os 3 painéis laterais (#editor, #viewer, #batchpanel) ficam todos na mesma posição fixa — sem
+// fechar os outros ao abrir um, dois (ou os três) apareciam empilhados por cima um do outro, e só
+// dava pra ver o de baixo fechando o de cima manualmente. Cada função que abre um painel chama isso
+// primeiro, garantindo que só um fica visível de cada vez.
+function closeOtherPanels(keepId) {
+  ['editor', 'viewer', 'batchpanel'].forEach((id) => { if (id !== keepId) $(id).classList.remove('open'); });
+}
 function openEditor(n) {
+  closeOtherPanels('editor');
   editorSnapshot = snapshotNode(n); editorDirty = false;
   const saveBtn = $('node-save-btn'); if (saveBtn) saveBtn.style.display = 'none';
   refreshEditorFields(n);
@@ -1387,6 +1395,7 @@ function canUnlock(n) {
   return { ok: true };
 }
 function openViewer(n) {
+  closeOtherPanels('viewer');
   $('v-name').textContent = n.name || '(sem nome)';
   $('v-type').textContent = n.kind === 'core' ? 'Núcleo' : n.kind === 'active' ? 'Ativa' : 'Passiva';
   const via = viaByKey(n.fac);
@@ -1596,6 +1605,7 @@ function finalizeAreaSelection(p1, p2) {
 function updateBatchPanel() {
   const n = areaSelection.size;
   $('batch-count').textContent = n + (n === 1 ? ' habilidade selecionada' : ' habilidades selecionadas');
+  if (n > 0) closeOtherPanels('batchpanel');
   batchPanelEl.classList.toggle('open', n > 0);
 }
 window.clearAreaSelection = () => { areaSelection = new Set(); batchPanelEl.classList.remove('open'); };
@@ -1643,11 +1653,20 @@ function transformPoint(x, y, cx, cy, op) {
   if (op === 'flip180') return { x: cx - dx, y: cy - dy };
   return { x, y };
 }
+// "Manter cor" (padrão) preserva a cor de cada habilidade original na cópia; "Trocar cor" aplica a
+// cor escolhida no swatch #dup-color-swatch em TODAS as cópias, não importa a cor de cada original.
+let dupColorMode = 'same';
+window.setDupColorMode = (mode) => {
+  dupColorMode = mode;
+  document.querySelectorAll('#dup-color-mode .chip').forEach((c) => c.classList.toggle('on', c.dataset.dcm === mode));
+  $('dup-color-row').style.display = mode === 'custom' ? 'flex' : 'none';
+};
 window.duplicateSelection = async (op) => {
   if (!isGM) return;
   const core = coreNode || nodes.find((n) => n.kind === 'core');
   const ids = [...areaSelection];
   if (!core || !ids.length) { showMsg('Nada pra duplicar.'); return; }
+  const customColor = dupColorMode === 'custom' ? ($('dup-color-swatch').style.getPropertyValue('--sw').trim() || null) : null;
   const idSet = new Set(ids);
   const internalEdges = edges.filter((e) => idSet.has(e.a) && idSet.has(e.b));
   const boundaryEdges = edges.filter((e) => idSet.has(e.a) !== idSet.has(e.b));
@@ -1659,7 +1678,7 @@ window.duplicateSelection = async (op) => {
       const n = byId(id); if (!n) return null;
       const t = transformPoint(n.x, n.y, core.x, core.y, op);
       const snapped = gridSnap(t.x, t.y);
-      const saved = await db.insertTreeNode(treeId, { name: n.name, kind: n.kind, fac: n.fac, size: n.size, shape: n.shape, color: n.color, cost: n.cost, descr: n.descr, x: snapped.x, y: snapped.y });
+      const saved = await db.insertTreeNode(treeId, { name: n.name, kind: n.kind, fac: n.fac, size: n.size, shape: n.shape, color: customColor ?? n.color, cost: n.cost, descr: n.descr, x: snapped.x, y: snapped.y });
       return { oldId: id, saved };
     }));
     const idMap = new Map();
@@ -1680,39 +1699,6 @@ window.duplicateSelection = async (op) => {
     [...internalSaved, ...boundarySaved].forEach((saved) => { if (saved) edges.push({ id: saved.id, a: saved.a, b: saved.b }); });
     render(); applyView(); clearAreaSelection();
     showMsg(`${ids.length} habilidade(s) duplicada(s).`);
-  } catch (e) { showMsg('Erro ao duplicar: ' + e.message); }
-};
-// duplicar "do lado" — desloca a cópia horizontalmente (não gira/espelha ao redor do Núcleo como
-// duplicateSelection acima) e aplica de propósito uma cor escolhida à parte, diferente da cor de
-// cada habilidade original (que não muda). Só reconecta as ligações INTERNAS da seleção — sem
-// conexão de fronteira com o Núcleo, já que aqui não existe relação de simetria com ele.
-window.duplicateSelectionSide = async () => {
-  if (!isGM) return;
-  const ids = [...areaSelection];
-  const selNodes = ids.map((id) => byId(id)).filter(Boolean);
-  if (!selNodes.length) { showMsg('Nada pra duplicar.'); return; }
-  const color = $('dup-color-swatch').style.getPropertyValue('--sw').trim() || null;
-  const idSet = new Set(ids);
-  const internalEdges = edges.filter((e) => idSet.has(e.a) && idSet.has(e.b));
-  const minX = Math.min(...selNodes.map((n) => n.x)), maxX = Math.max(...selNodes.map((n) => n.x));
-  const offsetX = (maxX - minX) + LINEAR_STEP * 2; // largura da seleção + um respiro de 2 células
-  showMsg('Duplicando…');
-  try {
-    const created = await Promise.all(ids.map(async (id) => {
-      const n = byId(id); if (!n) return null;
-      const snapped = gridSnap(n.x + offsetX, n.y);
-      const saved = await db.insertTreeNode(treeId, { name: n.name, kind: n.kind, fac: n.fac, size: n.size, shape: n.shape, color, cost: n.cost, descr: n.descr, x: snapped.x, y: snapped.y });
-      return { oldId: id, saved };
-    }));
-    const idMap = new Map();
-    created.forEach((c) => { if (c && c.saved) { nodes.push({ ...c.saved }); idMap.set(c.oldId, c.saved.id); } });
-    const internalSaved = await Promise.all(internalEdges.map((e) => {
-      const a = idMap.get(e.a), b = idMap.get(e.b); if (!a || !b) return null;
-      return db.insertTreeEdge(treeId, a, b);
-    }));
-    internalSaved.forEach((saved) => { if (saved) edges.push({ id: saved.id, a: saved.a, b: saved.b }); });
-    render(); applyView(); clearAreaSelection();
-    showMsg(`${ids.length} habilidade(s) duplicada(s) com nova cor.`);
   } catch (e) { showMsg('Erro ao duplicar: ' + e.message); }
 };
 window.deleteAreaSelection = async () => {

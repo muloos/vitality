@@ -121,6 +121,7 @@
   .chip[data-v="passive"].on{background:var(--bone)}.chip[data-v="active"].on{background:var(--brass)}.chip[data-v="core"].on{background:#ecd9a4}
   .chip[data-s]{color:var(--ink-dim)}.chip[data-s].on{background:var(--maq);color:#08161a}
   .chip[data-sh]{color:var(--ink-dim)}.chip[data-sh].on{background:var(--maq);color:#08161a}
+  .chip[data-dcm]{color:var(--ink-dim)}.chip[data-dcm].on{background:var(--maq);color:#08161a}
   /* Estado (Ativada/Desativada) não tinha fundo próprio pro estado .on — herdava o texto escuro
      genérico (.chip.on) sobre o fundo quase transparente padrão, ficando ilegível. Forma (data-sh)
      tinha o mesmo problema: só o texto escuro genérico, sem fundo próprio pro estado selecionado. */
@@ -358,14 +359,16 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
       <div class="chip" onclick="batchSet('enabled',true)">Ativada</div>
       <div class="chip" onclick="batchSet('enabled',false)">Desativada</div></div></div>
     <div class="section-title" id="dup-title" style="margin:16px 0 10px">Duplicar seleção</div>
-    <div class="rotgrid" id="rotgrid"></div>
-    <p id="dup-hint" style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);line-height:1.6;margin:12px 0 0"></p>
-    <div class="section-title" style="margin:16px 0 10px">Duplicar do lado com outra cor</div>
-    <div style="display:flex;align-items:center;gap:10px">
-      <button type="button" class="color-swatch sm" id="dup-color-swatch" style="--sw:#e3c071" onclick="openColorPicker(this, this.style.getPropertyValue('--sw'), ()=>{})" title="Cor da cópia" aria-label="Cor da cópia"></button>
-      <button type="button" class="btn sm auto" style="flex:1" onclick="duplicateSelectionSide()">Duplicar do lado</button>
+    <div class="chips" id="dup-color-mode">
+      <div class="chip on" data-dcm="same" onclick="setDupColorMode('same')">Manter cor</div>
+      <div class="chip" data-dcm="custom" onclick="setDupColorMode('custom')">Trocar cor</div>
     </div>
-    <p style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);line-height:1.6;margin:8px 0 0">Cria uma cópia deslocada ao lado da seleção, já com a cor escolhida acima — a original não muda de cor.</p>
+    <div id="dup-color-row" style="display:none;align-items:center;gap:10px;margin-top:8px">
+      <button type="button" class="color-swatch sm" id="dup-color-swatch" style="--sw:#e3c071" onclick="openColorPicker(this, this.style.getPropertyValue('--sw'), ()=>{})" title="Cor da cópia" aria-label="Cor da cópia"></button>
+      <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint)">Cor aplicada às cópias criadas abaixo</span>
+    </div>
+    <div class="rotgrid" id="rotgrid" style="margin-top:10px"></div>
+    <p id="dup-hint" style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);line-height:1.6;margin:12px 0 0"></p>
     <div class="actions" style="margin-top:16px"><button class="btn danger" onclick="deleteAreaSelection()">Excluir seleção</button><button class="btn" onclick="clearAreaSelection()">Cancelar</button></div>
   </div>
 </div>

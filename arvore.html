@@ -129,7 +129,10 @@
   /* Vias — cor livre por via, então o chip lê a cor via custom property em vez de classes fixas */
   .chip[data-f]{color:var(--vc,var(--ink-dim));border-color:var(--vc,var(--line2))}
   .chip[data-f].on{background:var(--vc,var(--ink-dim));color:#08161a}
-  .hud{position:fixed;left:12px;bottom:12px;z-index:30;display:flex;gap:8px;align-items:center}
+  /* left:70px (não 12px): o botão de tema (.theme-fab, lib/theme.css) é fixo em left:16px;bottom:16px
+     em TODO o app, círculo de 42px — com left:12px aqui os dois ficavam exatamente empilhados no
+     mesmo canto. 70px deixa o HUD do zoom começar depois do fab (16+42px de diâmetro + folga). */
+  .hud{position:fixed;left:70px;bottom:12px;z-index:30;display:flex;gap:8px;align-items:center}
   .zoom{display:flex;border-radius:11px;overflow:hidden;background:rgba(18,22,32,.9);border:1px solid var(--line2)}
   .zoom button{background:transparent;border:0;color:var(--ink-dim);font-family:var(--mono);font-size:16px;width:40px;height:38px;cursor:pointer}
   .zoom button:hover{color:var(--ink);background:rgba(255,255,255,.08)}
@@ -357,6 +360,12 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
     <div class="section-title" id="dup-title" style="margin:16px 0 10px">Duplicar seleção</div>
     <div class="rotgrid" id="rotgrid"></div>
     <p id="dup-hint" style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);line-height:1.6;margin:12px 0 0"></p>
+    <div class="section-title" style="margin:16px 0 10px">Duplicar do lado com outra cor</div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <button type="button" class="color-swatch sm" id="dup-color-swatch" style="--sw:#e3c071" onclick="openColorPicker(this, this.style.getPropertyValue('--sw'), ()=>{})" title="Cor da cópia" aria-label="Cor da cópia"></button>
+      <button type="button" class="btn sm auto" style="flex:1" onclick="duplicateSelectionSide()">Duplicar do lado</button>
+    </div>
+    <p style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);line-height:1.6;margin:8px 0 0">Cria uma cópia deslocada ao lado da seleção, já com a cor escolhida acima — a original não muda de cor.</p>
     <div class="actions" style="margin-top:16px"><button class="btn danger" onclick="deleteAreaSelection()">Excluir seleção</button><button class="btn" onclick="clearAreaSelection()">Cancelar</button></div>
   </div>
 </div>

@@ -1495,6 +1495,15 @@ function pointerMid() { const pts = [...activePointers.values()]; return { x: (p
 // próprio elemento de SVG com stopPropagation() (ver a nota histórica em startNodeDrag)
 stage.addEventListener('pointerdown', async (ev) => {
   activePointers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+  // botão do meio (scroll) sempre move a câmera, não importa a ferramenta ativa — sem isso, navegar
+  // enquanto a ferramenta "Habilidade"/"Área"/"Conectar" está ativa exigia trocar pra "Selecionar"
+  // primeiro. preventDefault evita o autoscroll nativo do navegador (aquele ícone de "bolinha" que
+  // aparece ao clicar o meio do mouse em várias páginas).
+  if (ev.button === 1) {
+    ev.preventDefault();
+    panning = true; stage.classList.add('panning'); pStart = { x: ev.clientX, y: ev.clientY }; vStart = { x: view.x, y: view.y };
+    return;
+  }
   if (activePointers.size === 2 && tool === 'select') {
     panning = false; areaDragging = false; stage.classList.remove('panning');
     pinchLastDist = pointerDist();
@@ -1503,8 +1512,17 @@ stage.addEventListener('pointerdown', async (ev) => {
   if (activePointers.size > 1) return; // dedo extra durante outro gesto — ignora
 
   const p = toWorld(ev.clientX, ev.clientY);
-  // ferramenta "área" ignora esferas no hit-test de propósito — clicar numa esfera com essa
-  // ferramenta ativa começa um marquee a partir dali, igual antes (não seleciona/arrasta ela)
+  // ferramenta "área" + Ctrl/Cmd: clicar numa habilidade alterna ela na seleção uma a uma, sem
+  // precisar arrastar um retângulo em volta dela. Sem Ctrl, continua ignorando habilidades no
+  // hit-test de propósito (clicar nelas só inicia o marquee a partir dali, como sempre foi).
+  if (tool === 'area' && isGM && (ev.ctrlKey || ev.metaKey)) {
+    const hit = hitTestNodeAt(p.x, p.y);
+    if (hit && hit.kind !== 'core') {
+      if (areaSelection.has(hit.id)) areaSelection.delete(hit.id); else areaSelection.add(hit.id);
+      updateBatchPanel();
+      return;
+    }
+  }
   const hitNode = tool !== 'area' ? hitTestNodeAt(p.x, p.y) : null;
   if (hitNode) {
     if (!isGM) { selectNode(hitNode); return; }
@@ -1662,6 +1680,39 @@ window.duplicateSelection = async (op) => {
     [...internalSaved, ...boundarySaved].forEach((saved) => { if (saved) edges.push({ id: saved.id, a: saved.a, b: saved.b }); });
     render(); applyView(); clearAreaSelection();
     showMsg(`${ids.length} habilidade(s) duplicada(s).`);
+  } catch (e) { showMsg('Erro ao duplicar: ' + e.message); }
+};
+// duplicar "do lado" — desloca a cópia horizontalmente (não gira/espelha ao redor do Núcleo como
+// duplicateSelection acima) e aplica de propósito uma cor escolhida à parte, diferente da cor de
+// cada habilidade original (que não muda). Só reconecta as ligações INTERNAS da seleção — sem
+// conexão de fronteira com o Núcleo, já que aqui não existe relação de simetria com ele.
+window.duplicateSelectionSide = async () => {
+  if (!isGM) return;
+  const ids = [...areaSelection];
+  const selNodes = ids.map((id) => byId(id)).filter(Boolean);
+  if (!selNodes.length) { showMsg('Nada pra duplicar.'); return; }
+  const color = $('dup-color-swatch').style.getPropertyValue('--sw').trim() || null;
+  const idSet = new Set(ids);
+  const internalEdges = edges.filter((e) => idSet.has(e.a) && idSet.has(e.b));
+  const minX = Math.min(...selNodes.map((n) => n.x)), maxX = Math.max(...selNodes.map((n) => n.x));
+  const offsetX = (maxX - minX) + LINEAR_STEP * 2; // largura da seleção + um respiro de 2 células
+  showMsg('Duplicando…');
+  try {
+    const created = await Promise.all(ids.map(async (id) => {
+      const n = byId(id); if (!n) return null;
+      const snapped = gridSnap(n.x + offsetX, n.y);
+      const saved = await db.insertTreeNode(treeId, { name: n.name, kind: n.kind, fac: n.fac, size: n.size, shape: n.shape, color, cost: n.cost, descr: n.descr, x: snapped.x, y: snapped.y });
+      return { oldId: id, saved };
+    }));
+    const idMap = new Map();
+    created.forEach((c) => { if (c && c.saved) { nodes.push({ ...c.saved }); idMap.set(c.oldId, c.saved.id); } });
+    const internalSaved = await Promise.all(internalEdges.map((e) => {
+      const a = idMap.get(e.a), b = idMap.get(e.b); if (!a || !b) return null;
+      return db.insertTreeEdge(treeId, a, b);
+    }));
+    internalSaved.forEach((saved) => { if (saved) edges.push({ id: saved.id, a: saved.a, b: saved.b }); });
+    render(); applyView(); clearAreaSelection();
+    showMsg(`${ids.length} habilidade(s) duplicada(s) com nova cor.`);
   } catch (e) { showMsg('Erro ao duplicar: ' + e.message); }
 };
 window.deleteAreaSelection = async () => {

@@ -1048,13 +1048,16 @@ function drawEdge(ctx, A, B, e, now) {
     // de graça em cima do stroke, sem o custo por-elemento que o drop-shadow tinha em SVG — o
     // pulsar (2.6s) não depende mais de liteMode, só o próprio shadowBlur (mais caro por chamada
     // que um stroke simples) continua desligado em árvores muito grandes.
-    let mul = .78;
+    // pulso bem mais perceptível (fade in/out real) do que a variação sutil de antes (.78–1) — vai
+    // de um brilho quase apagado até um brilho forte, dando a sensação de energia fluindo pela
+    // conexão em vez de uma linha estática.
+    let mul = .3;
     if (!REDUCED) {
       const phase = ((now / 1000) % 2.6) / 2.6 * Math.PI * 2;
-      mul = 0.78 + 0.22 * (0.5 - 0.5 * Math.cos(phase));
+      mul = 0.3 + 0.7 * (0.5 - 0.5 * Math.cos(phase));
     }
     ctx.strokeStyle = `rgba(${er},${eg},${eb},.95)`; ctx.lineWidth = 2;
-    if (!liteMode) { ctx.shadowColor = `rgba(${er},${eg},${eb},${mul.toFixed(3)})`; ctx.shadowBlur = 9; }
+    if (!liteMode) { ctx.shadowColor = `rgba(${er},${eg},${eb},${mul.toFixed(3)})`; ctx.shadowBlur = 4 + 14 * mul; }
   } else {
     ctx.strokeStyle = `rgba(${er},${eg},${eb},.3)`; ctx.lineWidth = 1.4;
   }
@@ -1070,13 +1073,17 @@ function drawNode(ctx, n, now) {
   const isMultisel = areaSelection.has(n.id);
   ctx.save();
   ctx.translate(n.x, n.y);
+  // desativada NÃO apaga a cor — só apaga bem forte. Antes o halo/textura/aro coloridos eram
+  // pulados de propósito quando desativada, e sobrava só o corpo escuro + um fio quase invisível
+  // (.25 de alpha) — na prática lia como "preto sem efeito nenhum". fadeMul multiplica em cima do
+  // alpha normal de cada elemento colorido, deixando tudo bem apagado (quase cinza) mas ainda dá
+  // pra reconhecer a cor original de cada via/habilidade.
+  const fadeMul = disabled ? 0.2 : 1;
   // halo — ver comentário nos sprites; substitui filter:drop-shadow (caro por elemento em SVG)
-  if (!disabled) {
-    const glowR = r * 2.4, sprite = glowSpriteFor(color, glowR);
-    ctx.globalAlpha = acquired ? .9 : .6;
-    ctx.drawImage(sprite, -glowR, -glowR, glowR * 2, glowR * 2);
-    ctx.globalAlpha = 1;
-  }
+  const glowR = r * 2.4, sprite = glowSpriteFor(color, glowR);
+  ctx.globalAlpha = (acquired ? .9 : .6) * fadeMul;
+  ctx.drawImage(sprite, -glowR, -glowR, glowR * 2, glowR * 2);
+  ctx.globalAlpha = 1;
   // corpo (gradiente escuro, sprite cacheado por forma+raio) + aro finíssimo translúcido na cor da via
   const shape = n.shape || 'circle';
   ctx.drawImage(bodySpriteFor(shape, r), -r, -r, r * 2, r * 2);
@@ -1086,21 +1093,19 @@ function drawNode(ctx, n, now) {
   // textura de pontos giratória (sólido 3D cacheado por forma+cor, ver dotSpriteFor) — recortada
   // na forma da esfera por segurança (o modelo 3D de cada forma já projeta dentro da silhueta na
   // maioria dos ângulos, mas o recorte evita qualquer vazamento nos cantos em rotações extremas)
-  if (!disabled) {
-    ctx.save();
-    traceShapePath(ctx, shape, r); ctx.clip();
-    ctx.drawImage(dotSpriteFor(shape, color), -r, -r, r * 2, r * 2);
-    ctx.restore();
-  }
+  ctx.save();
+  traceShapePath(ctx, shape, r); ctx.clip();
+  ctx.globalAlpha = fadeMul;
+  ctx.drawImage(dotSpriteFor(shape, color), -r, -r, r * 2, r * 2);
+  ctx.globalAlpha = 1;
+  ctx.restore();
   // aro de destaque (rim) — dourado grosso se o JOGADOR já desbloqueou de verdade, senão a cor da via
-  if (!disabled) {
-    ctx.strokeStyle = acquired ? cssVar('--brass', '#18b5c6') : color;
-    ctx.lineWidth = acquired ? 3 : 1.8;
-    ctx.globalAlpha = .9;
-    if (n === linkSrc) ctx.setLineDash([2, 4]);
-    traceShapePath(ctx, shape, r); ctx.stroke();
-    ctx.setLineDash([]); ctx.globalAlpha = 1;
-  }
+  ctx.strokeStyle = acquired ? cssVar('--brass', '#18b5c6') : color;
+  ctx.lineWidth = acquired ? 3 : 1.8;
+  ctx.globalAlpha = .9 * fadeMul;
+  if (n === linkSrc) ctx.setLineDash([2, 4]);
+  traceShapePath(ctx, shape, r); ctx.stroke();
+  ctx.setLineDash([]); ctx.globalAlpha = 1;
   // flash de desbloqueio — anel branco que expande e some (disparado em doUnlock)
   if (n._flashStart != null) {
     const p = (now - n._flashStart) / 700;

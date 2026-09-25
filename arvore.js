@@ -922,9 +922,14 @@ function rebuildIndexes() { nodeById = new Map(nodes.map((n) => [n.id, n])); }
 // distância de cada habilidade até o Núcleo em unidades de MUNDO, seguindo as conexões (Dijkstra
 // sobre o comprimento real de cada uma) — base da onda de luz das conexões: ela sai do Núcleo e
 // avança pela árvore inteira na mesma velocidade, chegando em cada habilidade na hora certa pra
-// seguir pelas conexões seguintes. Nada a ver com desbloqueio/pontos. Recalculada quando a
-// topologia muda (render()) e ao soltar uma habilidade arrastada (posição muda os comprimentos) —
-// nunca por quadro.
+// seguir pelas conexões seguintes. Nada a ver com desbloqueio/pontos, mas segue estritamente a
+// topologia ATIVADA (n.enabled, mesmo critério do "on" em drawEdge): uma conexão desativada não
+// entra no grafo de busca, mesmo sendo geometricamente mais curta. Sem essa exclusão, um atalho
+// desativado (ex.: um "loop" entre duas trilhas) virava sempre o caminho mais rápido pro Dijkstra,
+// e a onda cortava caminho por ele em vez de seguir a única trilha de fato ativada até o fim —
+// terminava "chegando antes" nas esferas do topo por uma via que sequer estava ligada de verdade.
+// Recalculada quando a topologia muda (render()) e ao soltar uma habilidade arrastada (posição
+// muda os comprimentos) — nunca por quadro.
 let nodeDist = new Map(), maxNodeDist = 0;
 function computeNodeDists() {
   nodeDist = new Map(); maxNodeDist = 0;
@@ -933,6 +938,7 @@ function computeNodeDists() {
   const link = (from, to, w) => { if (!adj.has(from)) adj.set(from, []); adj.get(from).push([to, w]); };
   for (const e of edges) {
     const A = nodeById.get(e.a), B = nodeById.get(e.b); if (!A || !B) continue;
+    if (A.enabled === false || B.enabled === false) continue; // desativada: fora do caminho da onda
     const w = Math.hypot(A.x - B.x, A.y - B.y);
     link(A.id, B.id, w); link(B.id, A.id, w);
   }
@@ -1479,9 +1485,12 @@ window.patch = async (k, v) => {
   const coreChanged = k === 'kind' && selected.kind === 'core' && v !== 'core';
   selected[k] = v;
   // canvas lê nome/custo/tamanho/estado/via/tipo direto de "selected" em todo quadro — nenhum campo
-  // precisa de atualização manual aqui além do caso especial acima (troca de Núcleo mexe com a
-  // âncora dos anéis/grade pra TODA a árvore, não só com o visual da esfera em si)
+  // precisa de atualização manual aqui além dos dois casos especiais abaixo. Núcleo mexe com a
+  // âncora dos anéis/grade pra TODA a árvore; "enabled" precisa recalcular o caminho da onda de luz
+  // (computeNodeDists ignora conexões desativadas — ver comentário lá), já que esse cálculo é
+  // cacheado e não roda todo quadro como o resto do desenho.
   if (coreChanged) { render(); applyView(); }
+  else if (k === 'enabled') computeNodeDists();
   refreshEditorFields(selected); markEditorDirty();
 };
 // cor própria da habilidade, independente da via — ver drawNode (color = n.color || via.color)
@@ -1739,6 +1748,7 @@ window.batchSet = (key, value) => {
   if (!ids.length) return;
   // canvas lê o campo direto da esfera em todo quadro — não precisa de nenhuma atualização visual manual aqui
   ids.forEach((id) => { const n = byId(id); if (n) n[key] = value; });
+  if (key === 'enabled') computeNodeDists(); // a onda de luz é cacheada e ignora conexões desativadas — ver computeNodeDists
   Promise.all(ids.map((id) => db.updateTreeNode(id, { [key]: value })))
     .then(() => showMsg(`${ids.length} habilidade(s) atualizada(s).`))
     .catch((e) => showMsg(e.message));

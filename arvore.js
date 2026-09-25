@@ -276,7 +276,7 @@ let DPR = Math.min(devicePixelRatio || 1, 2); // usado pelo #fx (partículas) e 
 // Com canvas isso já não é sobre custo de repintura de DOM (não existe mais DOM por esfera) — é só
 // pra não gastar quadro à toa com sprites de textura sendo regerados sem necessidade numa árvore
 // gigante. Reavaliado a cada render() (troca de árvore, adicionar/excluir esfera).
-const LITE_MODE_NODE_THRESHOLD = 30;
+const LITE_MODE_NODE_THRESHOLD = 150;
 let liteMode = false;
 let isGM = false; // só vira true depois do boot confirmar que o usuário é dono do sistema
 let nodeById = new Map(); // reconstruído em rebuildIndexes() — usado no lugar de nodes.find()
@@ -1058,26 +1058,29 @@ function drawEdge(ctx, A, B, e, now) {
   ctx.save();
   ctx.lineCap = 'round';
   if (e === selectedEdge) {
+    // só existe UMA conexão selecionada por vez — custo irrelevante mesmo em árvore gigante, então
+    // não faz sentido apagar isso em liteMode (diferente do brilho de TODAS as conexões ativas
+    // abaixo, que sim escala com o tamanho da árvore)
     ctx.strokeStyle = cssVar('--brass', '#18b5c6'); ctx.lineWidth = 3;
-    if (!liteMode) { ctx.shadowColor = cssVar('--brass', '#18b5c6'); ctx.shadowBlur = 12; }
+    ctx.shadowColor = cssVar('--brass', '#18b5c6'); ctx.shadowBlur = 12;
   } else if (on) {
     // brilho de verdade via shadowBlur nativo do canvas (equivalente ao filter:drop-shadow do
     // design original) — a versão anterior desenhava uma SEGUNDA linha larga e translúcida por
     // baixo da nítida, sem borrão nenhum: no zoom normal isso lia como uma faixa sólida meio
     // esbranquiçada ao redor da linha, não como um brilho de verdade. shadowBlur aplica o borrão
-    // de graça em cima do stroke, sem o custo por-elemento que o drop-shadow tinha em SVG — o
-    // pulsar (2.6s) não depende mais de liteMode, só o próprio shadowBlur (mais caro por chamada
-    // que um stroke simples) continua desligado em árvores muito grandes.
+    // de graça em cima do stroke, sem o custo por-elemento que o drop-shadow tinha em SVG.
     // pulso bem mais perceptível (fade in/out real) do que a variação sutil de antes (.78–1) — vai
     // de um brilho quase apagado até um brilho forte, dando a sensação de energia fluindo pela
-    // conexão em vez de uma linha estática.
+    // conexão em vez de uma linha estática. Em liteMode (árvore grande demais pra recalcular o
+    // brilho de TODA conexão a cada quadro) o brilho fica num valor FIXO em vez de animado — ainda
+    // dá pra ver que a conexão está ativa, só sem o "respirar" constante.
     let mul = .3;
-    if (!REDUCED) {
+    if (!REDUCED && !liteMode) {
       const phase = ((now / 1000) % 2.6) / 2.6 * Math.PI * 2;
       mul = 0.3 + 0.7 * (0.5 - 0.5 * Math.cos(phase));
-    }
+    } else if (liteMode) mul = .65;
     ctx.strokeStyle = `rgba(${er},${eg},${eb},.95)`; ctx.lineWidth = 2;
-    if (!liteMode) { ctx.shadowColor = `rgba(${er},${eg},${eb},${mul.toFixed(3)})`; ctx.shadowBlur = 4 + 14 * mul; }
+    ctx.shadowColor = `rgba(${er},${eg},${eb},${mul.toFixed(3)})`; ctx.shadowBlur = 4 + 14 * mul;
   } else {
     ctx.strokeStyle = `rgba(${er},${eg},${eb},.3)`; ctx.lineWidth = 1.4;
   }
@@ -1086,8 +1089,10 @@ function drawEdge(ctx, A, B, e, now) {
   // perto do Núcleo, ver nodeDepth/computeNodeDepths) pro mais FUNDO — dá a sensação visual de
   // "energia fluindo rumo à próxima camada", não só uma linha parada. Só nas conexões ativas
   // (mesmo critério do brilho acima) e com direção definida (as duas pontas em profundidades
-  // diferentes — sem isso não há "pra frente" nenhum pra apontar).
-  if (on && e !== selectedEdge && !liteMode) {
+  // diferentes — sem isso não há "pra frente" nenhum pra apontar). NÃO depende de liteMode: ao
+  // contrário do shadowBlur acima, isso só faz drawImage de um sprite pequeno já cacheado — mesmo
+  // custo do halo/textura de cada esfera, que também nunca foram desligados em árvore grande.
+  if (on && e !== selectedEdge) {
     const depthA = nodeDepth.get(A.id), depthB = nodeDepth.get(B.id);
     if (depthA != null && depthB != null && depthA !== depthB) {
       const [from, to] = depthA < depthB ? [A, B] : [B, A];

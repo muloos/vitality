@@ -919,24 +919,33 @@ function computeVisibleIds() {
 // de UMA esfera arrastada, sem precisar varrer todas as conexões — em canvas, drawWorld() já varre
 // "edges" inteiro todo quadro de qualquer jeito, então o índice seria trabalho refeito à toa.)
 function rebuildIndexes() { nodeById = new Map(nodes.map((n) => [n.id, n])); }
-// distância (em número de conexões) de cada esfera até o Núcleo, via BFS — usada só pra saber o
-// SENTIDO do pulso de energia nas conexões (sempre do nível mais raso pro mais fundo, rumo à
-// periferia), não tem nada a ver com desbloqueio/pontos. Recalculada só quando a topologia muda
-// (render()), não por quadro — é uma travessia do grafo inteiro, não algo pra repetir 60x/segundo.
-let nodeDepth = new Map();
-function computeNodeDepths() {
-  nodeDepth = new Map();
+// distância de cada habilidade até o Núcleo em unidades de MUNDO, seguindo as conexões (Dijkstra
+// sobre o comprimento real de cada uma) — base da onda de luz das conexões: ela sai do Núcleo e
+// avança pela árvore inteira na mesma velocidade, chegando em cada habilidade na hora certa pra
+// seguir pelas conexões seguintes. Nada a ver com desbloqueio/pontos. Recalculada quando a
+// topologia muda (render()) e ao soltar uma habilidade arrastada (posição muda os comprimentos) —
+// nunca por quadro.
+let nodeDist = new Map(), maxNodeDist = 0;
+function computeNodeDists() {
+  nodeDist = new Map(); maxNodeDist = 0;
   if (!coreNode) return;
-  nodeDepth.set(coreNode.id, 0);
-  const queue = [coreNode.id];
-  while (queue.length) {
-    const id = queue.shift();
-    const d = nodeDepth.get(id);
-    for (const e of edges) {
-      const other = e.a === id ? e.b : (e.b === id ? e.a : null);
-      if (other != null && !nodeDepth.has(other)) { nodeDepth.set(other, d + 1); queue.push(other); }
-    }
+  const adj = new Map();
+  const link = (from, to, w) => { if (!adj.has(from)) adj.set(from, []); adj.get(from).push([to, w]); };
+  for (const e of edges) {
+    const A = nodeById.get(e.a), B = nodeById.get(e.b); if (!A || !B) continue;
+    const w = Math.hypot(A.x - B.x, A.y - B.y);
+    link(A.id, B.id, w); link(B.id, A.id, w);
   }
+  nodeDist.set(coreNode.id, 0);
+  const done = new Set();
+  for (;;) { // O(V²) simples — roda só em mudança de topologia/posição, nunca por quadro
+    let cur = null, best = Infinity;
+    for (const [id, d] of nodeDist) if (!done.has(id) && d < best) { best = d; cur = id; }
+    if (cur == null) break;
+    done.add(cur);
+    for (const [nb, w] of adj.get(cur) || []) if (!nodeDist.has(nb) || best + w < nodeDist.get(nb)) nodeDist.set(nb, best + w);
+  }
+  for (const d of nodeDist.values()) if (d > maxNodeDist) maxNodeDist = d;
 }
 // chamado sempre que nodes/edges são substituídos ou ganham/perdem itens (criar/excluir/duplicar
 // esfera ou conexão, carregar a árvore) — recalcula os índices e o Núcleo. NÃO desenha nada: o
@@ -945,7 +954,7 @@ function computeNodeDepths() {
 function render() {
   coreNode = nodes.find((n) => n.kind === 'core') || null;
   rebuildIndexes();
-  computeNodeDepths();
+  computeNodeDists();
   refreshCount();
   buildRings(); // o alcance dos anéis decorativos depende de onde as esferas estão — ver ringExtent()
 }
@@ -1022,7 +1031,21 @@ function cssVar(name, fallback) {
 
 /* ---------- desenho ---------- */
 let hoveredNode = null; // esfera sob o cursor (mostra o rótulo do nome, igual :hover de antes)
+// onda de luz: UMA frente pra árvore inteira (em unidades de mundo a partir do Núcleo), então
+// todas as conexões ficam sincronizadas — sai do Núcleo, percorre cada camada, e só depois que a
+// cauda passa da habilidade mais distante espera um instante e recomeça do Núcleo. Velocidade
+// mínima fixa (calma); em árvore muito grande acelera só o suficiente pro ciclo não passar de
+// WAVE_MAX_CYCLE_S. null = sem onda (movimento reduzido no sistema, ou árvore sem Núcleo).
+const WAVE_SPEED = 45, WAVE_MAX_CYCLE_S = 18, WAVE_PAUSE_S = 1.4, WAVE_TAIL = 110, WAVE_HEAD = 22;
+let waveFront = null;
+function updateWaveFront(now) {
+  if (REDUCED || !coreNode || maxNodeDist <= 0) { waveFront = null; return; }
+  const travel = maxNodeDist + WAVE_TAIL;
+  const speed = Math.max(WAVE_SPEED, travel / WAVE_MAX_CYCLE_S);
+  waveFront = ((now / 1000) % (travel / speed + WAVE_PAUSE_S)) * speed; // na pausa passa de travel: nada acende
+}
 function drawWorld(now) {
+  updateWaveFront(now);
   const ctx = sctx;
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.clearRect(0, 0, W, H);
@@ -1050,18 +1073,10 @@ function drawWorld(now) {
 // glow nenhum". shadowBlur também ignora zoom/DPR e é a operação mais cara por chamada. Traços
 // empilhados em unidades de mundo aproximam o degradê de um brilho, acompanham o zoom e custam só
 // uns strokes a mais — barato o bastante pra rodar em qualquer tamanho de árvore.
-const EDGE_GLOW_LAYERS = [[22, .08], [13, .13], [7, .22], [3.5, .34]]; // [largura, alpha no pico do pulso]
-const PULSE_SPRITE_R = 16; // sprite único do pulso, redimensionado no drawImage (um só no cache)
-// fase própria por conexão (hash do id) — sem isso todos os pulsos da árvore andavam em uníssono
-function edgePhase(e) {
-  if (e._ph == null) {
-    let h = 0; const s = String(e.id);
-    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
-    e._ph = ((h >>> 0) % 1000) / 1000;
-  }
-  return e._ph;
-}
-function drawEdge(ctx, A, B, e, now) {
+const EDGE_GLOW_LAYERS = [[22, .05], [13, .08], [7, .14], [3.5, .22]]; // [largura, alpha] — brilho base, estável
+// faixa de luz da onda: mesmas camadas empilhadas, bem mais fortes, na cor da linha puxada pro branco
+const WAVE_GLOW_LAYERS = [[26, .2], [15, .32], [8, .5], [3, .95]];
+function drawEdge(ctx, A, B, e) {
   const on = A.enabled !== false && B.enabled !== false;
   const [er, eg, eb] = hexToRgb(edgeColor);
   ctx.save();
@@ -1074,48 +1089,41 @@ function drawEdge(ctx, A, B, e, now) {
     ctx.restore(); return;
   }
   if (!on) { line(1.4, `rgba(${er},${eg},${eb},.3)`); ctx.restore(); return; }
-  // "respirar" (fade in/out, 2.6s) — com movimento reduzido fica parado num valor ALTO; antes ficava
-  // parado no mínimo, então justamente quem pediu menos animação via o brilho mais fraco possível
-  let mul = .75;
-  if (!REDUCED) mul = 0.35 + 0.65 * (0.5 - 0.5 * Math.cos(((now / 1000) % 2.6) / 2.6 * Math.PI * 2));
-  const glow = 0.25 + 0.75 * mul;
-  for (const [w, a] of EDGE_GLOW_LAYERS) line(w, `rgba(${er},${eg},${eb},${(a * glow).toFixed(3)})`);
-  line(1.8, `rgba(${er},${eg},${eb},${(0.7 + 0.3 * mul).toFixed(3)})`);
-  drawProgressPulse(ctx, A, B, e, now);
+  // brilho base estável — o movimento fica só por conta da onda, pra não competir com ela
+  for (const [w, a] of EDGE_GLOW_LAYERS) line(w, `rgba(${er},${eg},${eb},${a})`);
+  line(1.8, `rgba(${er},${eg},${eb},.8)`);
+  drawWaveOnEdge(ctx, A, B, er, eg, eb);
   ctx.restore();
 }
-// pulso de progresso: trilha de faíscas viajando do nível mais RASO (perto do Núcleo, ver
-// nodeDepth) pro mais FUNDO — mesma direção em que o desbloqueio avança (canUnlock exige conexão
-// com algo já desbloqueado). Sem direção definida (pontas na mesma profundidade, ou fora do
-// alcance do Núcleo) não desenha nada — não há "pra frente" pra apontar.
-function drawProgressPulse(ctx, A, B, e, now) {
-  const dA = nodeDepth.get(A.id), dB = nodeDepth.get(B.id);
-  if (dA == null || dB == null || dA === dB) return;
-  const [from, to] = dA < dB ? [A, B] : [B, A];
+// trecho da onda de luz que está passando por esta conexão agora (se estiver): uma faixa mais
+// intensa do próprio brilho da linha, com cauda longa que se apaga pra trás e cabeça suave, indo
+// sempre do lado mais perto do Núcleo pro mais longe. O trecho vai de centro a centro — dentro das
+// esferas fica escondido pelo corpo delas, o que lê como a luz "entrando" na habilidade e saindo
+// pela conexão seguinte no instante certo (a distância de cada uma já inclui esse trecho).
+function drawWaveOnEdge(ctx, A, B, er, eg, eb) {
+  if (waveFront == null) return;
+  const dA = nodeDist.get(A.id), dB = nodeDist.get(B.id);
+  if (dA == null || dB == null) return;
+  const [from, to, d0] = dA <= dB ? [A, B, dA] : [B, A, dB];
   const dx = to.x - from.x, dy = to.y - from.y, len = Math.hypot(dx, dy) || 1;
-  // só o trecho VISÍVEL entre as bordas das duas esferas — o corpo delas é opaco, e o pulso indo de
-  // centro a centro ficava escondido por baixo delas boa parte do caminho em conexões curtas
-  const r0 = nodeRadius(from), r1 = nodeRadius(to), seg = len - r0 - r1;
-  if (seg < 6) return;
-  const ux = dx / len, uy = dy / len, sx = from.x + ux * r0, sy = from.y + uy * r0;
-  // velocidade em unidades de mundo/s (não fração do trajeto): curtas e longas andam no mesmo
-  // ritmo visual; o teto evita que uma conexão curtinha vire um pisca-pisca. Com movimento
-  // reduzido a trilha fica parada no meio do caminho — ainda mostra a direção, sem animar.
-  const rate = Math.min(70 / seg, 0.9);
-  const head = REDUCED ? 0.65 : ((now / 1000) * rate + edgePhase(e)) % 1;
-  const hr = Math.min(9, seg * 0.3), gap = Math.min(0.12, 7 / seg);
-  const sprite = glowSpriteFor('#ffffff', PULSE_SPRITE_R);
-  ctx.fillStyle = '#fff';
-  for (let i = 0; i < 4; i++) {
-    const t = head - i * gap;
-    if (t < 0) break; // cauda ainda "saindo" da esfera de origem — não dá a volta pro outro lado
-    const ends = Math.min(1, t / 0.1, (1 - t) / 0.1); // surge/some suave nas bordas das esferas
-    const a = (1 - i / 4) * ends, r = hr * (1 - i * 0.15);
-    const px = sx + ux * seg * t, py = sy + uy * seg * t;
-    ctx.globalAlpha = a * 0.9;
-    ctx.drawImage(sprite, px - r, py - r, r * 2, r * 2);
-    ctx.globalAlpha = a;
-    ctx.beginPath(); ctx.arc(px, py, r * 0.3, 0, Math.PI * 2); ctx.fill();
+  const p = waveFront - d0; // posição da frente da onda ao longo desta conexão
+  if (p + WAVE_HEAD <= 0 || p - WAVE_TAIL >= len) return;
+  const ux = dx / len, uy = dy / len;
+  const at = (s) => [from.x + ux * s, from.y + uy * s];
+  const [gx0, gy0] = at(p - WAVE_TAIL), [gx1, gy1] = at(p + WAVE_HEAD);
+  const hr = Math.round(er + (255 - er) * .55), hg = Math.round(eg + (255 - eg) * .55), hb = Math.round(eb + (255 - eb) * .55);
+  const c = (a) => `rgba(${hr},${hg},${hb},${a})`;
+  const g = ctx.createLinearGradient(gx0, gy0, gx1, gy1);
+  g.addColorStop(0, c(0));
+  g.addColorStop(.5, c(.3));
+  g.addColorStop(WAVE_TAIL / (WAVE_TAIL + WAVE_HEAD), c(1));
+  g.addColorStop(1, c(0));
+  const [x0, y0] = at(Math.max(0, p - WAVE_TAIL)), [x1, y1] = at(Math.min(len, p + WAVE_HEAD));
+  ctx.lineCap = 'butt'; // ponta reta cortada no centro das esferas fica escondida pelo corpo delas
+  ctx.strokeStyle = g;
+  for (const [w, a] of WAVE_GLOW_LAYERS) {
+    ctx.globalAlpha = a; ctx.lineWidth = w;
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
   }
   ctx.globalAlpha = 1;
 }
@@ -1272,7 +1280,7 @@ function startNodeDrag(n, ev) {
     // a grade fica visível (ver setTool). Escondendo sempre aqui, incondicionalmente, a grade sumia
     // depois de soltar uma esfera arrastada mesmo com a ferramenta "esfera" ainda ligada.
     if (tool !== 'add') gridPolarEl.classList.remove('show');
-    if (moved) { db.updateTreeNode(n.id, { x: n.x, y: n.y }).catch((e) => showMsg(e.message)); buildRings(); }
+    if (moved) { db.updateTreeNode(n.id, { x: n.x, y: n.y }).catch((e) => showMsg(e.message)); buildRings(); computeNodeDists(); }
     else selectNode(n); };
   stage.addEventListener('pointermove', mv); stage.addEventListener('pointerup', up);
 }

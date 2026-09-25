@@ -2251,7 +2251,7 @@ async function renderArvores(c) {
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         ${DRAG_HANDLE_SVG}
         <input class="nm" value="${esc(t.name)}" onchange="updateTreeName('${t.id}', this.value)" style="flex:1;min-width:140px;background:transparent;border:0;color:var(--ink);font-family:var(--serif);font-size:15px">
-        <a class="btn sm go auto" style="text-decoration:none" href="arvore.html?tree=${t.id}&system=${systemId}&v=4"><span class="ic">${ICONS.externalLink}</span>Acessar árvore</a>
+        <a class="btn sm go auto" style="text-decoration:none" href="arvore.html?tree=${t.id}&system=${systemId}&v=5"><span class="ic">${ICONS.externalLink}</span>Acessar árvore</a>
         <button class="btn sm danger auto" onclick="delTree('${t.id}')">Excluir</button>
       </div>
       <div class="sub">Atribuir a classes/subclasses:</div>

@@ -271,13 +271,6 @@ const focusProxy = $('tree-focus-proxy'), liveRegion = $('tree-live'); // acessi
 let focusedNodeId = null; // id (não índice) — ver seção "teclado (canvas)" mais abaixo pro motivo
 let W = innerWidth, H = innerHeight;
 let DPR = Math.min(devicePixelRatio || 1, 2); // usado pelo #fx (partículas) e pelo #worldCanvas
-// "modo leve": acima desse tamanho de árvore, desliga a rotação contínua da textura das esferas e
-// o pulsar animado das conexões "ligadas" — o efeito continua aceso, só o movimento constante some.
-// Com canvas isso já não é sobre custo de repintura de DOM (não existe mais DOM por esfera) — é só
-// pra não gastar quadro à toa com sprites de textura sendo regerados sem necessidade numa árvore
-// gigante. Reavaliado a cada render() (troca de árvore, adicionar/excluir esfera).
-const LITE_MODE_NODE_THRESHOLD = 150;
-let liteMode = false;
 let isGM = false; // só vira true depois do boot confirmar que o usuário é dono do sistema
 let nodeById = new Map(); // reconstruído em rebuildIndexes() — usado no lugar de nodes.find()
 // nada no editor de esfera grava sozinho mais — os campos só mudam o rascunho local (`selected`)
@@ -953,7 +946,6 @@ function render() {
   coreNode = nodes.find((n) => n.kind === 'core') || null;
   rebuildIndexes();
   computeNodeDepths();
-  liteMode = nodes.length > LITE_MODE_NODE_THRESHOLD;
   refreshCount();
   buildRings(); // o alcance dos anéis decorativos depende de onde as esferas estão — ver ringExtent()
 }
@@ -1052,77 +1044,80 @@ function drawWorld(now) {
   }
   ctx.restore();
 }
+// brilho das conexões em traços empilhados (largo+fraco → fino+forte), não shadowBlur: a sombra
+// do canvas nasce da cobertura do traço, então numa linha de 2px o borrão espalha essa pouca
+// cobertura por dezenas de pixels e quase não aparece — era por isso que as linhas pareciam "sem
+// glow nenhum". shadowBlur também ignora zoom/DPR e é a operação mais cara por chamada. Traços
+// empilhados em unidades de mundo aproximam o degradê de um brilho, acompanham o zoom e custam só
+// uns strokes a mais — barato o bastante pra rodar em qualquer tamanho de árvore.
+const EDGE_GLOW_LAYERS = [[22, .08], [13, .13], [7, .22], [3.5, .34]]; // [largura, alpha no pico do pulso]
+const PULSE_SPRITE_R = 16; // sprite único do pulso, redimensionado no drawImage (um só no cache)
+// fase própria por conexão (hash do id) — sem isso todos os pulsos da árvore andavam em uníssono
+function edgePhase(e) {
+  if (e._ph == null) {
+    let h = 0; const s = String(e.id);
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+    e._ph = ((h >>> 0) % 1000) / 1000;
+  }
+  return e._ph;
+}
 function drawEdge(ctx, A, B, e, now) {
   const on = A.enabled !== false && B.enabled !== false;
   const [er, eg, eb] = hexToRgb(edgeColor);
   ctx.save();
   ctx.lineCap = 'round';
+  const line = (w, style) => { ctx.strokeStyle = style; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.stroke(); };
   if (e === selectedEdge) {
-    // só existe UMA conexão selecionada por vez — custo irrelevante mesmo em árvore gigante, então
-    // não faz sentido apagar isso em liteMode (diferente do brilho de TODAS as conexões ativas
-    // abaixo, que sim escala com o tamanho da árvore)
-    ctx.strokeStyle = cssVar('--brass', '#18b5c6'); ctx.lineWidth = 3;
-    ctx.shadowColor = cssVar('--brass', '#18b5c6'); ctx.shadowBlur = 12;
-  } else if (on) {
-    // brilho de verdade via shadowBlur nativo do canvas (equivalente ao filter:drop-shadow do
-    // design original) — a versão anterior desenhava uma SEGUNDA linha larga e translúcida por
-    // baixo da nítida, sem borrão nenhum: no zoom normal isso lia como uma faixa sólida meio
-    // esbranquiçada ao redor da linha, não como um brilho de verdade. shadowBlur aplica o borrão
-    // de graça em cima do stroke, sem o custo por-elemento que o drop-shadow tinha em SVG.
-    // pulso bem mais perceptível (fade in/out real) do que a variação sutil de antes (.78–1) — vai
-    // de um brilho quase apagado até um brilho forte, dando a sensação de energia fluindo pela
-    // conexão em vez de uma linha estática. Em liteMode (árvore grande demais pra recalcular o
-    // brilho de TODA conexão a cada quadro) o brilho fica num valor FIXO em vez de animado — ainda
-    // dá pra ver que a conexão está ativa, só sem o "respirar" constante.
-    let mul = .3;
-    if (!REDUCED && !liteMode) {
-      const phase = ((now / 1000) % 2.6) / 2.6 * Math.PI * 2;
-      mul = 0.3 + 0.7 * (0.5 - 0.5 * Math.cos(phase));
-    } else if (liteMode) mul = .65;
-    ctx.strokeStyle = `rgba(${er},${eg},${eb},.95)`; ctx.lineWidth = 2;
-    ctx.shadowColor = `rgba(${er},${eg},${eb},${mul.toFixed(3)})`; ctx.shadowBlur = 4 + 14 * mul;
-  } else {
-    ctx.strokeStyle = `rgba(${er},${eg},${eb},.3)`; ctx.lineWidth = 1.4;
+    // só uma conexão selecionada por vez, então o shadowBlur aqui não pesa (em px de tela: × DPR)
+    ctx.shadowColor = cssVar('--brass', '#18b5c6'); ctx.shadowBlur = 12 * DPR;
+    line(3, cssVar('--brass', '#18b5c6'));
+    ctx.restore(); return;
   }
-  ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.stroke();
-  // pulso de progresso: uma partícula de brilho viaja pela linha, sempre do nível mais RASO (mais
-  // perto do Núcleo, ver nodeDepth/computeNodeDepths) pro mais FUNDO — dá a sensação visual de
-  // "energia fluindo rumo à próxima camada", não só uma linha parada. Só nas conexões ativas
-  // (mesmo critério do brilho acima) e com direção definida (as duas pontas em profundidades
-  // diferentes — sem isso não há "pra frente" nenhum pra apontar). NÃO depende de liteMode: ao
-  // contrário do shadowBlur acima, isso só faz drawImage de um sprite pequeno já cacheado — mesmo
-  // custo do halo/textura de cada esfera, que também nunca foram desligados em árvore grande.
-  if (on && e !== selectedEdge) {
-    const depthA = nodeDepth.get(A.id), depthB = nodeDepth.get(B.id);
-    if (depthA != null && depthB != null && depthA !== depthB) {
-      const [from, to] = depthA < depthB ? [A, B] : [B, A];
-      // branco (não a cor da linha): um halo na MESMA cor da linha praticamente some contra ela —
-      // sem contraste nenhum pra "pop" como faísca. Núcleo sólido pequeno por cima do halo suave,
-      // senão um blob difuso sozinho também se perde visualmente contra a própria linha.
-      // trilha PROPORCIONAL ao comprimento da conexão — com espaçamento fixo, conexões curtas
-      // (comuns perto do Núcleo, onde a grade é mais densa) tinham as 3 partículas se sobrepondo a
-      // ponto de cobrir a linha inteira o tempo todo, lendo como uma faixa branca sólida e parada
-      // em vez de uma trilha viajando.
-      const edgeLen = Math.hypot(to.x - from.x, to.y - from.y) || 1;
-      const SPEED = 0.35, TRAIL = 3, glowR = Math.min(7, edgeLen * 0.09);
-      const gap = Math.min(0.09, 12 / edgeLen); // fração do trajeto entre partículas consecutivas
-      const sprite = glowSpriteFor('#ffffff', glowR);
-      ctx.shadowBlur = 0; // reseta o borrão da linha (ainda ativo no ctx) pra não amassar o pulso
-      for (let i = 0; i < TRAIL; i++) {
-        const raw = (now / 1000) * SPEED - i * gap;
-        const t = ((raw % 1) + 1) % 1; // wrap seguro mesmo com raw negativo
-        const px = from.x + (to.x - from.x) * t, py = from.y + (to.y - from.y) * t;
-        const fade = 1 - i / TRAIL;
-        ctx.globalAlpha = fade * 0.95;
-        ctx.drawImage(sprite, px - glowR, py - glowR, glowR * 2, glowR * 2);
-        ctx.globalAlpha = fade;
-        ctx.fillStyle = '#fff';
-        ctx.beginPath(); ctx.arc(px, py, Math.min(2, glowR * 0.3), 0, Math.PI * 2); ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-    }
-  }
+  if (!on) { line(1.4, `rgba(${er},${eg},${eb},.3)`); ctx.restore(); return; }
+  // "respirar" (fade in/out, 2.6s) — com movimento reduzido fica parado num valor ALTO; antes ficava
+  // parado no mínimo, então justamente quem pediu menos animação via o brilho mais fraco possível
+  let mul = .75;
+  if (!REDUCED) mul = 0.35 + 0.65 * (0.5 - 0.5 * Math.cos(((now / 1000) % 2.6) / 2.6 * Math.PI * 2));
+  const glow = 0.25 + 0.75 * mul;
+  for (const [w, a] of EDGE_GLOW_LAYERS) line(w, `rgba(${er},${eg},${eb},${(a * glow).toFixed(3)})`);
+  line(1.8, `rgba(${er},${eg},${eb},${(0.7 + 0.3 * mul).toFixed(3)})`);
+  drawProgressPulse(ctx, A, B, e, now);
   ctx.restore();
+}
+// pulso de progresso: trilha de faíscas viajando do nível mais RASO (perto do Núcleo, ver
+// nodeDepth) pro mais FUNDO — mesma direção em que o desbloqueio avança (canUnlock exige conexão
+// com algo já desbloqueado). Sem direção definida (pontas na mesma profundidade, ou fora do
+// alcance do Núcleo) não desenha nada — não há "pra frente" pra apontar.
+function drawProgressPulse(ctx, A, B, e, now) {
+  const dA = nodeDepth.get(A.id), dB = nodeDepth.get(B.id);
+  if (dA == null || dB == null || dA === dB) return;
+  const [from, to] = dA < dB ? [A, B] : [B, A];
+  const dx = to.x - from.x, dy = to.y - from.y, len = Math.hypot(dx, dy) || 1;
+  // só o trecho VISÍVEL entre as bordas das duas esferas — o corpo delas é opaco, e o pulso indo de
+  // centro a centro ficava escondido por baixo delas boa parte do caminho em conexões curtas
+  const r0 = nodeRadius(from), r1 = nodeRadius(to), seg = len - r0 - r1;
+  if (seg < 6) return;
+  const ux = dx / len, uy = dy / len, sx = from.x + ux * r0, sy = from.y + uy * r0;
+  // velocidade em unidades de mundo/s (não fração do trajeto): curtas e longas andam no mesmo
+  // ritmo visual; o teto evita que uma conexão curtinha vire um pisca-pisca. Com movimento
+  // reduzido a trilha fica parada no meio do caminho — ainda mostra a direção, sem animar.
+  const rate = Math.min(70 / seg, 0.9);
+  const head = REDUCED ? 0.65 : ((now / 1000) * rate + edgePhase(e)) % 1;
+  const hr = Math.min(9, seg * 0.3), gap = Math.min(0.12, 7 / seg);
+  const sprite = glowSpriteFor('#ffffff', PULSE_SPRITE_R);
+  ctx.fillStyle = '#fff';
+  for (let i = 0; i < 4; i++) {
+    const t = head - i * gap;
+    if (t < 0) break; // cauda ainda "saindo" da esfera de origem — não dá a volta pro outro lado
+    const ends = Math.min(1, t / 0.1, (1 - t) / 0.1); // surge/some suave nas bordas das esferas
+    const a = (1 - i / 4) * ends, r = hr * (1 - i * 0.15);
+    const px = sx + ux * seg * t, py = sy + uy * seg * t;
+    ctx.globalAlpha = a * 0.9;
+    ctx.drawImage(sprite, px - r, py - r, r * 2, r * 2);
+    ctx.globalAlpha = a;
+    ctx.beginPath(); ctx.arc(px, py, r * 0.3, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
 }
 function drawNode(ctx, n, now) {
   const r = nodeRadius(n);

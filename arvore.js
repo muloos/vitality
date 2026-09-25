@@ -926,6 +926,25 @@ function computeVisibleIds() {
 // de UMA esfera arrastada, sem precisar varrer todas as conexões — em canvas, drawWorld() já varre
 // "edges" inteiro todo quadro de qualquer jeito, então o índice seria trabalho refeito à toa.)
 function rebuildIndexes() { nodeById = new Map(nodes.map((n) => [n.id, n])); }
+// distância (em número de conexões) de cada esfera até o Núcleo, via BFS — usada só pra saber o
+// SENTIDO do pulso de energia nas conexões (sempre do nível mais raso pro mais fundo, rumo à
+// periferia), não tem nada a ver com desbloqueio/pontos. Recalculada só quando a topologia muda
+// (render()), não por quadro — é uma travessia do grafo inteiro, não algo pra repetir 60x/segundo.
+let nodeDepth = new Map();
+function computeNodeDepths() {
+  nodeDepth = new Map();
+  if (!coreNode) return;
+  nodeDepth.set(coreNode.id, 0);
+  const queue = [coreNode.id];
+  while (queue.length) {
+    const id = queue.shift();
+    const d = nodeDepth.get(id);
+    for (const e of edges) {
+      const other = e.a === id ? e.b : (e.b === id ? e.a : null);
+      if (other != null && !nodeDepth.has(other)) { nodeDepth.set(other, d + 1); queue.push(other); }
+    }
+  }
+}
 // chamado sempre que nodes/edges são substituídos ou ganham/perdem itens (criar/excluir/duplicar
 // esfera ou conexão, carregar a árvore) — recalcula os índices e o Núcleo. NÃO desenha nada: o
 // desenho em si roda todo quadro dentro de tick()/drawWorld(), então qualquer mudança de dados
@@ -933,6 +952,7 @@ function rebuildIndexes() { nodeById = new Map(nodes.map((n) => [n.id, n])); }
 function render() {
   coreNode = nodes.find((n) => n.kind === 'core') || null;
   rebuildIndexes();
+  computeNodeDepths();
   liteMode = nodes.length > LITE_MODE_NODE_THRESHOLD;
   refreshCount();
   buildRings(); // o alcance dos anéis decorativos depende de onde as esferas estão — ver ringExtent()
@@ -1062,6 +1082,34 @@ function drawEdge(ctx, A, B, e, now) {
     ctx.strokeStyle = `rgba(${er},${eg},${eb},.3)`; ctx.lineWidth = 1.4;
   }
   ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.stroke();
+  // pulso de progresso: uma partícula de brilho viaja pela linha, sempre do nível mais RASO (mais
+  // perto do Núcleo, ver nodeDepth/computeNodeDepths) pro mais FUNDO — dá a sensação visual de
+  // "energia fluindo rumo à próxima camada", não só uma linha parada. Só nas conexões ativas
+  // (mesmo critério do brilho acima) e com direção definida (as duas pontas em profundidades
+  // diferentes — sem isso não há "pra frente" nenhum pra apontar).
+  if (on && e !== selectedEdge && !liteMode) {
+    const depthA = nodeDepth.get(A.id), depthB = nodeDepth.get(B.id);
+    if (depthA != null && depthB != null && depthA !== depthB) {
+      const [from, to] = depthA < depthB ? [A, B] : [B, A];
+      // branco (não a cor da linha): um halo na MESMA cor da linha praticamente some contra ela —
+      // sem contraste nenhum pra "pop" como faísca. Núcleo sólido pequeno por cima do halo suave,
+      // senão um blob difuso sozinho também se perde visualmente contra a própria linha.
+      const SPEED = 0.35, TRAIL = 3, glowR = 15;
+      const sprite = glowSpriteFor('#ffffff', glowR);
+      ctx.shadowBlur = 0; // reseta o borrão da linha (ainda ativo no ctx) pra não amassar o pulso
+      for (let i = 0; i < TRAIL; i++) {
+        const t = ((now / 1000) * SPEED + i / TRAIL) % 1;
+        const px = from.x + (to.x - from.x) * t, py = from.y + (to.y - from.y) * t;
+        const fade = 1 - i / TRAIL;
+        ctx.globalAlpha = fade * 0.95;
+        ctx.drawImage(sprite, px - glowR, py - glowR, glowR * 2, glowR * 2);
+        ctx.globalAlpha = fade;
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(px, py, 3, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+  }
   ctx.restore();
 }
 function drawNode(ctx, n, now) {

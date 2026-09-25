@@ -1094,18 +1094,25 @@ function drawEdge(ctx, A, B, e, now) {
       // branco (não a cor da linha): um halo na MESMA cor da linha praticamente some contra ela —
       // sem contraste nenhum pra "pop" como faísca. Núcleo sólido pequeno por cima do halo suave,
       // senão um blob difuso sozinho também se perde visualmente contra a própria linha.
-      const SPEED = 0.35, TRAIL = 3, glowR = 15;
+      // trilha PROPORCIONAL ao comprimento da conexão — com espaçamento fixo, conexões curtas
+      // (comuns perto do Núcleo, onde a grade é mais densa) tinham as 3 partículas se sobrepondo a
+      // ponto de cobrir a linha inteira o tempo todo, lendo como uma faixa branca sólida e parada
+      // em vez de uma trilha viajando.
+      const edgeLen = Math.hypot(to.x - from.x, to.y - from.y) || 1;
+      const SPEED = 0.35, TRAIL = 3, glowR = Math.min(7, edgeLen * 0.09);
+      const gap = Math.min(0.09, 12 / edgeLen); // fração do trajeto entre partículas consecutivas
       const sprite = glowSpriteFor('#ffffff', glowR);
       ctx.shadowBlur = 0; // reseta o borrão da linha (ainda ativo no ctx) pra não amassar o pulso
       for (let i = 0; i < TRAIL; i++) {
-        const t = ((now / 1000) * SPEED + i / TRAIL) % 1;
+        const raw = (now / 1000) * SPEED - i * gap;
+        const t = ((raw % 1) + 1) % 1; // wrap seguro mesmo com raw negativo
         const px = from.x + (to.x - from.x) * t, py = from.y + (to.y - from.y) * t;
         const fade = 1 - i / TRAIL;
         ctx.globalAlpha = fade * 0.95;
         ctx.drawImage(sprite, px - glowR, py - glowR, glowR * 2, glowR * 2);
         ctx.globalAlpha = fade;
         ctx.fillStyle = '#fff';
-        ctx.beginPath(); ctx.arc(px, py, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(px, py, Math.min(2, glowR * 0.3), 0, Math.PI * 2); ctx.fill();
       }
       ctx.globalAlpha = 1;
     }

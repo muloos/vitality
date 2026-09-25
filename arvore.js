@@ -1030,7 +1030,8 @@ function cssVar(name, fallback) {
 }
 
 /* ---------- desenho ---------- */
-let hoveredNode = null; // esfera sob o cursor (mostra o rótulo do nome, igual :hover de antes)
+let hoveredNode = null; // esfera sob o cursor (mostra nome + custo, com fade — ver LABEL_FADE_MS)
+const LABEL_FADE_MS = 160; // duração do cross-fade do nome/custo ao entrar/sair do hover
 // onda de luz: UMA frente pra árvore inteira (em unidades de mundo a partir do Núcleo), então
 // todas as conexões ficam sincronizadas — sai do Núcleo, percorre cada camada, e só depois que a
 // cauda passa da habilidade mais distante espera um instante e recomeça do Núcleo. Velocidade
@@ -1067,15 +1068,65 @@ function drawWorld(now) {
   }
   ctx.restore();
 }
-// brilho das conexões em traços empilhados (largo+fraco → fino+forte), não shadowBlur: a sombra
-// do canvas nasce da cobertura do traço, então numa linha de 2px o borrão espalha essa pouca
-// cobertura por dezenas de pixels e quase não aparece — era por isso que as linhas pareciam "sem
-// glow nenhum". shadowBlur também ignora zoom/DPR e é a operação mais cara por chamada. Traços
-// empilhados em unidades de mundo aproximam o degradê de um brilho, acompanham o zoom e custam só
-// uns strokes a mais — barato o bastante pra rodar em qualquer tamanho de árvore.
-const EDGE_GLOW_LAYERS = [[22, .05], [13, .08], [7, .14], [3.5, .22]]; // [largura, alpha] — brilho base, estável
-// faixa de luz da onda: mesmas camadas empilhadas, bem mais fortes, na cor da linha puxada pro branco
-const WAVE_GLOW_LAYERS = [[26, .2], [15, .32], [8, .5], [3, .95]];
+// brilho das conexões: sprite com gradiente CONTÍNUO (mesma ideia do halo das esferas, ver
+// glowSpriteFor) esticado ao longo da linha via drawImage. Antes eram traços sólidos empilhados
+// (largo+fraco → fino+forte, evitando shadowBlur — ver histórico abaixo) e cada um tinha borda
+// dura; sobrepostos, isso lia como "degraus" de brilho crescendo em vez de uma dissipação suave
+// como a das esferas. Um gradiente pré-desenhado (sem bordas nenhuma, só interpolação) elimina os
+// degraus de vez, e ainda sai mais barato: 1 drawImage por conexão em vez de 4 strokes.
+// (shadowBlur continua fora de cogitação: nasce da cobertura do traço — numa linha fina o borrão
+// espalha essa pouca cobertura por dezenas de pixels e quase não aparece — além de ignorar
+// zoom/DPR e ser a operação mais cara por chamada.)
+const EDGE_GLOW_THICKNESS = 24; // grossura do brilho base, em unidades de mundo
+const EDGE_GLOW_ALPHA = .55;
+const EDGE_STRIP_OVERSAMPLE = 2; // nitidez no zoom máximo do editor (~2.6x, ver zoomAt)
+// perfil transversal suave (uma "tent" arredondada) compartilhado pelo brilho base e pela onda —
+// mesmos cortes de alpha do halo radial das esferas, só que num gradiente linear (grossura da
+// linha) em vez de radial (raio da esfera)
+function paintCrossProfile(g, w, h, r, gg, b) {
+  const grad = g.createLinearGradient(0, 0, 0, h);
+  const stop = (t, a) => grad.addColorStop(t, `rgba(${r},${gg},${b},${a})`);
+  stop(0, 0); stop(.15, .05); stop(.35, .5); stop(.5, 1); stop(.65, .5); stop(.85, .05); stop(1, 0);
+  g.fillStyle = grad; g.fillRect(0, 0, w, h);
+}
+function edgeGlowStripFor(colorHex) {
+  const key = 'estrip|' + colorHex;
+  let cv = spriteCache.get(key);
+  if (cv) return cv;
+  const [cr, cg, cb] = hexToRgb(colorHex);
+  const h = Math.max(2, Math.ceil(EDGE_GLOW_THICKNESS * DPR * EDGE_STRIP_OVERSAMPLE));
+  cv = document.createElement('canvas'); cv.width = 2; cv.height = h;
+  paintCrossProfile(cv.getContext('2d'), 2, h, cr, cg, cb);
+  spriteCache.set(key, cv);
+  return cv;
+}
+// faixa de luz da onda: sprite 2D em vez de um gradiente por quadro (createLinearGradient custava
+// uma alocação por conexão por frame). O perfil transversal acima é multiplicado
+// (globalCompositeOperation destination-in) pelo perfil longitudinal — cauda comprida some pra
+// trás, cabeça suave na frente — então o resultado já sai pronto e cacheado; desenhar por quadro
+// vira só um drawImage esticado na posição certa.
+const WAVE_STRIP_THICKNESS = 30;
+function waveStripFor(colorHex) {
+  const key = 'wstrip|' + colorHex;
+  let cv = spriteCache.get(key);
+  if (cv) return cv;
+  const [cr, cg, cb] = hexToRgb(colorHex);
+  const hr = Math.round(cr + (255 - cr) * .55), hg = Math.round(cg + (255 - cg) * .55), hb = Math.round(cb + (255 - cb) * .55);
+  const totalLen = WAVE_TAIL + WAVE_HEAD;
+  const w = Math.max(2, Math.ceil(totalLen * EDGE_STRIP_OVERSAMPLE)), h = Math.max(2, Math.ceil(WAVE_STRIP_THICKNESS * EDGE_STRIP_OVERSAMPLE));
+  cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+  const g = cv.getContext('2d');
+  paintCrossProfile(g, w, h, hr, hg, hb);
+  g.globalCompositeOperation = 'destination-in'; // multiplica o alpha já pintado pelo perfil ao longo da linha, sem mexer na cor
+  const along = g.createLinearGradient(0, 0, w, 0);
+  along.addColorStop(0, 'rgba(0,0,0,0)');
+  along.addColorStop(.5, 'rgba(0,0,0,.3)');
+  along.addColorStop(WAVE_TAIL / totalLen, 'rgba(0,0,0,1)');
+  along.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = along; g.fillRect(0, 0, w, h);
+  spriteCache.set(key, cv);
+  return cv;
+}
 function drawEdge(ctx, A, B, e) {
   const on = A.enabled !== false && B.enabled !== false;
   const [er, eg, eb] = hexToRgb(edgeColor);
@@ -1089,43 +1140,38 @@ function drawEdge(ctx, A, B, e) {
     ctx.restore(); return;
   }
   if (!on) { line(1.4, `rgba(${er},${eg},${eb},.3)`); ctx.restore(); return; }
-  // brilho base estável — o movimento fica só por conta da onda, pra não competir com ela
-  for (const [w, a] of EDGE_GLOW_LAYERS) line(w, `rgba(${er},${eg},${eb},${a})`);
-  line(1.8, `rgba(${er},${eg},${eb},.8)`);
-  drawWaveOnEdge(ctx, A, B, er, eg, eb);
+  // brilho base suave — sprite esticado ao longo da linha (ver comentário acima); movimento fica só
+  // por conta da onda, pra não competir com ela
+  const dx = B.x - A.x, dy = B.y - A.y, len = Math.hypot(dx, dy) || 1, angle = Math.atan2(dy, dx);
+  ctx.save();
+  ctx.translate(A.x, A.y); ctx.rotate(angle);
+  ctx.globalAlpha = EDGE_GLOW_ALPHA;
+  ctx.drawImage(edgeGlowStripFor(edgeColor), 0, -EDGE_GLOW_THICKNESS / 2, len, EDGE_GLOW_THICKNESS);
+  ctx.globalAlpha = 1;
+  ctx.restore();
+  line(1.8, `rgba(${er},${eg},${eb},.8)`); // núcleo sólido nítido da linha
+  drawWaveOnEdge(ctx, A, B, len, angle);
   ctx.restore();
 }
-// trecho da onda de luz que está passando por esta conexão agora (se estiver): uma faixa mais
-// intensa do próprio brilho da linha, com cauda longa que se apaga pra trás e cabeça suave, indo
-// sempre do lado mais perto do Núcleo pro mais longe. O trecho vai de centro a centro — dentro das
-// esferas fica escondido pelo corpo delas, o que lê como a luz "entrando" na habilidade e saindo
-// pela conexão seguinte no instante certo (a distância de cada uma já inclui esse trecho).
-function drawWaveOnEdge(ctx, A, B, er, eg, eb) {
+// trecho da onda de luz que está passando por esta conexão agora (se estiver): recorte do sprite
+// pré-computado acima (ver waveStripFor) na posição certa ao longo da linha, sempre do lado mais
+// perto do Núcleo pro mais longe. O trecho vai de centro a centro — dentro das esferas fica
+// escondido pelo corpo delas, o que lê como a luz "entrando" na habilidade e saindo pela conexão
+// seguinte no instante certo (a distância de cada uma já inclui esse trecho).
+function drawWaveOnEdge(ctx, A, B, len, angle) {
   if (waveFront == null) return;
   const dA = nodeDist.get(A.id), dB = nodeDist.get(B.id);
   if (dA == null || dB == null) return;
-  const [from, to, d0] = dA <= dB ? [A, B, dA] : [B, A, dB];
-  const dx = to.x - from.x, dy = to.y - from.y, len = Math.hypot(dx, dy) || 1;
-  const p = waveFront - d0; // posição da frente da onda ao longo desta conexão
+  const flip = dA > dB; // true: B é o lado mais perto do Núcleo, a onda anda de B pra A
+  const p = waveFront - (flip ? dB : dA); // posição da frente da onda ao longo desta conexão
   if (p + WAVE_HEAD <= 0 || p - WAVE_TAIL >= len) return;
-  const ux = dx / len, uy = dy / len;
-  const at = (s) => [from.x + ux * s, from.y + uy * s];
-  const [gx0, gy0] = at(p - WAVE_TAIL), [gx1, gy1] = at(p + WAVE_HEAD);
-  const hr = Math.round(er + (255 - er) * .55), hg = Math.round(eg + (255 - eg) * .55), hb = Math.round(eb + (255 - eb) * .55);
-  const c = (a) => `rgba(${hr},${hg},${hb},${a})`;
-  const g = ctx.createLinearGradient(gx0, gy0, gx1, gy1);
-  g.addColorStop(0, c(0));
-  g.addColorStop(.5, c(.3));
-  g.addColorStop(WAVE_TAIL / (WAVE_TAIL + WAVE_HEAD), c(1));
-  g.addColorStop(1, c(0));
-  const [x0, y0] = at(Math.max(0, p - WAVE_TAIL)), [x1, y1] = at(Math.min(len, p + WAVE_HEAD));
-  ctx.lineCap = 'butt'; // ponta reta cortada no centro das esferas fica escondida pelo corpo delas
-  ctx.strokeStyle = g;
-  for (const [w, a] of WAVE_GLOW_LAYERS) {
-    ctx.globalAlpha = a; ctx.lineWidth = w;
-    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
-  }
-  ctx.globalAlpha = 1;
+  ctx.save();
+  ctx.translate(flip ? B.x : A.x, flip ? B.y : A.y);
+  ctx.rotate(flip ? angle + Math.PI : angle);
+  // recorta pro trecho real da conexão — a faixa nasce/morre nas pontas, não vaza pra fora dela
+  ctx.beginPath(); ctx.rect(0, -WAVE_STRIP_THICKNESS, len, WAVE_STRIP_THICKNESS * 2); ctx.clip();
+  ctx.drawImage(waveStripFor(edgeColor), p - WAVE_TAIL, -WAVE_STRIP_THICKNESS / 2, WAVE_TAIL + WAVE_HEAD, WAVE_STRIP_THICKNESS);
+  ctx.restore();
 }
 function drawNode(ctx, n, now) {
   const r = nodeRadius(n);
@@ -1202,29 +1248,38 @@ function drawNode(ctx, n, now) {
     ctx.beginPath(); ctx.arc(0, 0, r + 5, 0, Math.PI * 2); ctx.stroke();
     ctx.globalAlpha = 1;
   }
-  // selo de custo — sempre visível (herdava .unlocked, que era incondicional, exceto desativada).
-  // Medido numa árvore sintética de ~1000 esferas visíveis de uma vez (bem afastado, o cenário
-  // real do relato original de lentidão): strokeText+fillText por esfera, a cada quadro, era o
-  // maior custo de longe — texto é caro de rasterizar em canvas, muito mais que um drawImage. Vira
-  // sprite cacheado (por texto+cor, igual glow/corpo/pontos) e, abaixo de um tamanho de tela onde o
-  // texto seria ilegível de qualquer jeito, nem desenha (sprite ou não) — sem perda visual real.
-  if (!disabled && r * view.s > 5) {
-    const label = (n.cost || 0) + ' ✦';
-    const sp = costBadgeSpriteFor(label, color);
-    // o sprite é desenhado numa resolução MAIOR que o tamanho final (ver COST_SPRITE_OVERSAMPLE) só
-    // pra ficar nítido no zoom — dividir por DPR sozinho esquecia de desfazer esse fator extra, e o
-    // selo saía ~2.6x maior do que deveria (o bug do "número gigante" em cima da esfera).
-    const w = sp.width / (DPR * COST_SPRITE_OVERSAMPLE), h = sp.height / (DPR * COST_SPRITE_OVERSAMPLE);
-    ctx.drawImage(sp, -w / 2, -(r + 9) - h / 2, w, h);
-  }
-  // rótulo do nome — só em hover/selecionado, igual antes
-  if (isSelected || n === hoveredNode) {
+  // nome + custo — só aparecem em hover/selecionado, com fade suave: sem isso os dois trocavam de
+  // visível pra invisível "secos", no exato quadro em que o mouse entra/sai da esfera. Guarda o
+  // instante da última mudança de estado por esfera (mesmo padrão do flash de desbloqueio acima) e
+  // anima um cross-fade a partir dali — funciona igual entrando ou saindo do hover.
+  const showLabel = isSelected || n === hoveredNode;
+  if (n._labelOn == null) { n._labelOn = showLabel; n._labelSince = -1e9; }
+  else if (n._labelOn !== showLabel) { n._labelOn = showLabel; n._labelSince = now; }
+  const labelT = Math.min(1, (now - n._labelSince) / LABEL_FADE_MS);
+  const labelAlpha = n._labelOn ? labelT : 1 - labelT;
+  if (labelAlpha > .003) {
+    // selo de custo — sprite cacheado (por texto+cor, igual glow/corpo/pontos: texto é caro de
+    // rasterizar em canvas a cada quadro, muito mais que um drawImage) e, abaixo de um tamanho de
+    // tela onde o texto seria ilegível de qualquer jeito, nem desenha (sprite ou não).
+    if (!disabled && r * view.s > 5) {
+      const label = (n.cost || 0) + ' ✦';
+      const sp = costBadgeSpriteFor(label, color);
+      // o sprite é desenhado numa resolução MAIOR que o tamanho final (ver COST_SPRITE_OVERSAMPLE) só
+      // pra ficar nítido no zoom — dividir por DPR sozinho esquecia de desfazer esse fator extra, e o
+      // selo saía ~2.6x maior do que deveria (o bug do "número gigante" em cima da esfera).
+      const w = sp.width / (DPR * COST_SPRITE_OVERSAMPLE), h = sp.height / (DPR * COST_SPRITE_OVERSAMPLE);
+      ctx.globalAlpha = labelAlpha;
+      ctx.drawImage(sp, -w / 2, -(r + 9) - h / 2, w, h);
+      ctx.globalAlpha = 1;
+    }
+    // rótulo do nome
     ctx.font = `11px ${cssVar('--mono', 'monospace')}`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const label = n.name || '(sem nome)';
-    ctx.lineWidth = 4; ctx.strokeStyle = '#080615'; ctx.globalAlpha = .97;
+    ctx.lineWidth = 4; ctx.strokeStyle = '#080615'; ctx.globalAlpha = .97 * labelAlpha;
     ctx.strokeText(label, 0, r + 16);
-    ctx.fillStyle = cssVar('--ink', '#e9edf1'); ctx.fillText(label, 0, r + 16);
+    ctx.fillStyle = cssVar('--ink', '#e9edf1'); ctx.globalAlpha = labelAlpha;
+    ctx.fillText(label, 0, r + 16);
     ctx.globalAlpha = 1;
   }
   ctx.restore();

@@ -1,15 +1,16 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<script>try{document.documentElement.dataset.theme=localStorage.getItem("vt_theme")||"dark"}catch(e){}</script>
+<script>try{document.documentElement.dataset.theme=localStorage.getItem("vt_theme")||"dark";if(localStorage.getItem("vt_motion")==="0")document.documentElement.dataset.motion="off"}catch(e){}</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Vitality · Editor de Árvore</title>
 <link rel="icon" type="image/png" href="lib/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="lib/theme.css?v=48">
+<link rel="stylesheet" href="lib/theme-ffx.css?v=4">
 <style>
   /* fundo cósmico original (sobrescreve o solido do tema, SÓ nesta tela) */
   /* body PRECISA ficar transparente aqui: #fallback e #fx (o canvas de partículas) usam z-index
@@ -81,16 +82,19 @@
   #marquee{position:fixed;z-index:32;display:none;border:1.5px dashed var(--brass);background:rgba(227,192,113,.08);pointer-events:none}
   @keyframes selpulse{0%,100%{opacity:.7;transform:scale(1)}50%{opacity:.2;transform:scale(1.15)}}
   @keyframes spin{to{transform:rotate(360deg)}}
-  /* anéis ornamentados do Crystarium — --ringc é o RGB customizável (aplicado via JS), com um
-     lilás-azulado como padrão antes disso rodar. */
+  /* anéis de fundo (docs/DESIGN-FFXIII.md §4.13): concêntricos de 1px na cor --line e dois
+     tracejados --line2 girando (90s/140s, durações no style de cada <g>, ver buildRings). --ringc é
+     o RGB do tom de linha do palco (ou a cor que o Mestre escolher — aí fica um pouco mais forte,
+     .custom). Sem brilho: a luz fica só nas esferas e conexões acesas. 1px de verdade em qualquer zoom. */
   #rings{pointer-events:none}
-  .ring{fill:none;stroke:rgba(var(--ringc,200,196,255),.6);stroke-width:1;
-    filter:drop-shadow(0 0 6px rgba(var(--ringc,200,196,255),.6))}
-  .ringTick{fill:none;stroke:rgba(var(--ringc,200,196,255),.75);
-    filter:drop-shadow(0 0 7px rgba(var(--ringc,200,196,255),.65))}
-  .ringspin{transform-origin:0 0;animation:spin 110s linear infinite}
-  .ringspin.rev{animation-duration:160s;animation-direction:reverse}
+  .ring{fill:none;stroke:rgba(var(--ringc,233,221,201),.10);stroke-width:1;vector-effect:non-scaling-stroke}
+  .ringTick{fill:none;stroke:rgba(var(--ringc,233,221,201),.26);stroke-width:1;vector-effect:non-scaling-stroke}
+  #rings.custom .ring{stroke:rgba(var(--ringc),.35)}
+  #rings.custom .ringTick{stroke:rgba(var(--ringc),.6)}
+  .ringspin{transform-origin:0 0;animation:spin 90s linear infinite}
+  .ringspin.rev{animation-direction:reverse}
   @media (prefers-reduced-motion:reduce){.ringspin{animation:none!important}}
+  html[data-motion="off"] .ringspin{animation:none!important}
   /* acessibilidade por teclado do canvas: um único proxy focável (não dá pra ter um elemento real
      de DOM por esfera sem reintroduzir o mesmo teto de desempenho que motivou trocar pra canvas) —
      Tab alcança a árvore uma vez, setas navegam entre esferas, Enter/Espaço ativa. Escondido de
@@ -144,10 +148,11 @@
   /* legenda fixa de Via/afinidade — mesmo nome+cor que já aparecia por esfera ao clicar, só que
      todo mundo de uma vez, sem precisar abrir cada esfera pra descobrir a que via ela pertence */
   .via-legend{position:fixed;top:var(--toolbar-bottom,64px);left:12px;z-index:30;display:flex;flex-direction:column;gap:5px;
-    background:color-mix(in srgb,var(--panel) 90%,transparent);border:1px solid var(--line2);border-radius:11px;padding:9px 11px;pointer-events:none;
-    font-family:var(--mono);font-size:10.5px;color:var(--ink-dim);max-width:180px}
-  .via-legend-row{display:flex;align-items:center;gap:7px}
-  .via-legend-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+    background:var(--panel-solid,var(--panel));border:0;border-radius:0;box-shadow:inset 0 0 0 1px var(--line2);padding:10px 14px 10px 12px;pointer-events:none;
+    clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+    font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;color:var(--ink-dim);max-width:180px}
+  .via-legend-row{display:flex;align-items:center;gap:9px}
+  .via-legend-dot{width:7px;height:7px;border-radius:0;flex-shrink:0;transform:rotate(45deg);margin:0 1px}
   .via-legend-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   /* aparece por cima de tudo (inclusive dentro do iframe embutido na mesa) quando o boot falha —
      ver showBootError() no script */
@@ -229,9 +234,7 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
 <div id="fallback"></div>
 <canvas id="fx"></canvas>
 <div id="marquee"></div>
-<svg id="grid"><defs id="defs">
-  <radialGradient id="orb-maq" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#7ee6dc" stop-opacity="0.02"/><stop offset="58%" stop-color="#7ee6dc" stop-opacity="0.06"/><stop offset="82%" stop-color="#7ee6dc" stop-opacity="0.20"/><stop offset="93%" stop-color="#c8fff8" stop-opacity="0.65"/><stop offset="100%" stop-color="#7ee6dc" stop-opacity="0"/></radialGradient>
-</defs><g id="rings"><g id="ringsInner"></g></g><g id="gridPolar"><g id="gridPolarInner"></g></g><g id="snapMark"><circle class="ring1" r="16"></circle><circle class="dot1" r="3"></circle></g></svg>
+<svg id="grid"><defs id="defs"></defs><g id="rings"><g id="ringsInner"></g></g><g id="gridPolar"><g id="gridPolarInner"></g></g><g id="snapMark"><circle class="ring1" r="16"></circle><circle class="dot1" r="3"></circle></g></svg>
 <!-- esferas e conexões: canvas 2D (ver comentário no <style> e em arvore.js) -->
 <canvas id="worldCanvas"></canvas>
 <!-- acessibilidade por teclado do canvas (ver arvore.js: seção "teclado (canvas)") -->
@@ -421,6 +424,6 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
 <div class="count" id="count"></div>
 <div class="via-legend" id="via-legend" style="display:none"></div>
 
-<script src="arvore.js?v=21"></script>
+<script src="arvore.js?v=23"></script>
 </body>
 </html>

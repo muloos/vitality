@@ -1,24 +1,43 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<script>try{document.documentElement.dataset.theme=localStorage.getItem("vt_theme")||"dark"}catch(e){}</script>
+<script>try{document.documentElement.dataset.theme=localStorage.getItem("vt_theme")||"dark";if(localStorage.getItem("vt_motion")==="0")document.documentElement.dataset.motion="off"}catch(e){}</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Vitality · Acesso</title>
 <link rel="icon" type="image/png" href="lib/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="lib/theme.css?v=48">
+<link rel="stylesheet" href="lib/theme-ffx.css?v=4">
 <style>
   html,body{min-height:100%}
   /* rolagem liberada: em telas baixas o card não fica mais cortado/inacessível */
-  .wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:28px 20px}
-  .card{width:100%;max-width:408px;border-radius:22px;padding:30px 28px 26px}
-  .head{text-align:center;margin-bottom:22px}
-  .head .title{font-size:20px}
-  .tagline{font-family:var(--serif);font-size:13.5px;color:var(--ink-dim);line-height:1.55;margin:13px auto 0;max-width:312px}
-  .foot{text-align:center;font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--ink-faint);margin-top:20px}
+  /* herói à esquerda + card chanfrado à direita, com quebra natural (docs/DESIGN-FFXIII.md §3.2) */
+  .wrap{position:relative;min-height:100vh;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:48px;padding:48px 6vw 110px;overflow-x:clip}
+  .hero{position:relative;flex:1 1 420px;max-width:620px;min-height:420px;display:flex;flex-direction:column;justify-content:center}
+  .hero-rings{position:absolute;left:30%;top:50%;width:0;height:0;pointer-events:none}
+  .hero-rings .ffx-ring:nth-child(1){width:520px;height:520px}
+  .hero-rings .ffx-ring:nth-child(2){width:360px;height:360px;animation-duration:80s}
+  .hero-eyebrow{position:relative;font-family:var(--mono);font-size:11px;letter-spacing:.42em;text-transform:uppercase;color:var(--ink-faint)}
+  .wordmark{position:relative;margin:18px 0 0;font-family:var(--disp);font-weight:400;font-size:clamp(52px,8vw,96px);letter-spacing:.16em;line-height:1;color:var(--bone)}
+  .hero-line{position:relative;height:1px;width:72%;margin:26px 0 24px;background:linear-gradient(90deg,var(--brass),transparent)}
+  .tagline{position:relative;font-family:var(--serif);font-size:17px;line-height:1.6;color:var(--ink-dim);max-width:440px;margin:0;text-wrap:pretty}
+  .card{flex:0 1 420px;width:100%;max-width:420px;padding:34px 32px 30px}
+  /* Entrar / Criar conta: menu vertical no topo do card, sangrando até as bordas dele */
+  .auth-menu{margin:0 -32px 24px}
+  .auth-menu button{padding:0 32px 0 44px;letter-spacing:.03em}
+  .auth-menu .on::before,.auth-menu [aria-selected="true"]::before{inset:5px 0 5px 20px}
+  .auth-menu .on::after,.auth-menu [aria-selected="true"]::after{left:12px}
+  .card .gbtn{height:46px}
+  @media (max-width:760px){
+    .wrap{padding:28px 20px 60px;gap:28px}
+    .hero{min-height:0;flex-basis:100%}
+    .hero-rings{display:none}
+    .hero-line{margin:18px 0 16px}
+    .tagline{font-size:15px}
+  }
   form{display:block}
   .gbtn .gicon{width:17px;height:17px;flex:0 0 auto}
   /* mostrar/ocultar senha */
@@ -41,7 +60,7 @@
   .pw-strength.ok i:nth-child(1),.pw-strength.ok i:nth-child(2){background:var(--brass)}
   .pw-strength.strong i{background:#4caf6b}
   .pw-strength-label{font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--ink-faint);flex-shrink:0}
-  @media (max-width:440px){ .card{padding:26px 20px} }
+  @media (max-width:440px){ .card{padding:26px 20px} .auth-menu{margin:0 -20px 20px} .auth-menu button{padding:0 20px 0 36px} }
 </style>
 </head>
 <body>
@@ -49,20 +68,23 @@
 <canvas id="fx"></canvas>
 
 <div class="wrap">
-  <div class="card glass">
-    <div class="head">
-      <div class="title">VITALITY<small>VTT · MESA VIRTUAL</small></div>
-      <p class="tagline">Crie seu próprio sistema de RPG e jogue com amigos: fichas, status, dados e trilha sonora — tudo numa mesa virtual.</p>
-    </div>
+  <div class="hero">
+    <div class="hero-rings" aria-hidden="true"><div class="ffx-ring"></div><div class="ffx-ring"></div></div>
+    <div class="hero-eyebrow">VTT · Mesa virtual</div>
+    <h1 class="wordmark">VITALITY</h1>
+    <div class="hero-line" aria-hidden="true"></div>
+    <p class="tagline">Crie seu próprio sistema de RPG e jogue com amigos: fichas, status, dados e trilha sonora — tudo numa mesa virtual.</p>
+  </div>
 
-    <div class="seg glass" id="seg-tabs" role="tablist">
-      <button id="tab-signin" class="on" onclick="setMode('signin')">Entrar</button>
-      <button id="tab-signup" onclick="setMode('signup')">Criar conta</button>
+  <div class="card glass ffx-corners">
+    <div class="ffx-menu auth-menu" id="auth-menu" role="tablist" aria-orientation="vertical" aria-label="Acesso">
+      <button type="button" role="tab" id="tab-signin" class="on" aria-selected="true" aria-controls="form" onclick="setMode('signin')">Entrar</button>
+      <button type="button" role="tab" id="tab-signup" aria-selected="false" aria-controls="form" onclick="setMode('signup')">Criar conta</button>
     </div>
 
     <div id="msg" class="msg"></div>
 
-    <form id="form" onsubmit="return submitForm(event)">
+    <form id="form" role="tabpanel" aria-labelledby="tab-signin" onsubmit="return submitForm(event)">
       <div class="fld" id="fld-name" style="display:none">
         <label for="name">Nome de exibição</label>
         <input id="name" type="text" autocomplete="nickname" placeholder="Como vão te chamar na mesa">
@@ -109,8 +131,9 @@
 </div>
 
 <script type="module">
-import { startParticles } from './lib/particles.js';
+import { startParticles } from './lib/particles.js?v=2';
 import { signInWithPassword, signUp, signInWithGoogle, getSession, resetPasswordForEmail, updatePassword, onAuthChange } from './lib/db.js?v=42';
+import { wireVerticalTablist } from './lib/ui.js?v=7';
 
 startParticles(document.getElementById('fx'));
 
@@ -130,6 +153,7 @@ const GOOGLE_ENABLED = true;
 
 const $ = (id) => document.getElementById(id);
 const msgEl = $('msg');
+const syncAuthTabindex = wireVerticalTablist($('auth-menu'));
 
 function showMsg(text, kind) {
   msgEl.textContent = text;
@@ -152,9 +176,14 @@ window.setMode = (m) => {
   mode = m;
   clearMsg();
   const isAuthTab = m === 'signin' || m === 'signup';
-  $('tab-signin').classList.toggle('on', m === 'signin');
-  $('tab-signup').classList.toggle('on', m === 'signup');
-  $('seg-tabs').style.display = isAuthTab ? '' : 'none';
+  for (const [id, on] of [['tab-signin', m === 'signin'], ['tab-signup', m === 'signup']]) {
+    $(id).classList.toggle('on', on);
+    $(id).setAttribute('aria-selected', String(on));
+  }
+  if (isAuthTab) $('form').setAttribute('aria-labelledby', 'tab-' + m);
+  else $('form').removeAttribute('aria-labelledby');
+  syncAuthTabindex();
+  $('auth-menu').style.display = isAuthTab ? '' : 'none';
   $('fld-name').style.display = m === 'signup' ? '' : 'none';
   $('fld-email').style.display = (m === 'signin' || m === 'signup' || m === 'recover') ? '' : 'none';
   $('fld-password').style.display = (m === 'signin' || m === 'signup' || m === 'reset') ? '' : 'none';

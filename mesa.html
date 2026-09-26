@@ -1,15 +1,16 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<script>try{document.documentElement.dataset.theme=localStorage.getItem("vt_theme")||"dark"}catch(e){}</script>
+<script>try{document.documentElement.dataset.theme=localStorage.getItem("vt_theme")||"dark";if(localStorage.getItem("vt_motion")==="0")document.documentElement.dataset.motion="off"}catch(e){}</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Vitality · Mesa</title>
 <link rel="icon" type="image/png" href="lib/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="lib/theme.css?v=48">
+<link rel="stylesheet" href="lib/theme-ffx.css?v=4">
 </head>
 <body class="mesa-page">
 <script>try{
@@ -31,7 +32,6 @@
     </button>
     <div class="drop glass" id="mesa-menu-drop" role="menu"></div>
   </div>
-  <nav id="tabs" class="mesa-toptabs" role="tablist"></nav>
   <div class="spacer"></div>
   <div class="nav-user" id="nav-user">
     <button type="button" class="chip" id="nav-user-btn" aria-haspopup="menu" aria-expanded="false" onclick="toggleUserMenu()">
@@ -50,6 +50,10 @@
 
 <div class="mesa-body">
   <aside class="mesa-rail-left" id="rail-left">
+    <!-- menu vertical (docs/DESIGN-FFXIII.md §3.4/§4.1): sempre visível, inclusive no celular — só o
+         bloco Grupo/pedidos/ações abaixo continua recolhível lá -->
+    <div class="ffx-menu-eyebrow" id="tabs-eyebrow" aria-hidden="true">Mesa</div>
+    <div class="ffx-menu" id="tabs" role="tablist" aria-orientation="vertical" aria-label="Seções da mesa"></div>
     <button type="button" class="rail-mobile-toggle" id="rail-mobile-toggle" onclick="toggleMobileRail()" aria-expanded="false">
       <span>Jogadores &amp; mesa</span>
       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
@@ -58,7 +62,7 @@
   </aside>
   <main class="mesa-main">
     <div id="msg" class="msg"></div>
-    <div id="content"></div>
+    <div id="content" role="tabpanel"></div>
   </main>
 </div>
 <button type="button" class="rail-toggle left" id="rail-toggle-left" onclick="toggleRailLeft()" title="Esconder/mostrar jogadores">
@@ -70,7 +74,7 @@
 
 <script type="module">
 import * as db from './lib/db.js?v=42';
-import { openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus } from './lib/ui.js?v=5';
+import { openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus, wireVerticalTablist } from './lib/ui.js?v=7';
 import { mountYtPlayer } from './lib/ytplayer.js?v=5';
 
 // sem mountHelp/mountThemeToggle flutuantes aqui: "Ajuda ou suporte" e "Tema" já existem como itens
@@ -278,9 +282,13 @@ function mountLiveSync() {
   }, 300));
 }
 
+let syncTabsTabindex = () => {};
 function buildTabs() {
+  // só o texto no menu vertical (o ícone de cada aba ficava na aba horizontal antiga)
   $('tabs').innerHTML = tabsFor().map(([id, label]) =>
-    `<button role="tab" aria-selected="false" data-tab="${id}" onclick="selectTab('${id}')">${label}</button>`).join('');
+    `<button type="button" role="tab" id="tab-${id}" aria-selected="false" aria-controls="content" data-tab="${id}" onclick="selectTab('${id}')">${label.replace(/<span class="ic">[\s\S]*?<\/span>/, '')}</button>`).join('');
+  $('tabs-eyebrow').textContent = role === 'gm' ? 'Mesa' : 'Personagem';
+  syncTabsTabindex = wireVerticalTablist($('tabs'));
   const extra = $('mesa-extra');
   const icKey = '<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M14 9l2 2"/></svg></span>';
   const icLogout = '<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg></span>';
@@ -302,15 +310,16 @@ async function renderParty() {
   if (!members.length) { box.innerHTML = ''; return; }
   const ord = { gm: 0, player: 1 };
   members.sort((a, b) => (ord[a.role] ?? 9) - (ord[b.role] ?? 9));
-  box.innerHTML = `<div class="party-label">Grupo · ${members.length}</div>` + members.map((m) => {
+  box.innerHTML = `<div class="party-label">Grupo<span class="party-count">${String(members.length).padStart(2, '0')}</span></div>` + members.map((m) => {
     const nm = m.profile?.display_name || '—';
     const initial = (nm.trim().charAt(0) || '?').toUpperCase();
     const me = m.user_id === myId;
     const online = _onlineIds.has(m.user_id);
     return `<div class="party-row${me ? ' me' : ''}">
-      <div class="party-av">${esc(initial)}<span class="presence-dot${online ? ' on' : ''}" title="${online ? 'Online agora' : 'Offline'}"></span></div>
+      <div class="party-av">${esc(initial)}</div>
       <div class="party-info"><div class="party-name">${esc(nm)}${me ? ' · você' : ''}</div>
       <div class="party-role">${m.role === 'gm' ? 'Mestre' : 'Jogador'}</div></div>
+      <span class="presence-dot${online ? ' on' : ''}" role="img" aria-label="${online ? 'Online agora' : 'Offline'}" title="${online ? 'Online agora' : 'Offline'}"></span>
     </div>`;
   }).join('');
 }
@@ -340,8 +349,7 @@ window.openTab = async (name) => {
     const on = b.dataset.tab === name;
     b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on));
   });
-  // abas do topo rolam na horizontal no celular — mantém a aba aberta sempre à vista
-  $('tabs').querySelector('button.on')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  syncTabsTabindex();
   const c = $('content');
   c.innerHTML = '<div class="empty">Carregando…</div>';
   if (name === 'arvores') _lastArvoreRenderedId = _arvoreViewingId;
@@ -2210,9 +2218,9 @@ function secStatRow(a, compact) {
   const pend = _pendingDelta[a.id] || 0;
   const canSpend = pointsLeft() > 0;
   const bonus = _fichaSkillBonus[a.id];
-  return `<div class="stat-tile${compact ? ' compact' : ''}" style="--stc:${esc(a.color || '#7ee6dc')}">
+  return `<div class="stat-tile${compact ? ' compact' : ''}${pend > 0 ? ' pending' : ''}" id="sectile-${a.id}" style="--stc:${esc(a.color || '#7ee6dc')}">
     <span class="mod-badge" id="secbonus-${a.id}" style="${bonus ? '' : 'display:none;'}" title="${bonus ? esc(bonusTitle(bonus)) : ''}">${bonus ? `+${bonus.total}` : ''}</span>
-    <div class="stat-val" id="secval-${a.id}">${base + pend + (bonus ? bonus.total : 0)}</div>
+    <div class="stat-val" id="secval-${a.id}">${base + pend + (bonus ? bonus.total : 0)}<span class="stat-pend" id="secpend-${a.id}">${pend > 0 ? '+' + pend : ''}</span></div>
     <div class="stat-name">${esc(a.name)}</div>
     <div class="stat-ctl">
       <button class="plus" id="secminus-${a.id}" title="Tirar do rascunho" onclick="removeDraftPoint('${a.id}')" ${pend > 0 ? '' : 'disabled'}>−</button>
@@ -2237,11 +2245,14 @@ function refreshSecRow(statId) {
     // pillar I (§2.4): um bump discreto tier-1 — confirma o clique antes mesmo do Salvar aparecer,
     // sem promover um ponto de status (rotina) a evento tier-2
     const newText = String(base + pend + (bonus ? bonus.total : 0));
-    if (vEl.textContent !== newText) {
-      vEl.textContent = newText;
+    const numNode = vEl.firstChild;
+    if (numNode && numNode.nodeValue !== newText) {
+      numNode.nodeValue = newText;
       vEl.classList.remove('bump'); void vEl.offsetWidth; vEl.classList.add('bump');
     }
   }
+  const pEl = $('secpend-' + statId); if (pEl) pEl.textContent = pend > 0 ? '+' + pend : '';
+  $('sectile-' + statId)?.classList.toggle('pending', pend > 0);
   const bEl = $('secbonus-' + statId); if (bEl) { bEl.style.display = bonus ? '' : 'none'; bEl.textContent = bonus ? `+${bonus.total}` : ''; bEl.title = bonus ? bonusTitle(bonus) : ''; }
   const minusEl = $('secminus-' + statId); if (minusEl) minusEl.disabled = pend <= 0;
   const left = pointsLeft();
@@ -3344,6 +3355,12 @@ async function mountDice() {
   const diceOpts = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100'];
   panel.innerHTML = `
     <div class="dh"><b><span class="ic" id="dice-panel-icon">${ICONS.dice}</span><span id="dice-panel-label">Rolagens</span></b><button class="x" onclick="closeDice()" aria-label="Fechar rolagens"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+    <div class="dice-last" aria-live="polite">
+      <span class="dl-val" id="dice-last-val">—</span><span class="dl-die" id="dice-last-die"></span>
+    </div>
+    <div class="dice-quick" role="group" aria-label="Rolar um dado">
+      ${['d4', 'd6', 'd8', 'd10', 'd12', 'd20'].map((d) => `<button type="button" onclick="quickRoll('${d}')">${d}</button>`).join('')}
+    </div>
     <div class="dice-builder">
       <input type="number" id="dice-qty" min="1" max="20" value="1" class="dice-qty" title="Quantidade de dados">
       <select id="dice-die">${diceOpts.map((d) => `<option ${d === 'd20' ? 'selected' : ''}>${d}</option>`).join('')}</select>
@@ -3377,6 +3394,15 @@ async function mountDice() {
   _unsub = db.subscribeRolls(campaignId, addRollToLog);
   _unsubChat = db.subscribeMessages(campaignId, addMsgToLog);
   loadStatMap();
+}
+// dado rápido (grade 3×2): 1 dado puro, sem modificador — o montador abaixo continua pras rolagens
+// com quantidade, vantagem e status/fórmula somados
+window.quickRoll = (die) => doRoll('1' + die, null, null);
+// último resultado em destaque no topo do painel (de qualquer pessoa da mesa, igual ao log)
+function paintLastRoll(r) {
+  const v = $('dice-last-val'), d = $('dice-last-die'); if (!v || !r) return;
+  v.textContent = r.total ?? '—';
+  d.textContent = (r.formula || '') + (r.roller_name ? ' · ' + r.roller_name : '');
 }
 window.toggleDice = () => { const p = $('dice-panel'); const open = !p.classList.contains('open'); p.classList.toggle('open'); if (open) { loadStatMap(); const fabDot = $('unread-fab'); if (fabDot) fabDot.style.display = 'none'; const activeTab = $('rail-tabs')?.querySelector('button.on')?.dataset.rt; if (activeTab) markRailTabRead(activeTab); } };
 window.closeDice = () => $('dice-panel').classList.remove('open');
@@ -3573,12 +3599,14 @@ function renderRolls(rolls) {
   const log = $('dice-log'); if (!log) return; log.innerHTML = '';
   if (!rolls.length) { log.innerHTML = '<div class="empty" style="border:0">Sem rolagens ainda.</div>'; return; }
   rolls.forEach((r) => log.appendChild(rollEl(r)));   // desc + column-reverse => mais recente embaixo
+  paintLastRoll(rolls[0]);
 }
 function addRollToLog(r) {
   const log = $('dice-log'); if (!log) return;
   if (log.querySelector(`[data-id="${r.id}"]`)) return;   // evita duplicar (realtime + eco local)
   const empty = log.querySelector('.empty'); if (empty) empty.remove();
   log.insertBefore(rollEl(r, true), log.firstChild);
+  paintLastRoll(r);
   markRailTabUnread('rolls');
 }
 

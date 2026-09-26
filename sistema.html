@@ -1,15 +1,16 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<script>try{document.documentElement.dataset.theme=localStorage.getItem("vt_theme")||"dark"}catch(e){}</script>
+<script>try{document.documentElement.dataset.theme=localStorage.getItem("vt_theme")||"dark";if(localStorage.getItem("vt_motion")==="0")document.documentElement.dataset.motion="off"}catch(e){}</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Vitality · Construtor de Sistema</title>
 <link rel="icon" type="image/png" href="lib/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="lib/theme.css?v=48">
+<link rel="stylesheet" href="lib/theme-ffx.css?v=4">
 <style>
   /* modo embutido (dentro da mesa, via iframe — ver mesa.html: viewSistemaInline/renderSistema):
      mesmo padrão de arvore.html — esconde a topbar própria (a mesa já tem a dela por fora) e troca
@@ -23,7 +24,7 @@
     font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
   .embed-back:hover{color:var(--ink);background:rgba(255,255,255,.08)}
   .embed-back svg{width:13px;height:13px}
-  body.embedded .page{padding-top:56px}
+  body.embedded .sis-layout{padding-top:60px}
 </style>
 </head>
 <body>
@@ -47,15 +48,28 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
   <div class="user-chip"><span id="who">…</span></div>
 </div>
 
-<div class="page">
-  <nav class="home-tabs" id="tabs" role="tablist"></nav>
-  <div id="msg" class="msg"></div>
-  <div id="content"></div>
+<!-- layout em colunas (docs/DESIGN-FFXIII.md §3.6): menu vertical com as 13 seções no lugar das abas
+     horizontais (#tabs.home-tabs), conteúdo no meio e, nas abas de status (Status/Combate/Cálculos), o
+     editor do status selecionado num painel fixo à direita em vez de editar dentro da própria linha -->
+<div class="ffx-layout sis-layout">
+  <aside class="ffx-side">
+    <div class="ffx-menu-eyebrow" aria-hidden="true">Construtor</div>
+    <div class="ffx-menu" id="tabs" role="tablist" aria-orientation="vertical" aria-label="Seções do construtor"></div>
+  </aside>
+  <main class="ffx-main">
+    <div class="sis-head">
+      <div class="ffx-eyebrow" id="sis-eyebrow">Sistema</div>
+      <h1 class="ffx-h1" id="sis-title">…</h1>
+    </div>
+    <div id="msg" class="msg"></div>
+    <div id="content" role="tabpanel"></div>
+  </main>
+  <aside class="ffx-aside" id="sys-aside" aria-label="Editor de status" hidden></aside>
 </div>
 
 <script type="module">
 import * as db from './lib/db.js?v=42';
-import { mountHelp, mountThemeToggle, trapFocus } from './lib/ui.js?v=5';
+import { mountHelp, mountThemeToggle, trapFocus, wireVerticalTablist } from './lib/ui.js?v=7';
 
 // embutido dentro da mesa (iframe) — ver comentário grande no <style> acima e em arvore.js (mesmo
 // padrão): sem topbar/FABs próprios (a mesa já cobre isso por fora).
@@ -284,6 +298,8 @@ function equipTypeOptionsHtml(current, emptyLabel) {
 }
 
 let system = null, currentTab = 'geral';
+let syncTabsTabindex = () => {};
+const tabLabel = (html) => html.replace(/<[^>]*>/g, '').trim();
 function showMsg(t, kind) { const m = $('msg'); m.textContent = t; m.className = 'msg show ' + (kind || 'err'); setTimeout(() => { if (m.textContent === t) m.className = 'msg'; }, 4000); }
 
 // no modo embutido (dentro da mesa), a aba "Árvores" fica de fora de propósito: o link dela pra
@@ -299,15 +315,18 @@ const TABS = [['geral', `<span class="ic">${ICONS.gear}</span>Geral`], ['status'
   const [profile] = await Promise.all([db.getMyProfile()]);
   $('who').innerHTML = '<b>' + esc(profile?.display_name || '—') + '</b>';
   try { system = await db.getSystem(systemId); } catch (e) { $('content').innerHTML = '<div class="empty">Erro: ' + esc(e.message) + '</div>'; return; }
-  if (!system) { document.querySelector('.page').innerHTML = '<div class="empty">Sistema não encontrado. <a href="app.html" style="color:var(--brass)">Voltar</a></div>'; return; }
+  if (!system) { document.querySelector('.sis-layout').innerHTML = '<div class="empty">Sistema não encontrado. <a href="app.html" style="color:var(--brass)">Voltar</a></div>'; return; }
   // este editor é só do dono do sistema — sem essa checagem, qualquer link (ex.: o "voltar" de
   // arvore.html) podia deixar um jogador cair direto na tela de edição de um sistema que não é dele
   if (system.owner_id !== session.user.id) {
-    document.querySelector('.page').innerHTML = '<div class="empty">Você não tem permissão pra editar este sistema. <a href="app.html" style="color:var(--brass)">Voltar</a></div>';
+    document.querySelector('.sis-layout').innerHTML = '<div class="empty">Você não tem permissão pra editar este sistema. <a href="app.html" style="color:var(--brass)">Voltar</a></div>';
     return;
   }
   $('sys-name').innerHTML = esc(system.name) + '<small>CONSTRUTOR DE SISTEMA</small>';
-  $('tabs').innerHTML = TABS.map(([id, label]) => `<button data-tab="${id}" role="tab" aria-selected="false" onclick="openTab('${id}')">${label}</button>`).join('');
+  $('sis-eyebrow').textContent = 'Sistema · ' + system.name;
+  // menu vertical: só o texto da aba (o ícone de cada uma continua nos cartões-guia da aba Geral)
+  $('tabs').innerHTML = TABS.map(([id, label]) => `<button type="button" data-tab="${id}" id="tab-${id}" role="tab" aria-selected="false" aria-controls="content" onclick="openTab('${id}')">${tabLabel(label)}</button>`).join('');
+  syncTabsTabindex = wireVerticalTablist($('tabs'));
   // deep-link: a mesa manda direto pra aba pedida (ex.: "Editar Itens" já abre em "itens") em vez
   // de sempre cair em "Geral" — ignora valores desconhecidos/a aba Árvores quando embutido
   const requestedTab = new URLSearchParams(location.search).get('tab');
@@ -329,9 +348,12 @@ window.openTab = async (name) => {
   _dirtyCount = 0;
   currentTab = name;
   [...$('tabs').children].forEach((b) => { const on = b.dataset.tab === name; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); });
-  // no celular as abas viram uma faixa rolando na horizontal — chegando por link direto numa aba
-  // do fim (ex.: ?tab=equipamento) ela ficava fora da tela, sem indicação de qual estava aberta
-  $('tabs').querySelector('button.on')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  syncTabsTabindex();
+  const tabDef = TABS.find(([id]) => id === name);
+  $('sis-title').textContent = tabDef ? tabLabel(tabDef[1]) : '';
+  $('content').setAttribute('aria-labelledby', 'tab-' + name);
+  // painel lateral é só das abas de status — cada uma que usa liga de novo (mountStatAside)
+  const aside = $('sys-aside'); aside.hidden = true; aside.innerHTML = '';
   const c = $('content'); c.innerHTML = '<div class="empty">Carregando…</div>';
   ({ geral: renderGeral, status: renderStatus, combate: renderCombate, pericias: renderPericias, calculos: renderCalculos, proficiencias: renderProficiencias, classes: renderClasses, racas: renderRacas, condicoes: renderCondicoes, nivel: renderNivel, arvores: renderArvores, itens: renderItens, equipamento: renderEquipamento }[name])(c)
     .catch((e) => { c.innerHTML = '<div class="empty">Erro: ' + esc(e.message) + '</div>'; });
@@ -551,29 +573,14 @@ async function renderStatus(c) {
 
     <div class="section-title" role="heading" aria-level="2"><span class="ic">${ICONS.dagger}</span>Status <span style="color:var(--ink-faint);text-transform:none;letter-spacing:0">(valor por classe + pontos de status)</span></div>
     <div class="list" id="status-list">${status.length ? status.map(statRow).join('') : emptyState(ICONS.dagger, 'Nenhum status ainda',
-      'Crie o primeiro abaixo — o valor de cada um é definido depois, por Classe.')}</div>
+      'Crie o primeiro em “+ Novo status” — o valor de cada um é definido depois, por Classe.')}</div>
 
-    <div class="surface" style="margin-top:16px">
-      <form class="item-form" onsubmit="return addStat(event)">
-        <div class="fld"><label for="st-name">Nome</label><input id="st-name" placeholder="Ex.: Pontos de Vida" maxlength="40" required></div>
-        <div class="fld"><label for="st-formkey">Nome na fórmula</label><input id="st-formkey" placeholder="Ex.: HP" maxlength="20"></div>
-        <div class="fld"><label for="st-type">Tipo</label>
-          <select id="st-type" class="fld-input" onchange="onStatTypeChange()">
-            <option value="status">Status (valor definido depois, por classe)</option>
-            <option value="resource-fixed">Recurso — valor fixo</option>
-            <option value="resource-formula">Recurso — fórmula</option>
-          </select></div>
-        <div class="fld"><label id="st-color-lbl">Cor</label>
-          <button type="button" class="color-swatch full" aria-labelledby="st-color-lbl" style="--sw:#7ee6dc" onclick="openColorPicker(this, '#7ee6dc', (v)=>{ document.getElementById('st-color').value = v; })"></button>
-          <input type="hidden" id="st-color" value="#7ee6dc"></div>
-        <div class="fld" id="st-extra-wrap" style="display:none"></div>
-        <div class="full"><button class="btn go auto" type="submit">+ Adicionar status</button></div>
-      </form>
-    </div>
+    <button type="button" class="stat-new" onclick="selectStat('__new__')" aria-controls="sys-aside">+ Novo status</button>
 
     ${formulaTutorial(stats)}`;
   wireDragReorder($('recursos-list'), '.list-row[data-id]', 'system_stats');
   wireDragReorder($('status-list'), '.list-row[data-id]', 'system_stats');
+  mountStatAside(true);
 }
 // aba separada pra status que não são "atributo cru" nem recurso, mas também não deveriam viver
 // misturados no meio de Status — defesas, testes de resistência, rolagem de ataque. Reaproveita
@@ -599,6 +606,7 @@ async function renderCombate(c) {
     `).join('') : emptyState(ICONS.combat, 'Nenhum status de combate ainda',
       'Vá na aba Status e clique em "Virar combate" num status (ex.: uma defesa ou um teste) pra ele aparecer aqui.')}`;
   groupProfsByCategory(combat).forEach((_, gi) => wireDragReorder($('combat-cat-list-' + gi), '.list-row[data-id]', 'system_stats'));
+  mountStatAside(false);
 }
 // aba pra status que existem só pra alimentar outras fórmulas (ex.: um multiplicador
 // intermediário) — nunca aparecem na ficha nem em Status/Combate/Recursos, mas continuam
@@ -625,6 +633,7 @@ async function renderCalculos(c) {
     `).join('') : emptyState(ICONS.calc, 'Nenhum cálculo oculto ainda',
       'Vá em Status, Recursos ou Combate e clique em "Ocultar" num status (ex.: um multiplicador intermediário) pra ele aparecer aqui.')}`;
   groupProfsByCategory(hidden).forEach((_, gi) => wireDragReorder($('calc-cat-list-' + gi), '.list-row[data-id]', 'system_stats'));
+  mountStatAside(false);
 }
 // barra única de salvar, reaproveitada por Status e Perícias (as duas abas compartilham
 // _statusStats/_statusDrafts/onStatFieldChange) — troca os N botões "Salvar" por linha (que
@@ -694,33 +703,109 @@ window.extraFormula = () => `<label>Fórmula do máximo</label>
     <input id="st-extra" placeholder="Ex.: CON*10" style="flex:1">
     <button type="button" class="btn sm auto" style="flex-shrink:0" title="Inserir função ou apelido" onclick="openFuncPicker(this, this.previousElementSibling)">ƒ(x)</button>
   </div>`;
+// linha de status (Status/Combate/Cálculos): só exibição + seleção — alça ⋮⋮, losango na cor do
+// status, nome, fórmula em mono e selo do tipo (docs/DESIGN-FFXIII.md §3.6). Toda a edição mora no
+// painel lateral fixo (renderStatEditor), no lugar da fileira de campos/botões dentro de cada linha.
+function statKindLabel(s) { return s.is_resource ? 'Recurso' : s.kind === 'computed' ? 'Calculado' : 'Base'; }
+function statRowFormula(s) {
+  const val = s.kind === 'computed' ? (s.formula || '—') : (s.default_value ? 'padrão ' + s.default_value : '—');
+  return ((s.formula_key || '').trim() ? s.formula_key.trim() + ' = ' : '') + val;
+}
 function statRow(s) {
+  const sel = s.id === _statSel;
+  return `<div class="list-row stat-row${sel ? ' on' : ''}" data-id="${s.id}" onclick="selectStat('${s.id}')">
+    ${DRAG_HANDLE_SVG}
+    <i class="stat-dot" style="--sw:${esc(s.color || '#7ee6dc')}" aria-hidden="true"></i>
+    <button type="button" class="stat-pick" aria-pressed="${sel}" aria-controls="sys-aside">${esc(s.name)}</button>
+    <span class="stat-row-f">${esc(statRowFormula(s))}</span>
+    <span class="stat-row-k">${statKindLabel(s)}${s.is_combat ? ' · Combate' : ''}${s.is_hidden ? ' · Oculto' : ''}</span>
+  </div>`;
+}
+// status aberto no painel lateral: id, ou '__new__' (formulário de criação — só na aba Status)
+let _statSel = null;
+function mountStatAside(canCreate) {
+  const ids = [...document.querySelectorAll('#content .stat-row')].map((r) => r.dataset.id);
+  if (!(_statSel === '__new__' && canCreate) && !ids.includes(_statSel)) _statSel = ids[0] || (canCreate ? '__new__' : null);
+  if (!_statSel) return; // aba sem nenhum status (ex.: Combate vazio) — o painel continua escondido
+  $('sys-aside').hidden = false;
+  selectStat(_statSel, true);
+}
+window.selectStat = (id, silent) => {
+  _statSel = id;
+  document.querySelectorAll('#content .stat-row').forEach((r) => {
+    const on = r.dataset.id === id;
+    r.classList.toggle('on', on);
+    r.querySelector('.stat-pick')?.setAttribute('aria-pressed', String(on));
+  });
+  renderStatEditor();
+  // em telas estreitas o painel fica em outra linha do layout — traz ele pra vista ao escolher
+  if (!silent) {
+    const aside = $('sys-aside'), r = aside.getBoundingClientRect();
+    if (r.top < 0 || r.top > innerHeight - 120) aside.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+};
+// reflete na linha o que está sendo digitado no painel, sem recriar a linha (a alça de arrastar tem
+// listeners próprios, ver wireDragReorder)
+function paintStatRow(id) {
+  const s = _statusStats.find((x) => x.id === id);
+  const row = document.querySelector(`#content .stat-row[data-id="${id}"]`);
+  if (!s || !row) return;
+  row.querySelector('.stat-pick').textContent = s.name;
+  row.querySelector('.stat-row-f').textContent = statRowFormula(s);
+  row.querySelector('.stat-dot').style.setProperty('--sw', s.color || '#7ee6dc');
+}
+window.onStatEditorField = (k, v) => { onStatFieldChange(_statSel, k, v); paintStatRow(_statSel); };
+function renderStatEditor() {
+  const box = $('sys-aside'); if (!box) return;
+  if (_statSel === '__new__') {
+    box.innerHTML = `<div class="ffx-panel ffx-corners stat-editor">
+      <div class="ffx-label">Novo status</div>
+      <form onsubmit="return addStat(event)">
+        <div class="fld"><label for="st-name">Nome</label><input id="st-name" placeholder="Ex.: Pontos de Vida" maxlength="40" required></div>
+        <div class="fld"><label for="st-formkey">Nome na fórmula</label><input id="st-formkey" placeholder="Ex.: HP" maxlength="20"></div>
+        <div class="fld"><label for="st-type">Tipo</label>
+          <select id="st-type" class="fld-input" onchange="onStatTypeChange()">
+            <option value="status">Status (valor definido depois, por classe)</option>
+            <option value="resource-fixed">Recurso — valor fixo</option>
+            <option value="resource-formula">Recurso — fórmula</option>
+          </select></div>
+        <div class="fld"><label id="st-color-lbl">Cor</label>
+          <button type="button" class="color-swatch full" aria-labelledby="st-color-lbl" style="--sw:#7ee6dc" onclick="openColorPicker(this, '#7ee6dc', (v)=>{ document.getElementById('st-color').value = v; })"></button>
+          <input type="hidden" id="st-color" value="#7ee6dc"></div>
+        <div class="fld" id="st-extra-wrap" style="display:none"></div>
+        <div class="actions"><button class="btn go" type="submit">+ Adicionar status</button></div>
+      </form>
+    </div>`;
+    return;
+  }
+  const s = _statusStats.find((x) => x.id === _statSel);
+  if (!s) { box.innerHTML = ''; return; }
   const isC = s.kind === 'computed';
-  return `<div class="list-row" data-id="${s.id}" style="flex-wrap:wrap;align-items:flex-start">
-    <div style="display:flex;align-items:center;gap:10px;width:100%">
-      ${DRAG_HANDLE_SVG}
-      <input class="nm grow" style="background:transparent;border:0;color:var(--ink);font-family:var(--serif);font-size:15px" value="${esc(s.name)}" onchange="onStatFieldChange('${s.id}','name',this.value)">
-      <button type="button" class="color-swatch" style="--sw:${esc(s.color || '#7ee6dc')};flex-shrink:0" title="Cor da caixa na ficha" onclick="openColorPicker(this, '${esc(s.color || '#7ee6dc')}', (v)=>onStatFieldChange('${s.id}','color',v))"></button>
-      <button class="btn sm auto" style="flex-shrink:0;${s.is_resource ? 'border-color:var(--maq);color:var(--maq)' : ''}" onclick="toggleResource('${s.id}', ${!s.is_resource})" title="Recurso: mostra atual/máximo na ficha (ex.: HP)">${s.is_resource ? `<span class="ic">${ICONS.heart}</span>recurso` : 'Virar recurso'}</button>
-      <button class="btn sm auto" style="flex-shrink:0;${s.is_combat ? 'border-color:var(--escarlate);color:var(--escarlate)' : ''}" onclick="toggleCombat('${s.id}', ${!s.is_combat})" title="Combate: fica na aba Combate em vez de Status, junto com defesas/ataques/testes">${s.is_combat ? `<span class="ic">${ICONS.combat}</span>combate` : 'Virar combate'}</button>
-      <button class="btn sm auto" style="flex-shrink:0;${s.is_hidden ? 'border-color:var(--ink-faint);color:var(--ink-faint)' : ''}" onclick="toggleHidden('${s.id}', ${!s.is_hidden})" title="Ocultar: some da ficha e de Status/Combate/Recursos — continua funcionando em fórmulas de outros status, só pra cálculo">${s.is_hidden ? `<span class="ic">${ICONS.eyeOff}</span>oculto` : 'Ocultar'}</button>
-      ${isC ? `<button class="btn sm auto" style="flex-shrink:0" onclick="toggleTest('${s.id}')" title="Testar a fórmula"><span class="ic">${ICONS.flask}</span>Testar</button>` : ''}
-      <button class="btn sm danger auto" style="flex-shrink:0" title="Excluir status" aria-label="Excluir status ${esc(s.name)}" onclick="delStat('${s.id}')"><span class="ic">${ICONS.x}</span></button>
+  const color = esc(s.color || '#7ee6dc');
+  box.innerHTML = `<div class="ffx-panel ffx-corners stat-editor">
+    <div class="ffx-label">Editar status</div>
+    <div class="fld"><label for="se-name">Nome</label><input id="se-name" value="${esc(s.name)}" oninput="onStatEditorField('name', this.value)"></div>
+    <div class="fld"><label id="se-flags-lbl">Onde aparece</label>
+      <div class="ffx-seg" role="group" aria-labelledby="se-flags-lbl">
+        <button type="button" aria-pressed="${!!s.is_resource}" title="Recurso: mostra atual/máximo na ficha (ex.: HP)" onclick="toggleResource('${s.id}', ${!s.is_resource})">Recurso</button>
+        <button type="button" aria-pressed="${!!s.is_combat}" title="Combate: fica na aba Combate em vez de Status" onclick="toggleCombat('${s.id}', ${!s.is_combat})">Combate</button>
+        <button type="button" aria-pressed="${!!s.is_hidden}" title="Oculto: some da ficha, mas continua valendo em fórmulas" onclick="toggleHidden('${s.id}', ${!s.is_hidden})">Oculto</button>
+      </div>
+      <div class="se-hint">${isC ? 'Valor calculado por fórmula' : 'Valor base — definido por classe, na aba Classes'}</div></div>
+    <div class="fld"><label id="se-color-lbl">Cor na ficha</label>
+      <button type="button" class="color-swatch full" aria-labelledby="se-color-lbl" style="--sw:${color}" onclick="openColorPicker(this, '${color}', (v)=>{ this.style.setProperty('--sw', v); onStatEditorField('color', v); })"></button></div>
+    <div class="fld"><label for="se-key">Nome na fórmula</label><input id="se-key" class="mono" value="${esc(s.formula_key || '')}" placeholder="Ex.: HP" oninput="onStatEditorField('formula_key', this.value)"></div>
+    <div class="fld"><label for="se-val">${isC ? 'Fórmula' : 'Valor padrão'}</label>
+      <div class="se-inline"><input id="se-val" class="mono" value="${esc(isC ? s.formula : s.default_value)}" placeholder="${isC ? 'Ex.: FORCA*5 + 10' : 'valor padrão'}" oninput="onStatEditorField('${isC ? 'formula' : 'default_value'}', this.value)">
+      ${isC ? `<button type="button" class="btn sm auto" title="Inserir função ou apelido" onclick="openFuncPicker(this, document.getElementById('se-val'))">ƒ(x)</button>` : ''}</div></div>
+    <div class="fld"><label for="se-cat">Categoria <span class="se-opt">(opcional)</span></label><input id="se-cat" value="${esc(s.category || '')}" placeholder="Agrupa com outros da mesma categoria" oninput="onStatEditorField('category', this.value)"></div>
+    ${isC ? `<button type="button" class="btn sm auto" onclick="toggleTest('${s.id}')"><span class="ic">${ICONS.flask}</span>Testar fórmula</button>
+    <div id="test-${s.id}" class="stat-test" style="display:none"></div>` : ''}
+    <div class="actions">
+      <button type="button" class="btn danger" onclick="delStat('${s.id}')">Excluir</button>
+      <button type="button" class="btn go" onclick="saveAllStats()">Salvar</button>
     </div>
-    <div style="display:flex;align-items:center;gap:10px;width:100%">
-      <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.08em;flex-shrink:0">${isC ? 'calculado' : 'base'}</span>
-      <input value="${esc(s.formula_key)}" placeholder="nome na fórmula" onchange="onStatFieldChange('${s.id}','formula_key',this.value)"
-        style="width:140px;flex-shrink:0;background:var(--field);border:1px solid var(--line2);border-radius:8px;color:var(--maq);font-family:var(--mono);font-size:12px;padding:8px 10px">
-      <input value="${esc(isC ? s.formula : s.default_value)}" placeholder="${isC ? 'fórmula (ex.: FORCA*5 + 10)' : 'valor padrão'}"
-        style="flex:1;min-width:140px;background:var(--field);border:1px solid var(--line2);border-radius:8px;color:${isC?'var(--maq)':'var(--ink)'};font-family:var(--mono);font-size:12px;padding:8px 10px"
-        onchange="onStatFieldChange('${s.id}','${isC?'formula':'default_value'}',this.value)">
-      ${isC ? `<button type="button" class="btn sm auto" style="flex-shrink:0" title="Inserir função ou apelido" onclick="openFuncPicker(this, this.previousElementSibling)">ƒ(x)</button>` : ''}
-      <input value="${esc(s.category || '')}" placeholder="categoria (opcional)" title="Agrupa esse status com outros da mesma categoria na aba"
-        onchange="onStatFieldChange('${s.id}','category',this.value)"
-        style="width:130px;flex-shrink:0;background:var(--field);border:1px solid var(--line2);border-radius:8px;color:var(--ink-dim);font-family:var(--mono);font-size:12px;padding:8px 10px">
-    </div>
-  </div>
-  ${isC ? `<div id="test-${s.id}" class="surface" style="display:none;margin:-2px 0 8px"></div>` : ''}`;
+  </div>`;
 }
 window.toggleResource = (id, val) => {
   const s = _statusStats.find((x) => x.id === id); if (s) s.is_resource = val;

@@ -1,15 +1,16 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<script>try{document.documentElement.dataset.theme=localStorage.getItem("vt_theme")||"dark"}catch(e){}</script>
+<script>try{document.documentElement.dataset.theme=localStorage.getItem("vt_theme")||"dark";if(localStorage.getItem("vt_motion")==="0")document.documentElement.dataset.motion="off"}catch(e){}</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Vitality · Plataforma</title>
 <link rel="icon" type="image/png" href="lib/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="lib/theme.css?v=48">
+<link rel="stylesheet" href="lib/theme-ffx.css?v=4">
 </head>
 <body class="home-page"> 
 <div id="fallback" class="solid"></div>
@@ -33,24 +34,40 @@
   </div>
 </header>
 
-<main class="home" id="home" style="visibility:hidden">
+<!-- layout em colunas (docs/DESIGN-FFXIII.md §3.1/§3.3): menu vertical à esquerda substitui as abas
+     horizontais (.home-tabs) e os segmentados de sub-aba (.seg) — mesmas funções showSec/showSysSub/
+     showItemSub de sempre, só a navegação mudou de lugar -->
+<div class="ffx-layout lobby" id="home" style="visibility:hidden">
+  <aside class="ffx-side">
+    <div class="ffx-menu-eyebrow" aria-hidden="true">Menu</div>
+    <div class="ffx-menu" id="home-menu" role="tablist" aria-orientation="vertical" aria-label="Seções da plataforma">
+      <button type="button" role="tab" id="tab-mesas" data-sec="mesas" class="on" aria-selected="true" aria-controls="sec-mesas" onclick="showSec('mesas')"><span>Mesas</span><span class="count" id="cnt-mesas"></span></button>
+      <button type="button" role="tab" id="tab-sistemas" data-sec="sistemas" aria-selected="false" aria-expanded="false" aria-controls="sec-sistemas" onclick="showSec('sistemas')"><span>Sistemas</span><span class="count" id="cnt-sistemas"></span></button>
+      <button type="button" role="tab" class="sub" id="tab-sys-loja" data-parent="sistemas" data-sub="loja" aria-selected="false" aria-controls="sys-loja" hidden onclick="showSysSub('loja')">Loja</button>
+      <button type="button" role="tab" class="sub" id="tab-sys-favoritos" data-parent="sistemas" data-sub="favoritos" aria-selected="false" aria-controls="sys-favoritos" hidden onclick="showSysSub('favoritos')">Favoritos</button>
+      <button type="button" role="tab" class="sub" id="tab-sys-criar" data-parent="sistemas" data-sub="criar" aria-selected="false" aria-controls="sys-criar" hidden onclick="showSysSub('criar')">Criar</button>
+      <button type="button" role="tab" id="tab-itens" data-sec="itens" aria-selected="false" aria-expanded="false" aria-controls="sec-itens" onclick="showSec('itens')"><span>Itens</span><span class="count" id="cnt-itens"></span></button>
+      <button type="button" role="tab" class="sub" id="tab-itens-loja" data-parent="itens" data-sub="loja" aria-selected="false" aria-controls="itens-loja" hidden onclick="showItemSub('loja')">Loja</button>
+      <button type="button" role="tab" class="sub" id="tab-itens-favoritos" data-parent="itens" data-sub="favoritos" aria-selected="false" aria-controls="itens-favoritos" hidden onclick="showItemSub('favoritos')">Favoritos</button>
+      <button type="button" role="tab" class="sub" id="tab-itens-criar" data-parent="itens" data-sub="criar" aria-selected="false" aria-controls="itens-criar" hidden onclick="showItemSub('criar')">Criar</button>
+      <button type="button" role="tab" class="sub" id="tab-itens-pacotes" data-parent="itens" data-sub="pacotes" aria-selected="false" aria-controls="itens-pacotes" hidden onclick="showItemSub('pacotes')">Pacotes</button>
+    </div>
+    <div class="ffx-side-note">Dúvidas? Toque no <b>?</b> no canto da tela.</div>
+  </aside>
+
+  <main class="ffx-main">
   <div class="home-head">
+    <div class="ffx-eyebrow" id="sec-eyebrow">Lobby · Mesas</div>
     <h1 id="greet">Bem-vindo</h1>
-    <p>Crie uma mesa, entre na de um Mestre pelo código, ou monte sua biblioteca de itens. Dúvidas? Clique no <b style="color:var(--brass)">?</b> no canto da tela.</p>
+    <p id="sec-intro">Crie uma mesa, entre na de um Mestre pelo código, ou continue uma campanha.</p>
   </div>
 
   <div id="onboard"></div>
 
-  <nav class="home-tabs" role="tablist">
-    <button data-sec="mesas" class="on" role="tab" aria-selected="true" onclick="showSec('mesas')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2.5" transform="rotate(45 12 12)"/><circle cx="12" cy="9.2" r="1" fill="currentColor" stroke="none"/><circle cx="9.2" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="14.8" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="14.8" r="1" fill="currentColor" stroke="none"/></svg></span>Mesas</button>
-    <button data-sec="sistemas" role="tab" aria-selected="false" onclick="showSec('sistemas')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 3.5v2.6M12 17.9v2.6M20.5 12h-2.6M6.1 12H3.5M17.7 6.3l-1.8 1.8M8.1 15.9l-1.8 1.8M17.7 17.7l-1.8-1.8M8.1 8.1 6.3 6.3"/></svg></span>Sistemas</button>
-    <button data-sec="itens" role="tab" aria-selected="false" onclick="showSec('itens')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M8 8c0-2.8 1.8-5 4-5s4 2.2 4 5"/><path d="M6 8h12l1.4 11.2a2 2 0 0 1-2 2.3H6.6a2 2 0 0 1-2-2.3L6 8Z"/></svg></span>Itens</button>
-  </nav>
-
   <div id="msg" class="msg" role="status" aria-live="polite"></div>
 
   <!-- ===================== MESAS ===================== -->
-  <section id="sec-mesas">
+  <section id="sec-mesas" role="tabpanel" aria-labelledby="tab-mesas">
     <div class="action-row">
       <div class="action-card">
         <h4>Criar mesa</h4>
@@ -79,27 +96,22 @@
   </section>
 
   <!-- ===================== SISTEMAS ===================== -->
-  <section id="sec-sistemas" style="display:none">
-    <div class="seg glass sys-subtabs" role="tablist">
-      <button role="tab" data-sub="loja" class="on" aria-selected="true" onclick="showSysSub('loja')">Loja</button>
-      <button role="tab" data-sub="favoritos" aria-selected="false" onclick="showSysSub('favoritos')">Favoritos</button>
-      <button role="tab" data-sub="criar" aria-selected="false" onclick="showSysSub('criar')">Criar</button>
-    </div>
+  <section id="sec-sistemas" role="tabpanel" aria-labelledby="tab-sistemas" style="display:none">
 
     <!-- ---------- LOJA (sistemas publicados por outros criadores) ---------- -->
-    <div id="sys-loja">
+    <div id="sys-loja" role="tabpanel" aria-labelledby="tab-sys-loja">
       <div class="section-title" role="heading" aria-level="2">Sistemas publicados por outros criadores</div>
       <div id="store-systems" class="grid"><div class="empty">Carregando…</div></div>
     </div>
 
     <!-- ---------- FAVORITOS ---------- -->
-    <div id="sys-favoritos" style="display:none">
+    <div id="sys-favoritos" role="tabpanel" aria-labelledby="tab-sys-favoritos" style="display:none">
       <div class="section-title" role="heading" aria-level="2">Sistemas favoritados</div>
       <div id="fav-systems" class="grid"><div class="empty">Carregando…</div></div>
     </div>
 
     <!-- ---------- CRIAR (sistemas do próprio usuário) ---------- -->
-    <div id="sys-criar" style="display:none">
+    <div id="sys-criar" role="tabpanel" aria-labelledby="tab-sys-criar" style="display:none">
       <div class="action-row">
         <div class="action-card" style="flex:1">
           <h4>Criar sistema de RPG</h4>
@@ -116,16 +128,10 @@
   </section>
 
   <!-- ===================== ITENS ===================== -->
-  <section id="sec-itens" style="display:none">
-    <div class="seg glass item-subtabs" role="tablist">
-      <button role="tab" data-sub="loja" class="on" aria-selected="true" onclick="showItemSub('loja')">Loja</button>
-      <button role="tab" data-sub="favoritos" aria-selected="false" onclick="showItemSub('favoritos')">Favoritos</button>
-      <button role="tab" data-sub="criar" aria-selected="false" onclick="showItemSub('criar')">Criar</button>
-      <button role="tab" data-sub="pacotes" aria-selected="false" onclick="showItemSub('pacotes')">Pacotes</button>
-    </div>
+  <section id="sec-itens" role="tabpanel" aria-labelledby="tab-itens" style="display:none">
 
     <!-- ---------- LOJA (itens de outros criadores) ---------- -->
-    <div id="itens-loja">
+    <div id="itens-loja" role="tabpanel" aria-labelledby="tab-itens-loja">
       <div class="toolbar">
         <div class="search-field">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-5.2-5.2"/></svg>
@@ -137,7 +143,7 @@
     </div>
 
     <!-- ---------- FAVORITOS ---------- -->
-    <div id="itens-favoritos" style="display:none">
+    <div id="itens-favoritos" role="tabpanel" aria-labelledby="tab-itens-favoritos" style="display:none">
       <div class="toolbar">
         <div class="search-field">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-5.2-5.2"/></svg>
@@ -149,7 +155,7 @@
     </div>
 
     <!-- ---------- CRIAR (biblioteca do próprio usuário) ---------- -->
-    <div id="itens-criar" style="display:none">
+    <div id="itens-criar" role="tabpanel" aria-labelledby="tab-itens-criar" style="display:none">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
         <div class="section-title" role="heading" aria-level="2" style="margin:0">Sua biblioteca de itens</div>
         <button class="btn go auto sm" onclick="openItemForm()">+ Criar item</button>
@@ -217,7 +223,7 @@
     </div>
 
     <!-- ---------- PACOTES (grupos de itens da biblioteca, pra importar de uma vez num sistema) ---------- -->
-    <div id="itens-pacotes" style="display:none">
+    <div id="itens-pacotes" role="tabpanel" aria-labelledby="tab-itens-pacotes" style="display:none">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
         <div class="section-title" role="heading" aria-level="2" style="margin:0">Meus pacotes de itens</div>
         <button class="btn go auto sm" onclick="openPackageForm()">+ Criar pacote</button>
@@ -230,11 +236,12 @@
       <div id="packages" class="list"><div class="empty">Carregando…</div></div>
     </div>
   </section>
-</main>
+  </main>
+</div>
 
 <script type="module">
 import * as db from './lib/db.js?v=42';
-import { mountHelp, mountThemeToggle, openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus } from './lib/ui.js?v=5';
+import { mountHelp, mountThemeToggle, openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus, wireVerticalTablist } from './lib/ui.js?v=7';
 
 mountHelp('home');
 mountThemeToggle();
@@ -413,23 +420,56 @@ window.doLogout = async () => {
   location.href = 'login.html';
 };
 
-/* ---------- seções ---------- */
+/* ---------- seções (menu vertical — docs/DESIGN-FFXIII.md §4.1) ----------
+   Uma aba selecionada por vez (aria-selected): Mesas, ou a sub-aba aberta de Sistemas/Itens. O item
+   pai da seção aberta fica destacado (.on + barra/cursor) e com aria-expanded, e só os sub-itens dele
+   ficam visíveis — os outros ficam [hidden], fora das setas ↑/↓. */
+let _sec = 'mesas', _sysSub = 'loja', _itemSub = 'loja';
+const SEC_COPY = {
+  mesas: ['Lobby · Mesas', 'Crie uma mesa, entre na de um Mestre pelo código, ou continue uma campanha.'],
+  sistemas: ['Lobby · Sistemas', 'Explore sistemas publicados por outros criadores, guarde os favoritos ou monte o seu.'],
+  itens: ['Lobby · Itens', 'Itens da loja, seus favoritos e a sua biblioteca — prontos para copiar para os seus sistemas.'],
+};
+const syncMenuTabindex = wireVerticalTablist($('home-menu'));
+function paintMenu() {
+  const activeSub = _sec === 'sistemas' ? _sysSub : _sec === 'itens' ? _itemSub : null;
+  $('home-menu').querySelectorAll('[role="tab"]').forEach((b) => {
+    if (b.dataset.sec) {
+      const on = b.dataset.sec === _sec;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-selected', String(on && !activeSub));
+      if (b.hasAttribute('aria-expanded')) b.setAttribute('aria-expanded', String(on));
+    } else {
+      const inSec = b.dataset.parent === _sec;
+      b.hidden = !inSec;
+      const on = inSec && b.dataset.sub === activeSub;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-selected', String(on));
+    }
+  });
+  const [eyebrow, intro] = SEC_COPY[_sec];
+  $('sec-eyebrow').textContent = eyebrow;
+  $('sec-intro').textContent = intro;
+  syncMenuTabindex();
+}
 window.showSec = (sec) => {
-  document.querySelectorAll('.home-tabs button').forEach((b) => { const on = b.dataset.sec === sec; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); });
+  _sec = sec;
   $('sec-mesas').style.display = sec === 'mesas' ? '' : 'none';
   $('sec-sistemas').style.display = sec === 'sistemas' ? '' : 'none';
   $('sec-itens').style.display = sec === 'itens' ? '' : 'none';
+  paintMenu();
 };
 window.showItemSub = (sub) => {
-  document.querySelectorAll('.item-subtabs button').forEach((b) => {
-    const on = b.dataset.sub === sub;
-    b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on));
-  });
+  _itemSub = sub;
   $('itens-loja').style.display = sub === 'loja' ? '' : 'none';
   $('itens-favoritos').style.display = sub === 'favoritos' ? '' : 'none';
   $('itens-criar').style.display = sub === 'criar' ? '' : 'none';
   $('itens-pacotes').style.display = sub === 'pacotes' ? '' : 'none';
+  // chamado também de fora do menu (ex.: "Editar" no detalhe do item) — garante a seção certa aberta
+  showSec('itens');
 };
+// contadores à direita de cada item do menu (§3.3) — mono, sempre com 2 dígitos, como "03"
+function setMenuCount(sec, n) { const el = $('cnt-' + sec); if (el) el.textContent = n == null ? '' : String(n).padStart(2, '0'); }
 
 /* ---------- sistemas ---------- */
 let _favSysIds = new Set();
@@ -437,13 +477,11 @@ const _systemById = new Map();
 function cacheSystems(list) { (list || []).forEach((s) => _systemById.set(s.id, s)); return list; }
 
 window.showSysSub = (sub) => {
-  document.querySelectorAll('.sys-subtabs button').forEach((b) => {
-    const on = b.dataset.sub === sub;
-    b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on));
-  });
+  _sysSub = sub;
   $('sys-loja').style.display = sub === 'loja' ? '' : 'none';
   $('sys-favoritos').style.display = sub === 'favoritos' ? '' : 'none';
   $('sys-criar').style.display = sub === 'criar' ? '' : 'none';
+  showSec('sistemas');
 };
 
 async function renderSystems() {
@@ -455,7 +493,7 @@ async function renderSystems() {
       db.listStoreSystems().catch(() => []),
     ]);
     cacheSystems(mine); cacheSystems(favorites); cacheSystems(store);
-    _sysCount = mine.length; renderOnboard();
+    _sysCount = mine.length; renderOnboard(); setMenuCount('sistemas', mine.length);
     fillSystemPicker(mine, favorites, store);   // alimenta o seletor de sistema do "Criar mesa"
     if (!mine.length) { box.className = ''; box.innerHTML = emptyState(ICON.gear, 'Nenhum sistema ainda',
       'O sistema é o coração do seu RPG: status, fórmulas, classes, árvores e itens. Crie o primeiro no campo acima ↑'); return; }
@@ -574,7 +612,7 @@ async function renderMesas() {
   const box = $('mesas');
   try {
     const mesas = await db.listMyCampaigns();
-    _mesaCount = mesas.length; renderOnboard();
+    _mesaCount = mesas.length; renderOnboard(); setMenuCount('mesas', mesas.length);
     if (!mesas.length) { box.className = ''; box.innerHTML = emptyState(ICON.dice, 'Nenhuma mesa ainda',
       'Crie a sua no card acima escolhendo um sistema, ou entre na mesa de um Mestre com o código de convite.'); return; }
     box.className = 'grid';
@@ -833,6 +871,7 @@ async function renderItems() {
   const box = $('items');
   try {
     window._myItems = cacheItems(await db.listItems());
+    setMenuCount('itens', window._myItems.length);
     paintItems();
   } catch (e) { box.className = ''; box.innerHTML = '<div class="empty">Erro: ' + esc(friendlyError(e)) + '</div>'; }
 }

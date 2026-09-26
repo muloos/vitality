@@ -32,7 +32,7 @@ function showBootError(msg) {
 let db, mountHelp, mountThemeToggle, openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus;
 try {
   db = await import('./lib/db.js?v=40');
-  ({ mountHelp, mountThemeToggle, openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus } = await import('./lib/ui.js?v=5'));
+  ({ mountHelp, mountThemeToggle, openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus } = await import('./lib/ui.js?v=7'));
 } catch (e) {
   showBootError(`Não deu pra carregar os módulos da página (db.js/ui.js): ${e && e.message ? e.message : e}`);
   throw e;
@@ -370,15 +370,54 @@ let unlockedIds = new Set();
 let myPoints = 0;
 const statById = (id) => stats.find((s) => s.id === id);
 const viaByKey = (key) => vias.find((v) => v.key === key) || vias[0] || DEFAULT_VIAS[0];
+/* cor de EXIBIÇÃO de uma via/esfera (docs/DESIGN-FFXIII.md §2.3): todas as vias com a mesma
+   luminosidade e croma, só o matiz muda — oklch(0.76 0.11 <matiz>). O dado salvo continua sendo o
+   hex que o Mestre escolheu (seletor de cor e gerenciador de vias mostram esse hex cru); aqui só se
+   aproveita o MATIZ dele. Cores quase neutras (cinza/branco) mantêm o croma baixo em vez de
+   ganharem uma cor inventada. Em fundo de árvore claro a luminosidade desce pra continuar legível. */
+const VIA_L_DARK = 0.76, VIA_L_LIGHT = 0.56, VIA_C = 0.11;
+let viaColorCache = new Map();
+function srgbToLin(c) { c /= 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; }
+function linToSrgb(c) { c = c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055; return Math.round(Math.min(1, Math.max(0, c)) * 255); }
+function hexToOklch(hex) {
+  const [r, g, b] = hexToRgb(hex).map(srgbToLin);
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+  const q = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  const L = 0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * q;
+  const A = 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * q;
+  const B = 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * q;
+  return [L, Math.hypot(A, B), Math.atan2(B, A)];
+}
+function oklchToHex(L, C, h) {
+  const A = C * Math.cos(h), B = C * Math.sin(h);
+  const l = (L + 0.3963377774 * A + 0.2158037573 * B) ** 3;
+  const m = (L - 0.1055613458 * A - 0.0638541728 * B) ** 3;
+  const q = (L - 0.0894841775 * A - 1.2914855480 * B) ** 3;
+  const rgb = [4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * q,
+    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * q,
+    -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * q];
+  return '#' + rgb.map((c) => linToSrgb(c).toString(16).padStart(2, '0')).join('');
+}
+function viaDisplayColor(hex) {
+  const key = (bgLight ? 'l|' : 'd|') + hex;
+  let out = viaColorCache.get(key);
+  if (out) return out;
+  const [, C, h] = hexToOklch(hex || '#e3c071');
+  out = oklchToHex(bgLight ? VIA_L_LIGHT : VIA_L_DARK, Math.min(C, VIA_C), h);
+  viaColorCache.set(key, out);
+  return out;
+}
+const nodeColor = (n) => viaDisplayColor(n.color || viaByKey(n.fac).color);
 const genViaKey = () => 'v' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 function saveVias() { return db.updateSystemTree(treeId, { vias }); }
 function renderViaChips() {
   $('e-fac').innerHTML = vias.map((v) =>
-    `<div class="chip" data-f="${v.key}" style="--vc:${v.color}" onclick="patch('fac','${v.key}')">${esc(v.name)}</div>`).join('');
+    `<div class="chip" data-f="${v.key}" style="--vc:${viaDisplayColor(v.color)}" onclick="patch('fac','${v.key}')">${esc(v.name)}</div>`).join('');
   if (selected) $('e-fac').querySelectorAll('.chip').forEach((c) => c.classList.toggle('on', c.dataset.f === selected.fac));
   // mesmos chips, no painel de edição em lote — aplica a via pra toda a seleção de área de uma vez
   $('batch-fac').innerHTML = vias.map((v) =>
-    `<div class="chip" style="--vc:${v.color}" onclick="batchSet('fac','${v.key}')">${esc(v.name)}</div>`).join('');
+    `<div class="chip" style="--vc:${viaDisplayColor(v.color)}" onclick="batchSet('fac','${v.key}')">${esc(v.name)}</div>`).join('');
   renderViaLegend();
 }
 // legenda fixa "nome da via — cor" num canto do canvas — antes só dava pra saber a via de uma
@@ -388,7 +427,7 @@ function renderViaLegend() {
   const el = $('via-legend'); if (!el) return;
   if (vias.length <= 1) { el.style.display = 'none'; return; }
   el.innerHTML = vias.map((v) =>
-    `<div class="via-legend-row"><span class="via-legend-dot" style="background:${esc(v.color)}"></span><span class="via-legend-name">${esc(v.name)}</span></div>`).join('');
+    `<div class="via-legend-row"><span class="via-legend-dot" style="background:${viaDisplayColor(v.color)}"></span><span class="via-legend-name">${esc(v.name)}</span></div>`).join('');
   el.style.display = '';
 }
 function renderViaManager() {
@@ -573,6 +612,16 @@ setTimeout(() => {
   console.log(BOOT_LOG, 'concluído — W/H =', W, H, '· view =', view);
 })();
 
+/* ---------- tons do palco (§4.13) — mesmos valores dos tokens de docs/DESIGN-FFXIII.md §2 ----------
+   canvas não lê var(--x) e o fundo é escolha do Mestre (não do tema), então o conjunto vem da
+   luminosidade do fundo (ver applyBg). --line2 sobe um pouco (.17 → .26): no palco é o contorno
+   das esferas bloqueadas, não só um divisor. */
+const TONE_DARK = { appBg: '#0c0906', field: 'rgba(40,32,23,.78)', line: 'rgba(233,221,201,.10)', line2: 'rgba(233,221,201,.26)',
+  lineRGB: '233,221,201', bone: '#f3ead9', inkDim: '#a89b85', inkFaint: '#7a7061', dots: '#1a1510' };
+const TONE_LIGHT = { appBg: '#efe7d8', field: 'rgba(236,226,205,.9)', line: 'rgba(42,33,24,.10)', line2: 'rgba(42,33,24,.26)',
+  lineRGB: '42,33,24', bone: '#20180f', inkDim: '#6b5d4a', inkFaint: '#8a7c68', dots: '#20180f' };
+let bgLight = false, tone = TONE_DARK;
+
 /* ---------- cor de fundo (roda de cores) ---------- */
 function hexToRgb(hex) {
   const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || '');
@@ -593,6 +642,10 @@ function applyBg(color) {
   const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
   if (lum > 0.6) { partRGB = '40,32,58'; partBlend = 'multiply'; }
   else { partRGB = '206,196,255'; partBlend = 'lighter'; }
+  const light = lum > 0.6;
+  if (light !== bgLight) { bgLight = light; viaColorCache.clear(); spriteCache.clear(); costSpriteCache.clear(); invalidateDotSprites(); renderViaChips(); }
+  tone = light ? TONE_LIGHT : TONE_DARK;
+  applyRingColor(ringColor);
 }
 window.previewBg = (c) => { if (isGM) { applyBg(c); colorPreviewDirty = true; } };   // pré-visualiza ao mexer no seletor
 window.saveBg = () => { if (!isGM) return; const c = $('bg-color').value; applyBg(c);
@@ -604,7 +657,13 @@ window.saveBg = () => { if (!isGM) return; const c = $('bg-color').value; applyB
    as partículas "recém-nascidas" herdarem um raio de mundo cada vez menor conforme o zoom
    aumentava (a fórmula de respawn dividia por view.s), então elas acabavam se acumulando todas
    perto de um único ponto do mundo assim que o zoom mudava de novo. */
-const REDUCED = matchMedia('(prefers-reduced-motion:reduce)').matches;
+const REDUCED_MQ = matchMedia('(prefers-reduced-motion:reduce)');
+// movimento reduzido = preferência do sistema OU "Animações" desligada nas Configurações do site
+// (html[data-motion="off"], ver lib/ui.js) — observado ao vivo, sem precisar recarregar a árvore
+let REDUCED = REDUCED_MQ.matches || document.documentElement.dataset.motion === 'off';
+function syncReducedMotion() { REDUCED = REDUCED_MQ.matches || document.documentElement.dataset.motion === 'off'; }
+REDUCED_MQ.addEventListener?.('change', syncReducedMotion);
+new MutationObserver(syncReducedMotion).observe(document.documentElement, { attributes: true, attributeFilter: ['data-motion'] });
 const fx = $('fx'), fctx = fx.getContext('2d');
 let parts = [], partRGB = '206,196,255', partBlend = 'lighter', psprite = {};
 function spr(rgb) {
@@ -743,15 +802,15 @@ function tick(now) {
     // época do SVG, onde repintar essas animações competia de verdade com o tempo de quadro do
     // gesto) — em canvas nenhuma das duas custa o suficiente pra isso importar: invalidateDotSprites
     // só limpa o cache de sprite (poucas cores distintas por árvore, não uma por esfera).
-    if ((tick.fc = (tick.fc || 0) + 1) % 6 === 0) { dotAngle += 0.027; invalidateDotSprites(); }
+    if (!REDUCED && (tick.fc = (tick.fc || 0) + 1) % 6 === 0) { dotAngle += 0.027; invalidateDotSprites(); }
     fctx.clearRect(0, 0, W, H);
     if (particlesOn) {
       fctx.globalCompositeOperation = partBlend;
       const t = now * .001, sp = spr(partRGB), m = 160;
       for (const p of parts) {
-        p.sx += p.vx * dt; p.sy += p.vy * dt;
+        if (!REDUCED) p.sx += p.vx * dt, p.sy += p.vy * dt;
         if (p.sx < -m || p.sx > W + m || p.sy < -m || p.sy > H + m) { p.sx = Math.random()*W; p.sy = Math.random()*H; continue; }
-        fctx.globalAlpha = Math.max(0, p.a * (.5 + .5 * Math.sin(t * p.tw + p.ph)));
+        fctx.globalAlpha = Math.max(0, p.a * (REDUCED ? .75 : .5 + .5 * Math.sin(t * p.tw + p.ph)));
         fctx.drawImage(sp, p.sx - p.r*3, p.sy - p.r*3, p.r*6, p.r*6);
       }
       fctx.globalAlpha = 1;
@@ -791,24 +850,27 @@ function buildRings() {
   // estática e um anel giratório tracejado exatamente um em cima do outro (o "os dois no mesmo"
   // reportado). As duas listas de fração abaixo nunca têm valores iguais entre si, então raio
   // contínuo garante raios sempre distintos, não importa o tamanho da árvore.
-  [0.125, 0.25, 0.375, 0.542, 0.708, 0.833, 1].forEach((f) => { s += C((f * ext * RING_STEP).toFixed(2), 'ring'); });
+  // §4.13: anéis concêntricos finos (1px, cor --line) + só DOIS tracejados girando (--line2, 90s e
+  // 140s, o segundo ao contrário) — antes eram 5 giratórios grossos com brilho, que competiam com
+  // as esferas acesas
+  [0.2, 0.4, 0.6, 0.8, 1].forEach((f) => { s += C((f * ext * RING_STEP).toFixed(2), 'ring'); });
   const spins = [
-    { f: 0.167, mult: 9,  width: 6,  speed: 110, rev: false },
-    { f: 0.333, mult: 13, width: 10, speed: 150, rev: false },
-    { f: 0.5,   mult: 10, width: 4,  speed: 95,  rev: true },
-    { f: 0.667, mult: 16, width: 8,  speed: 170, rev: false },
-    { f: 0.875, mult: 12, width: 5,  speed: 130, rev: true },
+    { f: 0.3, mult: 12, speed: 90,  rev: false },
+    { f: 0.7, mult: 20, speed: 140, rev: true },
   ];
-  spins.forEach(({ f, mult, width, speed, rev }) => {
-    const r = f * ext * RING_STEP, n = segs * mult, seg = (2 * Math.PI * r) / n, dash = seg * .15, gap = seg - dash;
+  spins.forEach(({ f, mult, speed, rev }) => {
+    const r = f * ext * RING_STEP, n = segs * mult, seg = (2 * Math.PI * r) / n, dash = seg * .35, gap = seg - dash;
     s += `<g class="ringspin${rev ? ' rev' : ''}" style="animation-duration:${speed}s">` +
-      C(r.toFixed(2), 'ringTick', `stroke-width="${width}" stroke-dasharray="${dash.toFixed(2)} ${gap.toFixed(2)}"`) + '</g>';
+      C(r.toFixed(2), 'ringTick', `stroke-dasharray="${dash.toFixed(2)} ${gap.toFixed(2)}"`) + '</g>';
   });
   ringsInner.innerHTML = s;
 }
+const DEFAULT_RING_COLOR = '#c6d2ff';
 function applyRingColor(hex) {
   ringColor = hex;
-  ringsEl.style.setProperty('--ringc', hexToRgb(hex).join(','));
+  // cor padrão = tom de linha do palco (--line/--line2, §4.13); cor escolhida pelo Mestre continua valendo
+  ringsEl.style.setProperty('--ringc', hex === DEFAULT_RING_COLOR ? tone.lineRGB : hexToRgb(hex).join(','));
+  ringsEl.classList.toggle('custom', hex !== DEFAULT_RING_COLOR);
 }
 window.previewRingColor = (c) => { if (isGM) { applyRingColor(c); colorPreviewDirty = true; } };
 function applyRingOpacity(v) {
@@ -987,15 +1049,18 @@ function glowSpriteFor(colorHex, r) {
   spriteCache.set(key, cv);
   return cv;
 }
-function bodySpriteFor(shape, r) {
-  const key = 'body|' + shape + '|' + r;
+// corpo da esfera DESBLOQUEADA (§4.13): degradê radial do branco 50% (mistura meio a meio com
+// branco) no centro-alto até a cor da via na borda — cacheado por forma+raio+cor como antes
+function bodySpriteFor(shape, r, colorHex) {
+  const key = 'body|' + shape + '|' + r + '|' + colorHex;
   let cv = spriteCache.get(key);
   if (cv) return cv;
   const d = Math.max(2, Math.ceil(r * 2 * DPR));
   cv = document.createElement('canvas'); cv.width = cv.height = d;
-  const g = cv.getContext('2d');
-  const grad = g.createRadialGradient(d*.42, d*.36, 0, d*.5, d*.5, d*.64);
-  grad.addColorStop(0, '#15131f'); grad.addColorStop(.55, '#0b0914'); grad.addColorStop(1, '#050308');
+  const g = cv.getContext('2d'), [cr, cg, cb] = hexToRgb(colorHex);
+  const grad = g.createRadialGradient(d*.42, d*.36, 0, d*.5, d*.5, d*.62);
+  grad.addColorStop(0, `rgb(${(cr + 255) >> 1},${(cg + 255) >> 1},${(cb + 255) >> 1})`);
+  grad.addColorStop(1, colorHex);
   g.fillStyle = grad;
   g.save(); g.translate(d/2, d/2); traceShapePath(g, shape, d/2); g.fill(); g.restore();
   spriteCache.set(key, cv);
@@ -1007,7 +1072,7 @@ function bodySpriteFor(shape, r) {
 const COST_SPRITE_OVERSAMPLE = 2.6;
 let costSpriteCache = new Map();
 function costBadgeSpriteFor(text, color) {
-  const key = text + '|' + color;
+  const key = text + '|' + color + '|' + tone.appBg;
   let cv = costSpriteCache.get(key);
   if (cv) return cv;
   const scale = DPR * COST_SPRITE_OVERSAMPLE, fontPx = 11 * scale, pad = 4 * scale;
@@ -1018,7 +1083,7 @@ function costBadgeSpriteFor(text, color) {
   const g = cv.getContext('2d');
   g.font = `700 ${fontPx}px ${cssVar('--mono', 'monospace')}`;
   g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.lineWidth = 3 * scale; g.strokeStyle = '#080615'; g.globalAlpha = .95;
+  g.lineWidth = 3 * scale; g.strokeStyle = tone.appBg; g.globalAlpha = .95;
   g.strokeText(text, w / 2, h / 2);
   g.fillStyle = color; g.globalAlpha = 1;
   g.fillText(text, w / 2, h / 2);
@@ -1051,8 +1116,27 @@ function updateWaveFront(now) {
   const speed = Math.max(WAVE_SPEED, travel / WAVE_MAX_CYCLE_S);
   waveFront = ((now / 1000) % (travel / speed + WAVE_PAUSE_S)) * speed; // na pausa passa de travel: nada acende
 }
+/* estados (docs/DESIGN-FFXIII.md §4.13) — só existem na visão do JOGADOR:
+   desbloqueada · disponível (vizinha de uma desbloqueada, ainda não comprada) · bloqueada.
+   O Mestre edita a árvore inteira, então pra ele tudo aparece aceso. "Selecionada" é por cima de
+   qualquer um dos três (losango externo + esfera a 1.12×, ver drawNode). */
+let availableIds = new Set();
+function computeAvailableIds() {
+  availableIds = new Set();
+  if (isGM) return;
+  for (const e of edges) {
+    const A = nodeById.get(e.a), B = nodeById.get(e.b); if (!A || !B) continue;
+    const ua = isNodeUnlocked(A), ub = isNodeUnlocked(B);
+    if (ua && !ub) availableIds.add(B.id); else if (ub && !ua) availableIds.add(A.id);
+  }
+}
+function nodeState(n) {
+  if (isGM || isNodeUnlocked(n)) return 'unlocked';
+  return availableIds.has(n.id) ? 'available' : 'locked';
+}
 function drawWorld(now) {
   updateWaveFront(now);
+  computeAvailableIds();
   const ctx = sctx;
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.clearRect(0, 0, W, H);
@@ -1133,9 +1217,15 @@ function waveStripFor(colorHex) {
   spriteCache.set(key, cv);
   return cv;
 }
+const DEFAULT_EDGE_COLOR = '#d6f0ff';
 function drawEdge(ctx, A, B, e) {
   const on = A.enabled !== false && B.enabled !== false;
-  const [er, eg, eb] = hexToRgb(edgeColor);
+  // §4.13: acesa quando as duas pontas estão desbloqueadas (pro Mestre: sempre); a cor é a da via da
+  // ponta de DESTINO (a mais longe do Núcleo). Se o Mestre escolheu uma cor própria pras linhas, ela vale.
+  const lit = on && nodeState(A) === 'unlocked' && nodeState(B) === 'unlocked';
+  const dest = (nodeDist.get(A.id) ?? 0) > (nodeDist.get(B.id) ?? 0) ? A : B;
+  const litColor = edgeColor === DEFAULT_EDGE_COLOR ? nodeColor(dest) : edgeColor;
+  const [er, eg, eb] = hexToRgb(litColor);
   ctx.save();
   ctx.lineCap = 'round';
   const line = (w, style) => { ctx.strokeStyle = style; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.stroke(); };
@@ -1145,18 +1235,19 @@ function drawEdge(ctx, A, B, e) {
     line(3, cssVar('--brass', '#18b5c6'));
     ctx.restore(); return;
   }
-  if (!on) { line(1.4, `rgba(${er},${eg},${eb},.3)`); ctx.restore(); return; }
+  if (!on) { ctx.setLineDash([4, 6]); line(1.4, tone.line2); ctx.restore(); return; } // atalho desativado: tracejado apagado
+  if (!lit) { line(2, tone.line2); ctx.restore(); return; }                               // caminho ainda não aberto: --line2, sem brilho
   // brilho base suave — sprite esticado ao longo da linha (ver comentário acima); movimento fica só
   // por conta da onda, pra não competir com ela
   const dx = B.x - A.x, dy = B.y - A.y, len = Math.hypot(dx, dy) || 1, angle = Math.atan2(dy, dx);
   ctx.save();
   ctx.translate(A.x, A.y); ctx.rotate(angle);
   ctx.globalAlpha = EDGE_GLOW_ALPHA;
-  ctx.drawImage(edgeGlowStripFor(edgeColor), 0, -EDGE_GLOW_THICKNESS / 2, len, EDGE_GLOW_THICKNESS);
+  ctx.drawImage(edgeGlowStripFor(litColor), 0, -EDGE_GLOW_THICKNESS / 2, len, EDGE_GLOW_THICKNESS);
   ctx.globalAlpha = 1;
   ctx.restore();
-  line(1.8, `rgba(${er},${eg},${eb},.8)`); // núcleo sólido nítido da linha
-  drawWaveOnEdge(ctx, A, B, len, angle);
+  line(2, `rgba(${er},${eg},${eb},.9)`); // núcleo sólido nítido da linha
+  drawWaveOnEdge(ctx, A, B, len, angle, litColor);
   ctx.restore();
 }
 // trecho da onda de luz que está passando por esta conexão agora (se estiver): recorte do sprite
@@ -1164,7 +1255,7 @@ function drawEdge(ctx, A, B, e) {
 // perto do Núcleo pro mais longe. O trecho vai de centro a centro — dentro das esferas fica
 // escondido pelo corpo delas, o que lê como a luz "entrando" na habilidade e saindo pela conexão
 // seguinte no instante certo (a distância de cada uma já inclui esse trecho).
-function drawWaveOnEdge(ctx, A, B, len, angle) {
+function drawWaveOnEdge(ctx, A, B, len, angle, colorHex) {
   if (waveFront == null) return;
   const dA = nodeDist.get(A.id), dB = nodeDist.get(B.id);
   if (dA == null || dB == null) return;
@@ -1176,72 +1267,84 @@ function drawWaveOnEdge(ctx, A, B, len, angle) {
   ctx.rotate(flip ? angle + Math.PI : angle);
   // recorta pro trecho real da conexão — a faixa nasce/morre nas pontas, não vaza pra fora dela
   ctx.beginPath(); ctx.rect(0, -WAVE_STRIP_THICKNESS, len, WAVE_STRIP_THICKNESS * 2); ctx.clip();
-  ctx.drawImage(waveStripFor(edgeColor), p - WAVE_TAIL, -WAVE_STRIP_THICKNESS / 2, WAVE_TAIL + WAVE_HEAD, WAVE_STRIP_THICKNESS);
+  ctx.drawImage(waveStripFor(colorHex), p - WAVE_TAIL, -WAVE_STRIP_THICKNESS / 2, WAVE_TAIL + WAVE_HEAD, WAVE_STRIP_THICKNESS);
   ctx.restore();
 }
+const AVAIL_PULSE_MS = 2200; // anel da esfera disponível: escala .8→1.9, alfa .9→0 (§4.13)
 function drawNode(ctx, n, now) {
   const r = nodeRadius(n);
-  const color = n.color || viaByKey(n.fac).color;
+  const color = nodeColor(n);
   const disabled = n.enabled === false;
-  const acquired = !isGM && isNodeUnlocked(n);
+  const state = nodeState(n);
   const isSelected = n === selected;
   const isMultisel = areaSelection.has(n.id);
+  const shape = n.shape || 'circle';
   ctx.save();
   ctx.translate(n.x, n.y);
-  // desativada NÃO apaga a cor — só apaga bem forte. Antes o halo/textura/aro coloridos eram
-  // pulados de propósito quando desativada, e sobrava só o corpo escuro + um fio quase invisível
-  // (.25 de alpha) — na prática lia como "preto sem efeito nenhum". fadeMul multiplica em cima do
-  // alpha normal de cada elemento colorido, deixando tudo bem apagado (quase cinza) mas ainda dá
-  // pra reconhecer a cor original de cada via/habilidade.
-  const fadeMul = disabled ? 0.2 : 1;
-  // halo — ver comentário nos sprites; substitui filter:drop-shadow (caro por elemento em SVG)
-  const glowR = r * 2.4, sprite = glowSpriteFor(color, glowR);
-  ctx.globalAlpha = (acquired ? .9 : .6) * fadeMul;
-  ctx.drawImage(sprite, -glowR, -glowR, glowR * 2, glowR * 2);
-  ctx.globalAlpha = 1;
-  // corpo (gradiente escuro, sprite cacheado por forma+raio) + aro finíssimo translúcido na cor da via
-  const shape = n.shape || 'circle';
-  ctx.drawImage(bodySpriteFor(shape, r), -r, -r, r * 2, r * 2);
-  const [cr, cg, cb] = hexToRgb(color);
-  ctx.strokeStyle = `rgba(${cr},${cg},${cb},.25)`; ctx.lineWidth = .6;
-  traceShapePath(ctx, shape, r); ctx.stroke();
-  // textura de pontos giratória (sólido 3D cacheado por forma+cor, ver dotSpriteFor) — recortada
-  // na forma da esfera por segurança (o modelo 3D de cada forma já projeta dentro da silhueta na
-  // maioria dos ângulos, mas o recorte evita qualquer vazamento nos cantos em rotações extremas)
+  // selecionada (§4.13): losango externo de 1px --bone com tamanho+16 e a esfera a 1.12×. Fica fora
+  // do scale abaixo, pra ser sempre exatamente r+8 do centro.
+  if (isSelected) {
+    const k = r * 1.12 + 8;
+    ctx.strokeStyle = tone.bone; ctx.lineWidth = 1; ctx.globalAlpha = .9;
+    ctx.beginPath(); ctx.moveTo(0, -k); ctx.lineTo(k, 0); ctx.lineTo(0, k); ctx.lineTo(-k, 0); ctx.closePath(); ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
   ctx.save();
-  traceShapePath(ctx, shape, r); ctx.clip();
-  ctx.globalAlpha = fadeMul;
-  ctx.drawImage(dotSpriteFor(shape, color), -r, -r, r * 2, r * 2);
-  ctx.globalAlpha = 1;
+  if (isSelected) ctx.scale(1.12, 1.12);
+  // desativada (dado do Mestre) NÃO apaga a cor de vez — vira a esfera "bloqueada" com a cor da via
+  // bem fraca no contorno, dá pra reconhecer de qual via ela é
+  if (disabled) {
+    ctx.fillStyle = tone.field; traceShapePath(ctx, shape, r); ctx.fill();
+    ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.globalAlpha = .35;
+    if (n === linkSrc) ctx.setLineDash([2, 4]);
+    traceShapePath(ctx, shape, r); ctx.stroke();
+    ctx.setLineDash([]); ctx.globalAlpha = 1;
+  } else if (state === 'unlocked') {
+    // halo na cor da via (equivale ao shadowBlur 20–44 do protótipo, sem o custo dele — ver sprites)
+    const glowR = r * 2.4;
+    ctx.globalAlpha = .8;
+    ctx.drawImage(glowSpriteFor(color, glowR), -glowR, -glowR, glowR * 2, glowR * 2);
+    ctx.globalAlpha = 1;
+    ctx.drawImage(bodySpriteFor(shape, r, color), -r, -r, r * 2, r * 2);
+    // textura de pontos giratória (sólido 3D cacheado por forma+cor, ver dotSpriteFor) — pontos
+    // escuros por cima do corpo claro, recortados na forma da esfera
+    ctx.save();
+    traceShapePath(ctx, shape, r); ctx.clip();
+    ctx.globalAlpha = .45;
+    ctx.drawImage(dotSpriteFor(shape, tone.dots), -r, -r, r * 2, r * 2);
+    ctx.restore();
+    ctx.strokeStyle = color; ctx.lineWidth = 1;
+    if (n === linkSrc) { ctx.setLineDash([2, 4]); ctx.lineWidth = 2; }
+    traceShapePath(ctx, shape, r); ctx.stroke();
+    ctx.setLineDash([]);
+  } else if (state === 'available') {
+    // anel expandindo — com movimento reduzido fica parado num tamanho intermediário
+    const p = REDUCED ? .45 : (now % AVAIL_PULSE_MS) / AVAIL_PULSE_MS;
+    ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.globalAlpha = REDUCED ? .5 : .9 * (1 - p);
+    traceShapePath(ctx, shape, r * (.8 + 1.1 * p)); ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = tone.appBg; traceShapePath(ctx, shape, r); ctx.fill();
+    ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+    traceShapePath(ctx, shape, r); ctx.stroke();
+  } else {
+    ctx.fillStyle = tone.field; traceShapePath(ctx, shape, r); ctx.fill();
+    ctx.strokeStyle = tone.line2; ctx.lineWidth = 1;
+    traceShapePath(ctx, shape, r); ctx.stroke();
+  }
   ctx.restore();
-  // aro de destaque (rim) — dourado grosso se o JOGADOR já desbloqueou de verdade, senão a cor da via
-  ctx.strokeStyle = acquired ? cssVar('--brass', '#18b5c6') : color;
-  ctx.lineWidth = acquired ? 3 : 1.8;
-  ctx.globalAlpha = .9 * fadeMul;
-  if (n === linkSrc) ctx.setLineDash([2, 4]);
-  traceShapePath(ctx, shape, r); ctx.stroke();
-  ctx.setLineDash([]); ctx.globalAlpha = 1;
   // flash de desbloqueio — anel branco que expande e some (disparado em doUnlock)
   if (n._flashStart != null) {
     const p = (now - n._flashStart) / 700;
-    if (p >= 1) n._flashStart = null;
+    if (p >= 1 || REDUCED) n._flashStart = null;
     else {
-      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.8; ctx.globalAlpha = .95 * (1 - p);
+      ctx.strokeStyle = tone.bone; ctx.lineWidth = 1.8; ctx.globalAlpha = .95 * (1 - p);
       ctx.beginPath(); ctx.arc(0, 0, (r + 7) * (1 + p * 1.6), 0, Math.PI * 2); ctx.stroke();
       ctx.globalAlpha = 1;
     }
   }
   // anel de seleção (pulsa) / multi-seleção (área) / foco de teclado
   if (isSelected) {
-    let mulO = .7, mulR = 1;
-    if (!REDUCED) {
-      const phase = ((now / 1000) % 1.8) / 1.8 * Math.PI * 2;
-      mulO = 0.2 + 0.5 * (0.5 + 0.5 * Math.cos(phase));
-      mulR = 1 + 0.15 * (0.5 - 0.5 * Math.cos(phase));
-    }
-    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.3; ctx.globalAlpha = .9 * mulO;
-    ctx.beginPath(); ctx.arc(0, 0, (r + 9) * mulR, 0, Math.PI * 2); ctx.stroke();
-    ctx.globalAlpha = 1;
+    // losango de seleção já desenhado no começo de drawNode
   } else if (isMultisel) {
     ctx.strokeStyle = cssVar('--brass', '#18b5c6'); ctx.fillStyle = 'rgba(227,192,113,.1)';
     ctx.lineWidth = 1.6; ctx.globalAlpha = .95;
@@ -1275,17 +1378,19 @@ function drawNode(ctx, n, now) {
       // selo saía ~2.6x maior do que deveria (o bug do "número gigante" em cima da esfera).
       const w = sp.width / (DPR * COST_SPRITE_OVERSAMPLE), h = sp.height / (DPR * COST_SPRITE_OVERSAMPLE);
       ctx.globalAlpha = labelAlpha;
-      ctx.drawImage(sp, -w / 2, -(r + 9) - h / 2, w, h);
+      ctx.drawImage(sp, -w / 2, -(r * (isSelected ? 1.12 : 1) + 9) - h / 2, w, h);
       ctx.globalAlpha = 1;
     }
     // rótulo do nome
-    ctx.font = `11px ${cssVar('--mono', 'monospace')}`;
+    ctx.font = `10px ${cssVar('--mono', 'monospace')}`;
+    ctx.letterSpacing = '0.6px'; // .06em
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    const label = n.name || '(sem nome)';
-    ctx.lineWidth = 4; ctx.strokeStyle = '#080615'; ctx.globalAlpha = .97 * labelAlpha;
-    ctx.strokeText(label, 0, r + 16);
-    ctx.fillStyle = cssVar('--ink', '#e9edf1'); ctx.globalAlpha = labelAlpha;
-    ctx.fillText(label, 0, r + 16);
+    const label = n.name || '(sem nome)', ly = r * (isSelected ? 1.12 : 1) + (isSelected ? 18 : 15);
+    ctx.lineWidth = 4; ctx.strokeStyle = tone.appBg; ctx.globalAlpha = .9 * labelAlpha;
+    ctx.strokeText(label, 0, ly);
+    ctx.fillStyle = isSelected ? tone.bone : state === 'unlocked' && !disabled ? tone.inkDim : tone.inkFaint; ctx.globalAlpha = labelAlpha;
+    ctx.fillText(label, 0, ly);
+    ctx.letterSpacing = '0px';
     ctx.globalAlpha = 1;
   }
   ctx.restore();
@@ -1531,7 +1636,7 @@ function openViewer(n) {
   $('v-name').textContent = n.name || '(sem nome)';
   $('v-type').textContent = n.kind === 'core' ? 'Núcleo' : n.kind === 'active' ? 'Ativa' : 'Passiva';
   const via = viaByKey(n.fac);
-  $('v-via').innerHTML = `<div class="chip on" style="--vc:${via.color};flex:0 0 auto;cursor:default">${esc(via.name)}</div>`;
+  $('v-via').innerHTML = `<div class="chip on" data-f="${esc(via.key)}" style="--vc:${viaDisplayColor(via.color)};flex:0 0 auto;cursor:default">${esc(via.name)}</div>`;
   $('v-cost').innerHTML = `<span class="ic">${ICONS.sparkle}</span>${n.cost || 0}`;
   $('v-desc').textContent = n.descr || 'Sem descrição.';
   const mods = n.modifiers || [];

@@ -44,10 +44,9 @@
    em qualquer página, então as camadas abaixo nunca apareciam. O html continua com a cor de base. */
 body{background:transparent}
 #fallback,#fallback.solid{background:var(--app-bg);overflow:hidden}
-/* árvore: o fundo é a cor que o Mestre escolheu pra árvore — no tema claro o theme.css apagava o
-   #fallback a 60%, virando um cinza médio sem contraste pras esferas; o palco mostra a cor inteira
-   e o arvore.js escolhe os tons (escuro/claro) pela luminosidade dela (§4.13) */
-:root[data-theme="light"] body.arvore-page #fallback{opacity:1}
+/* árvore: o fundo é a cor que o Mestre escolheu (com os degradês próprios do arvore.js) — as camadas
+   de brilho/linhas do redesign ficam fora dela, senão pintam por cima do céu da árvore */
+body.arvore-page #fallback::before,body.arvore-page #fallback::after{content:none}
 #fallback::before{content:"";position:absolute;inset:-20%;
   background:radial-gradient(900px 700px at 28% 24%,var(--glow1),transparent 60%),radial-gradient(1000px 800px at 76% 82%,var(--glow2),transparent 62%);
   animation:vtDrift 26s ease-in-out infinite}

@@ -32,7 +32,7 @@ function showBootError(msg) {
 let db, mountHelp, mountThemeToggle, openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus;
 try {
   db = await import('./lib/db.js?v=40');
-  ({ mountHelp, mountThemeToggle, openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus } = await import('./lib/ui.js?v=4'));
+  ({ mountHelp, mountThemeToggle, openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus } = await import('./lib/ui.js?v=5'));
 } catch (e) {
   showBootError(`Não deu pra carregar os módulos da página (db.js/ui.js): ${e && e.message ? e.message : e}`);
   throw e;

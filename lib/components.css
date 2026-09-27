@@ -187,3 +187,22 @@ input[type=checkbox]::after{width:8px;height:8px;background:var(--primary)}
 .res-btn,.stat-ctl .plus{width:40px;height:40px;box-shadow:inset 0 0 0 1px var(--border-strong) !important;color:var(--text-2) !important;background:transparent !important}
 .res-btn:hover,.stat-ctl .plus:hover:not(:disabled){box-shadow:inset 0 0 0 1px var(--primary) !important;color:var(--text) !important;background:var(--surface-2) !important}
 @media (pointer:coarse){.res-btn,.stat-ctl .plus{width:44px;height:44px}}
+
+/* ---------- raridade calma (decisão do usuário sobre o §2 "nenhum loop") ----------
+   a raridade vira uma faixa de 2px no topo do card, na cor dela; nada brilha, pulsa ou flutua.
+   Só o Lendário ganha um brilho único ao passar o mouse, e nem isso com movimento reduzido. */
+.rar-frame,.rar-frame::before,.rarity-fx,.rarity-fx *{animation:none !important}
+.rar-frame{padding:0 !important;background:none !important;box-shadow:none !important;filter:none !important;transform:none !important}
+.rar-frame::before{content:none !important}
+.rar-frame:hover{transform:none !important;filter:none !important}
+.rar-ground,.rar-ring,.rar-rays,.rar-spark,.pc-sweep,.pc-highlight,.pc-ring,.pc-core,.pc-glint{display:none !important}
+.rar-frame > .poster-card,.rar-frame > .list-row,.rarity-fx.rarity-surface{border-color:var(--border) !important;
+  box-shadow:inset 0 2px 0 var(--rc,var(--border-strong)),inset 0 0 0 1px var(--border) !important}
+.rar-frame > .poster-card:hover,.rar-frame > .list-row:hover{background:var(--surface-2) !important;
+  box-shadow:inset 0 2px 0 var(--rc,var(--border-strong)),inset 0 0 0 1px var(--border-strong) !important}
+@keyframes rarOnce{
+  0%{box-shadow:inset 0 2px 0 var(--rc),inset 0 0 0 1px var(--rc),inset 0 0 28px color-mix(in srgb,var(--rc) 40%,transparent)}
+  100%{box-shadow:inset 0 2px 0 var(--rc),inset 0 0 0 1px var(--border-strong),inset 0 0 28px transparent}}
+.rar-frame[data-rarity="Lendário"]:hover > .poster-card{animation:rarOnce .9s var(--ease) 1 !important}
+@media (prefers-reduced-motion:reduce){.rar-frame[data-rarity="Lendário"]:hover > .poster-card{animation:none !important}}
+html[data-motion="off"] .rar-frame[data-rarity="Lendário"]:hover > .poster-card{animation:none !important}

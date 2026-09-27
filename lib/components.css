@@ -55,6 +55,9 @@ p{max-width:68ch}
 
 /* ---------- campos ---------- */
 .fld{display:flex;flex-direction:column;gap:6px}
+/* .fld.row (rótulo à esquerda, campo à direita) continua em linha no desktop */
+.fld.row{flex-direction:row;align-items:center;gap:var(--space-3)}
+@media (max-width:760px){.fld.row{flex-direction:column;align-items:stretch}.fld.row label{flex:none}}
 .fld > label,.fld label{font-family:var(--mono);font-size:var(--fs-label);line-height:16px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-2);margin:0}
 .fld-help,.fld .hint{font-size:var(--fs-small);color:var(--text-3)}
 .fld-err{font-family:var(--serif);font-size:var(--fs-small);letter-spacing:0;color:var(--danger)}

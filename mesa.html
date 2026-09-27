@@ -12,7 +12,91 @@
 <link rel="stylesheet" href="lib/tokens.css?v=1">
 <link rel="stylesheet" href="lib/theme.css?v=50">
 <link rel="stylesheet" href="lib/theme-ffx.css?v=11">
-<link rel="stylesheet" href="lib/components.css?v=4">
+<link rel="stylesheet" href="lib/components.css?v=5">
+<style>
+  /* Mesa — "Latão calmo" (docs/DESIGN-v2-LATAO-CALMO.md §3.3) */
+  /* topbar: o grupo em avatares, traço verde = online */
+  .party-strip{display:flex;align-items:center;gap:4px;margin-right:var(--space-4)}
+  .ps-av{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;font-family:var(--disp);font-size:13px;
+    color:var(--text-2);background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--border)}
+  .ps-av.on{color:var(--text);box-shadow:inset 0 0 0 1px var(--border),inset 0 -2px 0 var(--success)}
+  .ps-av.more{font-family:var(--mono);font-size:var(--fs-label)}
+  .ps-count{margin-left:var(--space-2);font-size:var(--fs-small);color:var(--text-3);white-space:nowrap}
+  /* trilho: mini-cabeçalho do personagem acima do menu; o grupo mora na topbar */
+  .rail-char{display:flex;align-items:center;gap:var(--space-3);padding:0 var(--space-4) var(--space-4) var(--space-5);margin-bottom:var(--space-2);border-bottom:1px solid var(--border)}
+  .rail-char[hidden]{display:none}
+  .rc-av{width:40px;height:40px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;object-fit:cover;background:var(--surface-2);
+    color:var(--primary);font-family:var(--disp);font-size:18px;--c:var(--cut-sm);clip-path:var(--chamfer)}
+  .rc-txt{min-width:0;display:flex;flex-direction:column}
+  .rc-txt b{font-family:var(--disp);font-weight:400;font-size:16px;line-height:22px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rc-txt small{font-size:var(--fs-small);color:var(--text-3)}
+  @media (min-width:821px){#party{display:none}}
+  /* capa: retrato 96 chanfro 12, nome Fraunces 32, tags neutras */
+  .char-bio-row{min-height:0 !important;padding:var(--space-5) !important;align-items:center !important;background:var(--surface-1) !important;
+    box-shadow:inset 0 0 0 1px var(--border) !important;--c:var(--cut-md);clip-path:var(--chamfer)}
+  .char-bio-row .char-portrait{width:96px !important;height:96px !important;--c:var(--cut-md);clip-path:var(--chamfer) !important;font-size:40px !important}
+  .char-bio-row .char-info h2{font-size:32px !important;line-height:40px !important}
+  /* status: grade de 6; clicar rola; a dica mostra a fórmula */
+  .mesa-main .stat-grid:not(.compact){grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}
+  @media (min-width:1280px){.mesa-main .stat-grid:not(.compact){grid-template-columns:repeat(6,minmax(0,1fr))}}
+  [data-roll]{cursor:pointer}
+  .stat-tile[data-roll]:not(.compact){position:relative}
+  .stat-tile[data-roll]:not(.compact):hover,.stat-tile[data-roll]:not(.compact):focus-visible{box-shadow:inset 0 0 0 1px var(--primary) !important}
+  .stat-tile[data-roll]:not(.compact):hover::before{content:attr(data-hint);position:absolute;right:10px;top:10px;font-family:var(--mono);font-size:var(--fs-label);color:var(--primary)}
+  .stat-grid.has-points .stat-tile[data-roll]:hover::before{content:none}
+  .stat-pend{color:var(--success) !important}
+  @keyframes rollTap{50%{transform:scale(.97)}}
+  .rolled{animation:rollTap .24s var(--ease)}
+  /* combate: lista de 3 colunas "Nome …… valor" */
+  .mesa-main .stat-grid.compact{grid-template-columns:repeat(3,minmax(0,1fr)) !important;gap:0 var(--space-5) !important}
+  .mesa-main .stat-tile.compact{flex-direction:row !important;align-items:baseline !important;justify-content:space-between;gap:var(--space-2);min-height:40px;
+    padding:var(--space-2) 0 !important;background:none !important;box-shadow:none !important;border-bottom:1px dotted var(--border-strong)}
+  .mesa-main .stat-tile.compact .stat-val{margin-left:auto}
+  .mesa-main .stat-grid.compact:not(.no-roll) .stat-tile.compact:hover .stat-val,.skill-chip[data-roll]:hover .skc-name{color:var(--primary)}
+  .mesa-main .stat-grid.compact.no-roll .stat-tile{cursor:default}
+  @media (max-width:1100px){.mesa-main .stat-grid.compact{grid-template-columns:repeat(2,minmax(0,1fr)) !important}}
+  /* painel de dados: histórico + rodapé com dados rápidos e fórmula livre */
+  @media (min-width:821px){.mesa-page .dice-panel .dice-last,.mesa-page .dice-panel .dh{display:none}}
+  .dice-foot{flex:0 0 auto !important;display:flex;flex-direction:column;gap:var(--space-2);padding:var(--space-3) var(--space-4);border-top:1px solid var(--border);background:var(--surface-1)}
+  .dice-foot .dice-quick{display:grid !important;grid-template-columns:repeat(6,1fr);gap:4px;padding:0}
+  .dice-foot .dice-quick button{height:40px}
+  .dice-formula{display:flex;gap:var(--space-2)}
+  .dice-formula input{flex:1;min-width:0;height:40px;padding:0 var(--space-3);font-family:var(--mono);font-size:14px;color:var(--text);
+    background:var(--surface-2);border:0;box-shadow:inset 0 0 0 1px var(--border-strong);outline:none}
+  .dice-formula input:focus{box-shadow:inset 0 0 0 1px var(--primary),0 0 0 3px color-mix(in srgb,var(--primary) 25%,transparent)}
+  .dice-formula .btn{width:auto}
+  .roll{background:none !important;box-shadow:none !important;border:0 !important;border-bottom:1px solid var(--border) !important;padding:var(--space-3) 0 !important}
+  .roll .rtop .who{font-family:var(--serif) !important;font-size:var(--fs-small) !important;letter-spacing:0 !important;text-transform:none !important;color:var(--text-2) !important}
+  .roll .ftxt{font-size:12px}
+  .roll .tot{font-family:var(--disp) !important;font-size:26px !important;font-variant-numeric:tabular-nums;color:var(--text) !important}
+  .roll.mine .tot{font-size:32px !important;color:var(--primary) !important}
+  .roll .tot.crit-max{color:var(--warning) !important}
+  .roll .tot.crit-min{color:var(--danger) !important}
+  .crit-tag{font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.1em;text-transform:uppercase;background:none !important;border:0 !important;padding:0 !important}
+  .crit-tag.max{color:var(--warning) !important} .crit-tag.min{color:var(--danger) !important}
+  .roll .det{font-family:var(--mono);font-size:12px;color:var(--text-3);flex-basis:100%}
+  /* celular */
+  .mesa-foot{display:none}
+  @media (max-width:820px){
+    .party-strip{display:none}
+    .rail-char,#tabs-eyebrow{display:none !important}
+    .mesa-rail-left > #tabs{flex-direction:row;overflow-x:auto;gap:0;border-bottom:1px solid var(--border);scrollbar-width:none}
+    .mesa-rail-left > #tabs button{flex:0 0 auto;height:44px;min-height:44px;padding:0 var(--space-4);background:none !important;box-shadow:none !important}
+    .mesa-rail-left > #tabs .on,.mesa-rail-left > #tabs [aria-selected="true"]{box-shadow:inset 0 -2px 0 var(--primary) !important}
+    .mesa-rail-left > #tabs .ffx-cursor{display:none}
+    .mesa-main .stat-grid:not(.compact){grid-template-columns:repeat(3,minmax(0,1fr))}
+    .mesa-main .stat-grid.compact{grid-template-columns:1fr !important}
+    .dice-fab{display:none !important}
+    .mesa-foot{position:fixed;left:0;right:0;bottom:env(safe-area-inset-bottom);z-index:var(--z-drawer);display:flex;align-items:center;gap:var(--space-2);
+      height:64px;padding:0 var(--space-4);background:var(--surface-1);border-top:1px solid var(--border)}
+    body.has-ytbar .mesa-foot{bottom:calc(50px + env(safe-area-inset-bottom))}
+    .mf-last{flex:1;min-width:0;display:flex;align-items:baseline;gap:var(--space-2)}
+    .mf-val{font-family:var(--disp);font-size:24px;color:var(--text);font-variant-numeric:tabular-nums}
+    .mf-det{font-size:var(--fs-small);color:var(--text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .mesa-foot .btn{width:auto;min-height:44px}
+    .mesa-page .mesa-main{padding-bottom:calc(150px + env(safe-area-inset-bottom)) !important}
+  }
+</style>
 </head>
 <body class="mesa-page">
 <script>try{
@@ -35,6 +119,7 @@
     <div class="drop glass" id="mesa-menu-drop" role="menu"></div>
   </div>
   <div class="spacer"></div>
+  <div class="party-strip" id="party-strip" aria-label="Grupo da mesa"></div>
   <div class="nav-user" id="nav-user">
     <button type="button" class="chip" id="nav-user-btn" aria-haspopup="menu" aria-expanded="false" onclick="toggleUserMenu()">
       <span class="av" id="nav-av">?</span><b id="who">…</b><span style="color:var(--ink-faint)">▾</span>
@@ -54,6 +139,7 @@
   <aside class="mesa-rail-left" id="rail-left">
     <!-- menu vertical (docs/DESIGN-FFXIII.md §3.4/§4.1): sempre visível, inclusive no celular — só o
          bloco Grupo/pedidos/ações abaixo continua recolhível lá -->
+    <div class="rail-char" id="rail-char" hidden></div>
     <div class="ffx-menu-eyebrow" id="tabs-eyebrow" aria-hidden="true">Mesa</div>
     <div class="ffx-menu" id="tabs" role="tablist" aria-orientation="vertical" aria-label="Seções da mesa"></div>
     <button type="button" class="rail-mobile-toggle" id="rail-mobile-toggle" onclick="toggleMobileRail()" aria-expanded="false">
@@ -287,11 +373,22 @@ function mountLiveSync() {
 }
 
 let syncTabsTabindex = () => {};
+// mini-cabeçalho do trilho (§3.3): jogador vê o próprio personagem; Mestre vê a mesa
+function paintRailChar() {
+  const el = $('rail-char'); if (!el) return;
+  const who = role === 'gm' ? { name: mesa?.name, sub: 'Mestre', img: mesa?.image_url } :
+    character ? { name: character.name || 'Sem nome', sub: ['Nível ' + (character.level || 1), character.char_class].filter(Boolean).join(' · '), img: character.avatar_url } : null;
+  if (!who || !who.name) { el.hidden = true; return; }
+  el.hidden = false;
+  el.innerHTML = (who.img ? `<img class="rc-av" src="${esc(who.img)}" alt="">` : `<span class="rc-av" aria-hidden="true">${esc(who.name.trim().charAt(0).toUpperCase())}</span>`) +
+    `<span class="rc-txt"><b title="${esc(who.name)}">${esc(who.name)}</b><small>${esc(who.sub)}</small></span>`;
+}
 function buildTabs() {
   // só o texto no menu vertical (o ícone de cada aba ficava na aba horizontal antiga)
   $('tabs').innerHTML = tabsFor().map(([id, label]) =>
     `<button type="button" role="tab" id="tab-${id}" aria-selected="false" aria-controls="content" data-tab="${id}" onclick="selectTab('${id}')">${label.replace(/<span class="ic">[\s\S]*?<\/span>/, '')}</button>`).join('');
   $('tabs-eyebrow').textContent = role === 'gm' ? 'Mesa' : 'Personagem';
+  paintRailChar();
   syncTabsTabindex = wireVerticalTablist($('tabs'));
   const extra = $('mesa-extra');
   const icKey = '<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M14 9l2 2"/></svg></span>';
@@ -314,6 +411,16 @@ async function renderParty() {
   if (!members.length) { box.innerHTML = ''; return; }
   const ord = { gm: 0, player: 1 };
   members.sort((a, b) => (ord[a.role] ?? 9) - (ord[b.role] ?? 9));
+  // topbar (§3.3): até 5 avatares, traço verde embaixo = online agora, e "N online"
+  const strip = $('party-strip');
+  if (strip) {
+    const onlineN = members.filter((m) => _onlineIds.has(m.user_id)).length;
+    strip.innerHTML = members.slice(0, 5).map((m) => {
+      const nm = m.profile?.display_name || '—', on = _onlineIds.has(m.user_id);
+      return `<span class="ps-av${on ? ' on' : ''}" title="${esc(nm)}${m.role === 'gm' ? ' · Mestre' : ''} — ${on ? 'online' : 'offline'}">${esc((nm.trim().charAt(0) || '?').toUpperCase())}</span>`;
+    }).join('') + (members.length > 5 ? `<span class="ps-av more">+${members.length - 5}</span>` : '') +
+      `<span class="ps-count">${onlineN} online</span>`;
+  }
   box.innerHTML = `<div class="party-label">Grupo<span class="party-count">${members.length}</span></div>` + members.map((m) => {
     const nm = m.profile?.display_name || '—';
     const initial = (nm.trim().charAt(0) || '?').toUpperCase();
@@ -876,7 +983,7 @@ async function renderCombateJogador(c, myToken) {
   const cs = _combatState;
   if (!cs || !cs.is_active) {
     if (myToken !== _combatRenderToken) return;
-    c.innerHTML = '<div class="section-title" role="heading" aria-level="2">Combate</div><div class="empty">Nenhum combate em andamento agora.</div>';
+    c.innerHTML = emptyState(ICONS.combat, 'Nenhum combate em andamento', 'Quando o Mestre iniciar um combate, a ordem de iniciativa e o turno de cada um aparecem aqui.');
     return;
   }
   const order = computeTurnOrder(_initiativeEntries, cs);
@@ -1674,7 +1781,7 @@ function combatBlockHtml(combatStats, renderTile) {
   return `<div class="hud-sec-label" style="margin-top:18px"><span class="ic">${ICONS.combat}</span>Combate<span class="ln"></span></div>
     ${groupProfsForFicha(combatStats).map(([cat, list]) => `
       <div class="prof-cat" style="--pcc:${profCategoryColor(cat)}"><span class="ic">${profCategoryIcon(cat)}</span>${esc(cat)}</div>
-      <div class="stat-grid compact" style="margin:6px 0 4px">${list.map(renderTile).join('')}</div>`).join('')}`;
+      <div class="stat-grid compact${/defes/i.test(cat) ? ' no-roll' : ''}" style="margin:6px 0 4px">${list.map(renderTile).join('')}</div>`).join('')}`;
 }
 // selo de condição — mesmo padrão visual/interativo de profChipsHtml. Mestre (editable=true) vê o
 // catálogo inteiro e clica pra aplicar/remover; jogador só vê as que estão ATIVAS agora, sem poder
@@ -1979,7 +2086,7 @@ async function renderFicha(c) {
   // Status usa o cartão grande de sempre; Combate usa a versão .compact (nome + valor lado a lado)
   // pra não competir visualmente nem ocupar tanto espaço com uma lista de defesas/testes que pode ficar longa
   const tileHtml = (a, compact) => a.kind === 'computed'
-    ? `<div class="stat-tile${compact ? ' compact' : ''} computed" style="--stc:${esc(a.color || '#7ee6dc')}"><div class="stat-val calc" id="comp-${a.id}">—</div><div class="stat-name">${esc(a.name)}</div></div>`
+    ? `<div class="stat-tile${compact ? ' compact' : ''} computed" data-roll="${a.id}" tabindex="0" role="button" aria-label="Rolar ${esc(a.name)}" style="--stc:${esc(a.color || '#7ee6dc')}"><div class="stat-val calc" id="comp-${a.id}">—</div><div class="stat-name">${esc(a.name)}</div></div>`
     : secStatRow(a, compact);
   const secTile = (a) => tileHtml(a, false);
   const secTileCompact = (a) => tileHtml(a, true);
@@ -2009,7 +2116,7 @@ async function renderFicha(c) {
             <h2>${esc(ch.name) || 'Sem nome'}</h2>
             <div class="char-tags" id="char-tags">${tagsHtml}</div>
           </div>
-          <button class="btn sm auto overlay" onclick="openTab('biografia')"><span class="ic">${ICONS.pencil}</span>Editar biografia</button>
+          <button class="btn sm auto overlay" onclick="openTab('biografia')"><span class="ic">${ICONS.pencil}</span>Editar</button>
         </div>
         <input type="file" id="cover-file" accept="image/*" style="display:none" onchange="onCoverFile(this)">
         <input type="file" id="avatar-quick-file" accept="image/*" style="display:none" onchange="onAvatarQuickFile(this)">
@@ -2023,7 +2130,7 @@ async function renderFicha(c) {
           <h2>${esc(ch.name) || 'Sem nome'}</h2>
           <div class="char-tags" id="char-tags">${tagsHtml}</div>
         </div>
-        <button class="btn sm auto" onclick="openTab('biografia')"><span class="ic">${ICONS.pencil}</span>Editar biografia</button>
+        <button class="btn sm auto" onclick="openTab('biografia')"><span class="ic">${ICONS.pencil}</span>Editar</button>
       </div>`}
     </div>
 
@@ -2041,7 +2148,7 @@ async function renderFicha(c) {
       ${hasBaseSecondary ? `<div class="points-bar" id="points-bar" data-n="${(ch.stat_points || 0)}">
         <span class="pb-value" id="stat-points-badge">${(ch.stat_points || 0)}</span>
         <span class="pb-label" id="stat-points-label">${(ch.stat_points || 0) === 1 ? 'ponto para distribuir' : 'pontos para distribuir'}</span>
-        <button class="btn go auto sm" id="stat-save-btn" style="display:none" onclick="commitStatPoints()"><span class="spin"></span>Salvar status</button>
+        <button class="btn go auto sm" id="stat-save-btn" style="display:none" onclick="commitStatPoints()"><span class="spin"></span>Concluir</button>
       </div>` : ''}
       <!-- .has-points: só com pontos pra distribuir os −/+ aparecem (docs/MELHORIAS-v1.4.md P0-4) -->
       <div class="stat-grid${hasBaseSecondary && (ch.stat_points || 0) > 0 ? ' has-points' : ''}" id="sec-stat-grid">
@@ -2269,13 +2376,46 @@ window.saveFormulaBuilder = () => {
 let _pendingDelta = {}; // statId -> quantos pontos foram alocados no rascunho (ainda não salvos)
 function pendingSum() { return Object.values(_pendingDelta).reduce((s, v) => s + v, 0); }
 function pointsLeft() { return (character.stat_points || 0) - pendingSum(); }
+// ---------- rolagem por contexto (§3.3): clicar num Status, Perícia ou Ataque rola direto ----------
+// A fórmula vem de uma propriedade opcional do status (a.roll_formula), com "1d20+{valor}" como padrão —
+// assim o sistema pode configurar outra (ex.: "2d6+{valor}") depois, sem mudar nada aqui.
+const DEFAULT_ROLL = '1d20+{valor}';
+function statRollFormula(id) {
+  const a = _fichaAttrs.find((x) => x.id === id); if (!a) return null;
+  const vEl = $('secval-' + id) || $('comp-' + id); if (!vEl) return null;
+  const raw = vEl.dataset.v ?? (vEl.firstChild && vEl.firstChild.nodeType === 3 ? vEl.firstChild.nodeValue : vEl.textContent);
+  const v = Number(String(raw).trim()); if (!Number.isFinite(v)) return null;
+  return (a.roll_formula || DEFAULT_ROLL).replace(/\{valor\}/g, String(v)).replace(/\+\s*-/g, '-').replace(/\+0$/, '');
+}
+function rollTarget(el) {
+  const t = el.closest('[data-roll]'); if (!t || t.closest('.no-roll') || el.closest('.stat-ctl, button, input')) return null;
+  return t;
+}
+document.addEventListener('click', (e) => {
+  const t = rollTarget(e.target); if (!t) return;
+  const f = statRollFormula(t.dataset.roll); if (!f) return;
+  const a = _fichaAttrs.find((x) => x.id === t.dataset.roll);
+  t.classList.remove('rolled'); void t.offsetWidth; t.classList.add('rolled');
+  doRoll(f, a ? a.name : null, null);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const t = e.target.matches?.('[data-roll]') ? rollTarget(e.target) : null; if (!t) return;
+  e.preventDefault(); t.click();
+});
+// a dica mostra a fórmula de verdade na hora (o valor muda com pontos, equipamento e condições)
+document.addEventListener('pointerover', (e) => {
+  const t = rollTarget(e.target); if (!t) return;
+  const f = statRollFormula(t.dataset.roll); if (!f) return;
+  t.dataset.hint = 'Rolar ' + f; t.title = 'Rolar ' + f;
+});
 function secStatRow(a, compact) {
   const base = Number(_fichaValues[a.id] ?? a.default_value ?? 0) || 0;
   const pend = _pendingDelta[a.id] || 0;
   const canSpend = pointsLeft() > 0;
   const bonus = _fichaSkillBonus[a.id];
-  return `<div class="stat-tile${compact ? ' compact' : ''}${pend > 0 ? ' pending' : ''}" id="sectile-${a.id}" style="--stc:${esc(a.color || '#7ee6dc')}">
-    <span class="mod-badge" id="secbonus-${a.id}" style="${bonus ? '' : 'display:none;'}" title="${bonus ? esc(bonusTitle(bonus)) : ''}">${bonus ? `+${bonus.total}` : ''}</span>
+  return `<div class="stat-tile${compact ? ' compact' : ''}${pend > 0 ? ' pending' : ''}" id="sectile-${a.id}" data-roll="${a.id}" tabindex="0" role="button" aria-label="Rolar ${esc(a.name)}" style="--stc:${esc(a.color || '#7ee6dc')}">
+    <span class="mod-badge" id="secbonus-${a.id}" style="${bonus ? '' : 'display:none;'}" title="${bonus ? esc(bonusTitle(bonus)) : ''}">${bonus ? `${bonus.total >= 0 ? '+' : ''}${bonus.total}` : ''}</span>
     <div class="stat-val" id="secval-${a.id}">${base + pend + (bonus ? bonus.total : 0)}<span class="stat-pend" id="secpend-${a.id}">${pend > 0 ? '+' + pend : ''}</span></div>
     <div class="stat-name">${esc(a.name)}</div>
     <div class="stat-ctl">
@@ -2287,7 +2427,7 @@ function secStatRow(a, compact) {
 // perícia: sempre calculada (nunca editável direto), por isso a caixinha só tem cor + nome + valor
 // — id="comp-<id>" segue a mesma convenção dos status calculados, pra recalcComputed() já atualizar sozinho.
 function skillChip(a) {
-  return `<div class="skill-chip" style="--skc:${esc(a.color || '#7ee6dc')}">
+  return `<div class="skill-chip" data-roll="${a.id}" tabindex="0" role="button" aria-label="Rolar ${esc(a.name)}" style="--skc:${esc(a.color || '#7ee6dc')}">
     <span class="skc-name">${esc(a.name)}</span>
     <span class="skc-val" id="comp-${a.id}">—</span>
   </div>`;
@@ -2309,7 +2449,7 @@ function refreshSecRow(statId) {
   }
   const pEl = $('secpend-' + statId); if (pEl) pEl.textContent = pend > 0 ? '+' + pend : '';
   $('sectile-' + statId)?.classList.toggle('pending', pend > 0);
-  const bEl = $('secbonus-' + statId); if (bEl) { bEl.style.display = bonus ? '' : 'none'; bEl.textContent = bonus ? `+${bonus.total}` : ''; bEl.title = bonus ? bonusTitle(bonus) : ''; }
+  const bEl = $('secbonus-' + statId); if (bEl) { bEl.style.display = bonus ? '' : 'none'; bEl.textContent = bonus ? `${bonus.total >= 0 ? '+' : ''}${bonus.total}` : ''; bEl.title = bonus ? bonusTitle(bonus) : ''; }
   const minusEl = $('secminus-' + statId); if (minusEl) minusEl.disabled = pend <= 0;
   const left = pointsLeft();
   document.querySelectorAll('[id^="secbtn-"]').forEach((b) => { b.disabled = left <= 0; });
@@ -3028,11 +3168,11 @@ async function renderInventario(c) {
     </div>` : ''}
 
     ${!items.length ? emptyState(ICONS.bag, 'Mochila vazia', hasSystem
-      ? (sysItems.length ? 'Adicione itens prontos do sistema da mesa abaixo — já vêm com dano, proteção e modificadores certos.' : 'O Mestre ainda não cadastrou itens neste sistema.')
-      : 'Adicione itens no campo abaixo.') : ''}
+      ? (sysItems.length ? 'Os itens do sistema já vêm com dano, proteção e modificadores certos. Peça um ao Mestre.' : 'O Mestre ainda não cadastrou itens neste sistema.')
+      : 'Adicione itens no campo abaixo.', hasSystem && sysItems.length ? `<button type="button" class="btn" onclick="document.getElementById('inv-request')?.scrollIntoView({behavior:'smooth',block:'start'})">Ver itens do sistema</button>` : '') : ''}
 
     ${hasSystem ? (sysItems.length ? `
-    <div class="section-title" role="heading" aria-level="2" style="margin-top:18px">Solicitar item do sistema <span style="color:var(--ink-faint);text-transform:none;letter-spacing:0">(o Mestre precisa aprovar antes de entrar na mochila)</span></div>
+    <div class="section-title" id="inv-request" role="heading" aria-level="2" style="margin-top:18px">Solicitar item do sistema <span style="color:var(--ink-faint);text-transform:none;letter-spacing:0">(o Mestre precisa aprovar antes de entrar na mochila)</span></div>
     <div class="inline-form">
       <select id="inv-sys-item" class="fld-input">${sysItems.map((it) => `<option value="${it.id}">${esc(it.name)}${(it.modifiers && it.modifiers.length) ? ' — ' + it.modifiers.map((m) => itemModLabel(m)).join(', ') : ''}</option>`).join('')}</select>
       <button class="btn auto" onclick="requestSysItem()">Solicitar</button>
@@ -3445,42 +3585,32 @@ async function mountDice() {
     <div class="dice-last" aria-live="polite">
       <span class="dl-val" id="dice-last-val">—</span><span class="dl-die" id="dice-last-die"></span>
     </div>
-    <div class="dice-quick" role="group" aria-label="Rolar um dado">
-      ${['d4', 'd6', 'd8', 'd10', 'd12', 'd20'].map((d) => `<button type="button" onclick="quickRoll('${d}')">${d}</button>`).join('')}
-    </div>
-    <div class="dice-builder">
-      <input type="number" id="dice-qty" min="1" max="20" value="1" class="dice-qty" title="Quantidade de dados" aria-label="Quantidade de dados">
-      <select id="dice-die" aria-label="Dado">${diceOpts.map((d) => `<option ${d === 'd20' ? 'selected' : ''}>${d}</option>`).join('')}</select>
-      <button class="btn go sm" type="button" onclick="rollBuilder()"><span class="ic">${ICONS.dice}</span>Rolar</button>
-    </div>
-    <button type="button" class="dice-more-toggle" id="dice-more-toggle" aria-expanded="false" aria-controls="dice-more" onclick="toggleDiceMore()">Avançado<span class="dmt-n" id="dice-more-n"></span></button>
-    <div class="dice-more" id="dice-more" hidden onchange="paintDiceMore()">
-      <select id="dice-adv" aria-label="Vantagem ou desvantagem" title="Rola o primeiro d20 duas vezes e fica com o maior (vantagem) ou o menor (desvantagem)">
-        <option value="">normal</option>
-        <option value="adv">vantagem</option>
-        <option value="dis">desvantagem</option>
-      </select>
-      ${role === 'player' ? `
-        <select id="dice-mod-type" aria-label="Somar à rolagem" onchange="onDiceModTypeChange()">
-          <option value="">+ nada</option>
-          <option value="stat">+ Status</option>
-          <option value="formula">+ Fórmula do Guia Rápido</option>
-        </select>
-        <select id="dice-mod-ref" aria-label="Qual status ou fórmula" style="display:none"></select>` : ''}
-    </div>
     <div class="rail-tabs" id="rail-tabs" role="tablist">
       <button type="button" class="on" role="tab" aria-selected="true" data-rt="rolls" onclick="selectRailTab('rolls')">Rolagens<span class="unread-dot" id="unread-rolls" style="display:none"></span></button>
       <button type="button" role="tab" aria-selected="false" data-rt="chat" onclick="selectRailTab('chat')">Conversa<span class="unread-dot" id="unread-chat" style="display:none"></span></button>
     </div>
     <div class="dice-log" id="dice-log"><div class="empty" style="border:0">Sem rolagens ainda.</div></div>
     <div class="chat-log" id="chat-log" style="display:none"><div class="empty" style="border:0">Sem mensagens ainda.</div></div>
+    <div class="dice-foot" id="dice-foot">
+      <div class="dice-quick" role="group" aria-label="Rolar um dado">
+        ${['d4', 'd6', 'd8', 'd10', 'd12', 'd20'].map((d) => `<button type="button" onclick="quickRoll('${d}')">${d}</button>`).join('')}
+      </div>
+      <form class="dice-formula" onsubmit="return rollFormulaInput(event)">
+        <input id="dice-formula" placeholder="2d6+3" autocomplete="off" spellcheck="false" aria-label="Fórmula da rolagem"
+          title="Ex.: 2d6+3 · 1d20+FOR · 1d20+FOR vant (vantagem) · 1d20 desv (desvantagem)">
+        <button class="btn go" type="submit">Rolar</button>
+      </form>
+    </div>
     <form class="chat-input-row" id="chat-form" onsubmit="return sendChatMsg(event)">
       <input id="chat-input" placeholder="Mensagem para a mesa…" maxlength="600" autocomplete="off">
       <button type="submit" aria-label="Enviar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"></path><path d="M22 2 11 13"></path></svg></button>
     </form>`;
-  document.body.appendChild(fab); document.body.appendChild(panel);
-  let moreOpen = innerHeight > 760; try { const v = localStorage.getItem('vt_dice_more'); if (v) moreOpen = v === '1'; } catch (_) {}
-  setDiceMore(moreOpen);
+  const foot = document.createElement('div');
+  foot.className = 'mesa-foot'; foot.id = 'mesa-foot';
+  foot.innerHTML = `<div class="mf-last" aria-live="polite"><span class="mf-val" id="mf-val">—</span><span class="mf-det" id="mf-det">Nenhuma rolagem ainda</span></div>
+    <button type="button" class="btn" onclick="openDicePanel('rolls')">Histórico</button>
+    <button type="button" class="btn go" onclick="openDicePanel('rolls', true)">${ICONS.dice ? `<span class="ic">${ICONS.dice}</span>` : ''}Dados</button>`;
+  document.body.appendChild(fab); document.body.appendChild(panel); document.body.appendChild(foot);
   try { renderRolls(await db.listRolls(campaignId)); } catch (_) {}
   try { renderChat(await db.listMessages(campaignId)); } catch (_) {}
   _unsub = db.subscribeRolls(campaignId, addRollToLog);
@@ -3506,7 +3636,13 @@ window.paintDiceMore = () => {
 // com quantidade, vantagem e status/fórmula somados
 window.quickRoll = (die) => doRoll('1' + die, null, null);
 // último resultado em destaque no topo do painel (de qualquer pessoa da mesa, igual ao log)
+window.openDicePanel = (tab, focusFormula) => {
+  const p = $('dice-panel'); if (!p.classList.contains('open')) toggleDice();
+  selectRailTab(tab || 'rolls');
+  if (focusFormula) setTimeout(() => $('dice-formula')?.focus(), 50);
+};
 function paintLastRoll(r, fresh) {
+  if (r) { const mv = $('mf-val'), md = $('mf-det'); if (mv) mv.textContent = r.total ?? '—'; if (md) md.textContent = (r.formula || '') + (r.roller_name ? ' · ' + r.roller_name : ''); }
   const v = $('dice-last-val'), d = $('dice-last-die'); if (!v || !r) return;
   v.textContent = r.total ?? '—';
   // P2-12: rolagem que acabou de chegar entra com escala + brilho; crítico natural fica em --maq com anel
@@ -3547,6 +3683,7 @@ window.resolveRequest = (id, approve) => {
 };
 window.selectRailTab = (tab) => {
   const isRolls = tab === 'rolls';
+  const foot = $('dice-foot'); if (foot) foot.style.display = isRolls ? '' : 'none';
   document.querySelectorAll('#rail-tabs button').forEach((b) => { const on = b.dataset.rt === tab; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); });
   $('dice-log').style.display = isRolls ? '' : 'none';
   $('chat-log').style.display = isRolls ? 'none' : '';
@@ -3609,6 +3746,19 @@ window.onDiceModTypeChange = () => {
   sel.innerHTML = type === 'stat'
     ? (_diceStats.map((s) => `<option value="${esc(s.key)}">${esc(s.name)} (${s.value})</option>`).join('') || '<option value="">— sem status —</option>')
     : (_diceFormulas.map((f) => `<option value="${f.id}">${esc(f.name)} (${f.total})</option>`).join('') || '<option value="">— sem fórmulas —</option>');
+};
+// fórmula livre do rodapé (§3.3): substitui quantidade/dado/"Avançado". Vantagem e desvantagem
+// continuam possíveis escrevendo "vant"/"desv" na própria fórmula (ex.: "1d20+FOR vant").
+window.rollFormulaInput = (ev) => {
+  ev.preventDefault();
+  const inp = $('dice-formula'); let f = (inp.value || '').trim();
+  if (!f) { inp.focus(); return false; }
+  let adv = null;
+  if (/\b(vant(agem)?|adv)\b/i.test(f)) adv = 'adv'; else if (/\b(desv(antagem)?|dis)\b/i.test(f)) adv = 'dis';
+  f = f.replace(/\b(vant(agem)?|adv|desv(antagem)?|dis)\b/ig, '').replace(/\s+/g, '');
+  if (!f) f = '1d20';
+  doRoll(f, null, adv);
+  return false;
 };
 window.rollBuilder = () => {
   const qty = Math.min(20, Math.max(1, parseInt($('dice-qty').value) || 1));
@@ -3693,7 +3843,8 @@ function rollEl(r, justLanded) {
   const when = new Date(r.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   const extremity = rollExtremity(r.detail);
   const critClass = extremity === 'max' ? ' crit-max' : extremity === 'min' ? ' crit-min' : '';
-  const critLabel = extremity === 'max' ? 'Crítico natural' : extremity === 'min' ? 'Falha crítica' : '';
+  const faces = (/\d+d(\d+)\[/.exec(r.detail || '') || [])[1];
+  const critLabel = extremity === 'max' ? `◆ Crítico · ${faces || ''} natural`.replace('·  ', '· ') : extremity === 'min' ? '◆ Falha crítica' : '';
   const critTagHtml = critLabel ? `<span class="crit-tag ${extremity}">${critLabel}</span>` : '';
   const div = document.createElement('div');
   // .mine (§3.2) é persistente; .landing (§4.3) é um tier-2 único aplicado só quando a rolagem

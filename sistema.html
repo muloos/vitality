@@ -12,7 +12,74 @@
 <link rel="stylesheet" href="lib/tokens.css?v=1">
 <link rel="stylesheet" href="lib/theme.css?v=50">
 <link rel="stylesheet" href="lib/theme-ffx.css?v=11">
-<link rel="stylesheet" href="lib/components.css?v=5">
+<link rel="stylesheet" href="lib/components.css?v=6">
+<style>
+  /* Construtor — "Latão calmo" (docs/DESIGN-v2-LATAO-CALMO.md §3.4) */
+  .sis-layout > .ffx-side{flex-basis:240px}
+  .sis-layout > .ffx-aside{flex:0 1 380px}
+  @media (min-width:761px) and (max-width:1100px){.sis-layout > .ffx-side{flex-basis:200px}.sis-layout > .ffx-aside{flex:0 1 300px}}
+  /* topbar: estado do salvamento + publicar */
+  .save-state{font-size:var(--fs-small);color:var(--text-3);margin-right:var(--space-3);white-space:nowrap;display:flex;align-items:center;gap:6px}
+  .save-state .ss-dot{width:6px;height:6px;background:var(--warning);transform:rotate(45deg)}
+  .save-state .ss-err{color:var(--danger)}
+  .save-state .btn.tertiary{font-size:var(--fs-small)}
+  #publish-btn{margin-right:var(--space-3);width:auto}
+  #publish-btn:disabled{color:var(--success);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--success) 45%,transparent);background:transparent;opacity:1}
+  /* progresso + ◆/◇ por item */
+  .build-progress{display:flex;flex-direction:column;gap:6px;padding:0 var(--space-4) var(--space-4) var(--space-5)}
+  .bp-t{font-size:var(--fs-small);color:var(--text-3)} .bp-t b{color:var(--text);font-weight:600}
+  .bp-bar{display:block;height:4px;background:var(--surface-3)} .bp-bar i{display:block;height:100%;background:var(--primary);transition:width var(--t-slow) var(--ease)}
+  #tabs .cfg{font-size:10px;color:var(--text-3);margin-left:auto} #tabs .cfg.ok{color:var(--primary)}
+  /* cabeçalho: eyebrow da etapa + H1 + ação da aba */
+  .sis-head{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--space-4);flex-wrap:wrap}
+  .sis-actions:empty{display:none}
+  .sis-actions .btn{width:auto}
+  /* linhas de status: ⋮⋮ · cor · nome · sigla · resumo */
+  .stat-row{min-height:48px !important;padding:var(--space-2) var(--space-4) !important;gap:var(--space-3) !important;cursor:pointer}
+  .stat-row .stat-pick{flex:1 1 auto;min-width:0;text-align:left;font-family:var(--serif);font-size:var(--fs-body);color:var(--text);background:none;border:0;padding:0;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .stat-row .sr-key{flex:0 0 auto;min-width:48px;font-family:var(--mono);font-size:12px;color:var(--primary)}
+  .stat-row .stat-row-f{flex:0 1 240px;min-width:0;font-family:var(--mono);font-size:12px;color:var(--text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
+  .stat-row .stat-dot{width:8px;height:8px;flex:0 0 auto;background:var(--sw);transform:rotate(45deg)}
+  .stat-row.on{box-shadow:inset 2px 0 0 var(--primary),inset 0 0 0 1px var(--border-strong) !important;background:var(--surface-2) !important}
+  /* editor */
+  .stat-editor{display:flex;flex-direction:column;gap:var(--space-4);padding:var(--space-5) !important}
+  .se-head{display:flex;align-items:center;gap:var(--space-3)}
+  .se-title{flex:1;margin:0;font-family:var(--disp);font-weight:400;font-size:var(--fs-h2);line-height:32px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .se-grip,.se-done{display:none}
+  .se-types{display:grid !important;grid-template-columns:repeat(4,1fr);gap:4px}
+  .se-types button{height:36px;font-family:var(--serif);font-size:var(--fs-small);font-weight:500;letter-spacing:0;text-transform:none}
+  .se-swatches{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+  .se-sw{width:28px;height:28px;border:0;cursor:pointer;background:var(--sw);--c:var(--cut-sm);clip-path:var(--chamfer);box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
+  .se-sw[aria-pressed="true"]{outline:2px solid var(--primary);outline-offset:2px;clip-path:none}
+  .se-other{width:auto;margin-left:var(--space-1)}
+  .se-inline{display:flex;gap:var(--space-2)} .se-inline input{flex:1;min-width:0}
+  .stat-editor .btn.tertiary{width:auto;align-self:flex-start}
+  .fld-help code{font-family:var(--mono);font-size:12px;color:var(--primary)}
+  .se-foot{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);flex-wrap:wrap;padding-top:var(--space-3);border-top:1px solid var(--border)}
+  .se-foot .btn{width:auto}
+  .se-auto{font-size:var(--fs-small);color:var(--text-3)}
+  /* celular: lista em largura total; editor em folha inferior com puxador e "Pronto" */
+  @media (max-width:760px){
+    .save-state{display:none}
+    .sis-layout > .ffx-aside:not(.sheet-open){display:none !important}
+    .sis-layout > .ffx-aside.sheet-open{position:fixed !important;left:0;right:0;bottom:0;top:auto !important;z-index:var(--z-drawer);max-height:85vh;overflow:auto;
+      margin:0 !important;background:var(--surface-2);box-shadow:var(--shadow-float);order:0}
+    .sheet-open .stat-editor{clip-path:none !important}
+    .se-grip{display:block;position:absolute;left:50%;top:8px;width:40px;height:4px;margin-left:-20px;background:var(--border-strong)}
+    .se-head{position:relative;padding-top:var(--space-2)}
+    .se-done{display:inline-flex}
+    .se-types{grid-template-columns:repeat(2,1fr)} .se-types button{height:44px}
+    .stat-row .stat-row-f{display:none}
+    /* menu vira abas roláveis no topo; o progresso fica numa linha */
+    .sis-layout > .ffx-side{min-width:0 !important;width:100% !important;max-width:100% !important;flex:1 1 100% !important;position:static !important;max-height:none !important;overflow:visible !important;-webkit-mask-image:none !important;mask-image:none !important;padding:0 !important}
+    .build-progress{flex-direction:row;align-items:center;padding:0 0 var(--space-2)}
+    .build-progress .bp-bar{flex:1}
+    #tabs{flex-direction:row !important;overflow-x:auto;gap:0;border-bottom:1px solid var(--border);scrollbar-width:none}
+    #tabs .ffx-menu-group,#tabs .ffx-cursor,#tabs .cfg{display:none !important}
+    #tabs button{flex:0 0 auto;height:44px;padding:0 var(--space-4);background:none !important;box-shadow:none !important}
+    #tabs .on,#tabs [aria-selected="true"]{box-shadow:inset 0 -2px 0 var(--primary) !important}
+  }
+</style>
 <style>
   /* modo embutido (dentro da mesa, via iframe — ver mesa.html: viewSistemaInline/renderSistema):
      mesmo padrão de arvore.html — esconde a topbar própria (a mesa já tem a dela por fora) e troca
@@ -47,6 +114,9 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
   <a class="topbar-brand" href="app.html"><img class="mark logo" src="lib/logo.png" alt="" aria-hidden="true">VITALITY</a>
   <div class="title" id="sys-name" style="font-size:14px">…</div>
   <div class="spacer"></div>
+  <!-- salvamento automático + publicar (docs/DESIGN-v2-LATAO-CALMO.md §3.4) -->
+  <div class="save-state" id="save-state" aria-live="polite"></div>
+  <button type="button" class="btn go" id="publish-btn" hidden onclick="publishSystem()">Publicar</button>
   <div class="nav-user" id="nav-user">
     <button type="button" class="chip" id="nav-user-btn" aria-haspopup="menu" aria-expanded="false" onclick="toggleUserMenu()">
       <span class="av" id="who-av" aria-hidden="true">·</span><b id="who">…</b><span style="color:var(--ink-faint)" aria-hidden="true">▾</span>
@@ -63,12 +133,14 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
      editor do status selecionado num painel fixo à direita em vez de editar dentro da própria linha -->
 <div class="ffx-layout sis-layout">
   <aside class="ffx-side">
+    <div class="build-progress" id="build-progress" aria-live="polite"></div>
     <div class="ffx-menu" id="tabs" role="tablist" aria-orientation="vertical" aria-label="Seções do construtor"></div>
   </aside>
   <main class="ffx-main">
     <div class="sis-head">
-      <div class="ffx-eyebrow" id="sis-eyebrow">Sistema</div>
-      <h1 class="ffx-h1" id="sis-title">…</h1>
+      <div class="sh-text"><div class="ffx-eyebrow" id="sis-eyebrow">Sistema</div>
+      <h1 class="ffx-h1" id="sis-title">…</h1></div>
+      <div class="sis-actions" id="sis-actions"></div>
     </div>
     <div id="msg" class="msg"></div>
     <div id="content" role="tabpanel"></div>
@@ -328,7 +400,7 @@ function showMsg(t, kind) { const m = $('msg'); m.textContent = t; m.className =
 // arvore.html não leva "&embed=1" (é usado normalmente fora da mesa também), e carregar esse link
 // aqui dentro criaria um iframe dentro de outro iframe, com chrome duplicado e o botão "voltar"
 // indo pro lugar errado. A mesa já tem sua PRÓPRIA aba Árvores, com um caminho de embed correto.
-const TABS = [['geral', `<span class="ic">${ICONS.gear}</span>Geral`], ['status', `<span class="ic">${ICONS.bolt}</span>Status`], ['combate', `<span class="ic">${ICONS.combat}</span>Combate`], ['pericias', `<span class="ic">${ICONS.target}</span>Perícias`], ['calculos', `<span class="ic">${ICONS.calc}</span>Cálculos`], ['proficiencias', `<span class="ic">${ICONS.checklist}</span>Proficiências`], ['classes', `<span class="ic">${ICONS.shield}</span>Classes`], ['racas', `<span class="ic">${ICONS.heart}</span>Raças`], ['condicoes', `<span class="ic">${ICONS.warning}</span>Condições`], ['nivel', `<span class="ic">${ICONS.levelUp}</span>Nível`], ...(embedded ? [] : [['arvores', `<span class="ic">${ICONS.tree}</span>Árvores`]]), ['itens', `<span class="ic">${ICONS.bag}</span>Itens`], ['equipamento', `<span class="ic">${ICONS.equip}</span>Equipamento`]];
+const TABS = [['geral', `<span class="ic">${ICONS.gear}</span>Geral`], ['status', `<span class="ic">${ICONS.bolt}</span>Status`], ['combate', `<span class="ic">${ICONS.combat}</span>Combate`], ['pericias', `<span class="ic">${ICONS.target}</span>Perícias`], ['proficiencias', `<span class="ic">${ICONS.checklist}</span>Proficiências`], ['classes', `<span class="ic">${ICONS.shield}</span>Classes`], ['racas', `<span class="ic">${ICONS.heart}</span>Raças`], ['condicoes', `<span class="ic">${ICONS.warning}</span>Condições`], ['nivel', `<span class="ic">${ICONS.levelUp}</span>Nível`], ...(embedded ? [] : [['arvores', `<span class="ic">${ICONS.tree}</span>Árvores`]]), ['itens', `<span class="ic">${ICONS.bag}</span>Itens`], ['equipamento', `<span class="ic">${ICONS.equip}</span>Equipamento`]];
 
 (async () => {
   if (!systemId) { location.href = 'app.html'; return; }
@@ -347,22 +419,22 @@ const TABS = [['geral', `<span class="ic">${ICONS.gear}</span>Geral`], ['status'
     return;
   }
   $('sys-name').innerHTML = esc(system.name) + '<small>CONSTRUTOR DE SISTEMA</small>';
-  $('sis-eyebrow').textContent = 'Sistema · ' + system.name;
   // menu vertical: só o texto da aba (o ícone de cada uma continua nos cartões-guia da aba Geral)
   // 13 abas em 3 blocos com eyebrow (docs/MELHORIAS-v1.3.md P0-2) — o rótulo do bloco é só visual
   // (role="presentation"), a navegação por seta continua pulando direto de aba em aba
-  const TAB_GROUP = { geral: 'Regras', classes: 'Personagem', arvores: 'Conteúdo', itens: 'Conteúdo' };
+  const TAB_GROUP = { geral: '1 · Regras', classes: '2 · Personagem', arvores: '3 · Conteúdo', itens: '3 · Conteúdo' };
   let lastGroup = '';
   $('tabs').innerHTML = TABS.map(([id, label]) => {
     const g = TAB_GROUP[id]; const head = g && g !== lastGroup ? `<div class="ffx-menu-group" role="presentation">${g}</div>` : '';
     if (g) lastGroup = g;
-    return head + `<button type="button" data-tab="${id}" id="tab-${id}" role="tab" aria-selected="false" aria-controls="content" onclick="openTab('${id}')">${tabLabel(label)}</button>`;
+    return head + `<button type="button" data-tab="${id}" id="tab-${id}" role="tab" aria-selected="false" aria-controls="content" onclick="openTab('${id}')"><span>${tabLabel(label)}</span><span class="cfg" id="cfg-${id}" aria-hidden="true"></span></button>`;
   }).join('');
   syncTabsTabindex = wireVerticalTablist($('tabs'));
   // deep-link: a mesa manda direto pra aba pedida (ex.: "Editar Itens" já abre em "itens") em vez
   // de sempre cair em "Geral" — ignora valores desconhecidos/a aba Árvores quando embutido
   const requestedTab = new URLSearchParams(location.search).get('tab');
-  const validTab = TABS.some(([id]) => id === requestedTab) ? requestedTab : 'geral';
+  const validTab = requestedTab === 'calculos' ? 'status' : TABS.some(([id]) => id === requestedTab) ? requestedTab : 'geral';
+  paintPublish(); paintProgress();
   openTab(validTab);
 })();
 
@@ -373,7 +445,72 @@ window.markDirty = () => { _dirtyCount++; };
 window.clearDirty = () => { _dirtyCount = Math.max(0, _dirtyCount - 1); };
 addEventListener('beforeunload', (e) => { if (_dirtyCount > 0) { e.preventDefault(); e.returnValue = ''; } });
 let enterTab = null; // animação de entrada do #content na troca de aba (P2-10, ver armEnter)
+// ---------- construtor em 3 etapas com progresso (§3.4) ----------
+const GROUP_OF = { geral: '1 · Regras', status: '1 · Regras', combate: '1 · Regras', pericias: '1 · Regras', proficiencias: '1 · Regras',
+  classes: '2 · Personagem', racas: '2 · Personagem', condicoes: '2 · Personagem', nivel: '2 · Personagem',
+  arvores: '3 · Conteúdo', itens: '3 · Conteúdo', equipamento: '3 · Conteúdo' };
+let _progressTimer = 0;
+function paintProgress() {
+  clearTimeout(_progressTimer);
+  _progressTimer = setTimeout(async () => {
+    let b; try { b = await db.getSystemBundle(systemId); } catch (_) { return; }
+    const st = b.stats || [];
+    const done = {
+      geral: !!(system?.description || '').trim(),
+      status: st.some((x) => !x.is_combat && !x.is_skill),
+      combate: st.some((x) => x.is_combat),
+      pericias: st.some((x) => x.is_skill),
+      proficiencias: (b.proficiencies || []).length > 0,
+      classes: (b.classes || []).length > 0,
+      racas: (b.origins || []).length > 0,
+      condicoes: (b.conditions || []).length > 0,
+      nivel: (b.levels || []).length > 0,
+      arvores: (b.trees || []).length > 0,
+      itens: (b.items || []).length > 0,
+      equipamento: (b.equipmentSlots || []).length > 0,
+    };
+    const ids = TABS.map(([id]) => id).filter((id) => id in done);
+    const n = ids.filter((id) => done[id]).length;
+    ids.forEach((id) => { const el = $('cfg-' + id); if (el) { el.textContent = done[id] ? '◆' : '◇'; el.classList.toggle('ok', done[id]); el.title = done[id] ? 'Configurado' : 'Pendente'; } });
+    const bp = $('build-progress');
+    if (bp) bp.innerHTML = `<span class="bp-t">Configurado <b>${n} de ${ids.length}</b></span><span class="bp-bar"><i style="width:${Math.round(n / ids.length * 100)}%"></i></span>`;
+  }, 250);
+}
+// ---------- salvamento automático: estado na topbar ----------
+let _savedAt = 0, _saveTick = 0, _saveRetry = null;
+function setSaveState(st, retry) {
+  const el = $('save-state'); if (!el) return;
+  clearInterval(_saveTick); _saveRetry = retry || null;
+  if (st === 'saving') el.innerHTML = '<span class="ss-dot"></span>Salvando…';
+  else if (st === 'error') el.innerHTML = `<span class="ss-err">Não foi possível salvar.</span>${retry ? ' <button type="button" class="btn tertiary" onclick="retrySave()">Tentar de novo</button>' : ''}`;
+  else if (st === 'saved') {
+    _savedAt = Date.now();
+    const paint = () => { const s2 = Math.round((Date.now() - _savedAt) / 1000); el.textContent = s2 < 5 ? 'Salvo agora' : s2 < 60 ? `Salvo há ${s2}s` : `Salvo há ${Math.round(s2 / 60)} min`; };
+    paint(); _saveTick = setInterval(paint, 5000);
+  } else el.textContent = '';
+  el.dataset.state = st || '';
+}
+window.retrySave = () => { if (_saveRetry) _saveRetry(); };
+// ---------- publicar ----------
+function paintPublish() {
+  const b = $('publish-btn'); if (!b || !system) return;
+  b.hidden = false;
+  const pub = !!system.is_published;
+  b.textContent = pub ? 'Publicado' : 'Publicar';
+  b.classList.toggle('go', !pub); b.disabled = pub;
+  b.title = pub ? 'Este sistema está na loja. Para tirar, desmarque em Geral.' : 'Deixa o sistema visível na loja para outros jogadores';
+}
+window.publishSystem = () => {
+  const b = $('publish-btn'); b.classList.add('loading'); b.disabled = true;
+  db.updateSystem(systemId, { is_published: true }).then(() => {
+    system.is_published = true; paintPublish();
+    const cb = $('g-published'); if (cb) cb.checked = true;
+    const m = $('msg'); m.innerHTML = 'Sistema publicado na loja. <a class="btn tertiary" href="app.html">Ver na loja</a>'; m.className = 'msg show ok';
+    setTimeout(() => { m.className = 'msg'; }, 6000);
+  }).catch((e) => { showMsg('Não deu pra publicar: ' + e.message); b.disabled = false; }).finally(() => b.classList.remove('loading'));
+};
 window.openTab = async (name) => {
+  if (name === 'calculos') name = 'status'; // Cálculos virou o tipo "Oculto" dentro de Status
   if (currentTab && name !== currentTab && _dirtyCount > 0) {
     const ok = await confirmModal({ title: 'Sair sem salvar?', desc: 'Você tem edições não salvas nesta aba — elas serão perdidas ao trocar de aba.', confirmLabel: 'Sair sem salvar' });
     if (!ok) return;
@@ -392,12 +529,14 @@ window.openTab = async (name) => {
   }
   const tabDef = TABS.find(([id]) => id === name);
   $('sis-title').textContent = tabDef ? tabLabel(tabDef[1]) : '';
+  $('sis-eyebrow').textContent = (GROUP_OF[name] || 'Sistema') + ' · ' + (system?.name || '');
+  $('sis-actions').innerHTML = name === 'status' ? '<button type="button" class="btn go" onclick="selectStat(\'__new__\')" aria-controls="sys-aside">+ Novo status</button>' : '';
   $('content').setAttribute('aria-labelledby', 'tab-' + name);
   // painel lateral é só das abas de status — cada uma que usa liga de novo (mountStatAside)
   const aside = $('sys-aside'); aside.hidden = true; aside.innerHTML = '';
   const c = $('content'); c.innerHTML = '<div class="empty loading" role="status"><span>Carregando…</span></div>';
   ({ geral: renderGeral, status: renderStatus, combate: renderCombate, pericias: renderPericias, calculos: renderCalculos, proficiencias: renderProficiencias, classes: renderClasses, racas: renderRacas, condicoes: renderCondicoes, nivel: renderNivel, arvores: renderArvores, itens: renderItens, equipamento: renderEquipamento }[name])(c)
-    .then(() => trimLoneEyebrow(c))
+    .then(() => { trimLoneEyebrow(c); paintProgress(); })
     .catch((e) => { c.innerHTML = '<div class="empty">Erro: ' + esc(e.message) + '</div>'; });
 };
 // aba com um bloco só: o rótulo de seção repetiria o H1 ("Cálculos" / "CÁLCULOS") — some da tela,
@@ -606,28 +745,30 @@ async function renderStatus(c) {
   _statusStats = stats; _profsCache = profs; _statusDrafts = {};
   const recursos = stats.filter((s) => s.is_resource && !s.is_hidden);
   const status = stats.filter((s) => !s.is_resource && !s.is_skill && !s.is_combat && !s.is_hidden);
+  const ocultos = stats.filter((s) => s.is_hidden && !s.is_skill);
+  if (!recursos.length && !status.length && !ocultos.length) {
+    c.innerHTML = emptyState(ICONS.bolt, 'Nenhum status ainda',
+      'Status são os números da ficha: recursos com barra (Vida, Mana), atributos (Força, Destreza) e valores ocultos usados só em fórmulas.',
+      `<button type="button" class="btn go" onclick="selectStat('__new__')">+ Status em branco</button>`);
+    mountStatAside(true);
+    return;
+  }
   c.innerHTML = `
-    <div class="section-title" role="heading" aria-level="2">Status do sistema</div>
-    <p style="font-family:var(--mono);font-size:11px;color:var(--ink-dim);line-height:1.6;margin:0 0 14px">
-      <b style="color:var(--maq)">Recurso</b> (ex.: HP, Mana, Sanidade) tem destaque na ficha com barra de atual/máximo e pode ser um valor fixo ou uma fórmula.
-      <b style="color:var(--brass)">Status</b> (ex.: Força, Destreza) não tem valor na criação — você define o valor de cada um por classe, na aba Classes.
-      O <b style="color:var(--maq)">nome na fórmula</b> é o apelido usado pra referenciar o status nas fórmulas. A <b>cor</b> pinta a caixinha dele na ficha.</p>
+    <p class="tab-note" style="margin:0 0 8px">Status são os números da ficha. <b>Recursos</b> têm barra de atual/máximo (Vida, Mana); <b>atributos</b> recebem o valor pela classe e pelos pontos de status; <b>ocultos</b> existem só para entrar em fórmulas. O <b>nome na fórmula</b> é o apelido usado nas contas e nas rolagens (ex.: FOR).</p>
 
-    ${statusSaveBarHtml()}
+    <div class="section-title" role="heading" aria-level="2">Recursos <span style="color:var(--ink-faint);text-transform:none;letter-spacing:0">atual/máximo, com barra na ficha</span></div>
+    <div class="list" id="recursos-list">${recursos.length ? recursos.map(statRow).join('') : '<div class="empty">Nenhum recurso ainda. Recursos como Vida ou Mana aparecem com barra na ficha.</div>'}</div>
 
-    <div class="section-title" role="heading" aria-level="2"><span class="ic">${ICONS.bolt}</span>Recursos <span style="color:var(--ink-faint);text-transform:none;letter-spacing:0">(atual/máximo, com destaque)</span></div>
-    <div class="list" id="recursos-list">${recursos.length ? recursos.map(statRow).join('') : emptyState(ICONS.bolt, 'Nenhum recurso ainda',
-      'Recursos como HP ou Mana aparecem com destaque na ficha, com barra de atual/máximo.')}</div>
+    <div class="section-title" role="heading" aria-level="2">Atributos <span style="color:var(--ink-faint);text-transform:none;letter-spacing:0">valor por classe + pontos de status</span></div>
+    <div class="list" id="status-list">${status.length ? status.map(statRow).join('') : '<div class="empty">Nenhum atributo ainda.</div>'}</div>
 
-    <div class="section-title" role="heading" aria-level="2"><span class="ic">${ICONS.dagger}</span>Status <span style="color:var(--ink-faint);text-transform:none;letter-spacing:0">(valor por classe + pontos de status)</span></div>
-    <div class="list" id="status-list">${status.length ? status.map(statRow).join('') : emptyState(ICONS.dagger, 'Nenhum status ainda',
-      'Crie o primeiro em “+ Novo status” — o valor de cada um é definido depois, por Classe.')}</div>
-
-    <button type="button" class="stat-new" onclick="selectStat('__new__')" aria-controls="sys-aside">+ Novo status</button>
+    ${ocultos.length ? `<div class="section-title" role="heading" aria-level="2">Ocultos <span style="color:var(--ink-faint);text-transform:none;letter-spacing:0">só em fórmulas, nunca na ficha</span></div>
+    <div class="list" id="ocultos-list">${ocultos.map(statRow).join('')}</div>` : ''}
 
     ${formulaTutorial(stats)}`;
   wireDragReorder($('recursos-list'), '.list-row[data-id]', 'system_stats');
   wireDragReorder($('status-list'), '.list-row[data-id]', 'system_stats');
+  if ($('ocultos-list')) wireDragReorder($('ocultos-list'), '.list-row[data-id]', 'system_stats');
   mountStatAside(true);
 }
 // aba separada pra status que não são "atributo cru" nem recurso, mas também não deveriam viver
@@ -641,10 +782,8 @@ async function renderCombate(c) {
   c.innerHTML = `
     <div class="section-title" role="heading" aria-level="2">Combate</div>
     <p style="font-family:var(--mono);font-size:11px;color:var(--ink-dim);line-height:1.6;margin:0 0 14px">
-      Defesas, testes de resistência e rolagem de ataque — o que fica separado de Status pra não
-      virar uma lista só com atributo, defesa e teste misturados. Marque "Virar combate" num status
-      lá na aba Status pra ele aparecer aqui. Use a categoria (ex.: Defesas/Testes/Ataques) pra
-      agrupar visualmente.</p>
+      Defesas, testes de resistência e ataques ficam aqui, separados dos atributos. Para trazer um status
+      para cá, escolha o tipo <b>Combate</b> no editor. A categoria (ex.: Defesas, Testes, Ataques) agrupa as linhas na ficha.</p>
 
     ${statusSaveBarHtml()}
 
@@ -652,7 +791,7 @@ async function renderCombate(c) {
       <div class="prof-cat-head" style="--pcc:${profCategoryColor(cat)}"><span class="ic">${profCategoryIcon(cat)}</span>${esc(cat)}</div>
       <div class="list" id="combat-cat-list-${gi}" style="margin-bottom:18px">${list.map(statRow).join('')}</div>
     `).join('') : emptyState(ICONS.combat, 'Nenhum status de combate ainda',
-      'Vá na aba Status e clique em "Virar combate" num status (ex.: uma defesa ou um teste) pra ele aparecer aqui.')}`;
+      'Em Status, abra um status (ex.: uma defesa ou um teste) e escolha o tipo Combate no editor.')}`;
   groupProfsByCategory(combat).forEach((_, gi) => wireDragReorder($('combat-cat-list-' + gi), '.list-row[data-id]', 'system_stats'));
   mountStatAside(false);
 }
@@ -699,9 +838,10 @@ window.onStatFieldChange = (id, k, v) => {
   _statusDrafts[id][k] = v.trim();
   const bar = $('status-save-bar'); if (bar) bar.style.display = 'flex';
 };
-window.saveAllStats = async () => {
+window.saveAllStats = async (opts = {}) => {
+  const silent = !!(opts && opts.silent);
   const ids = Object.keys(_statusDrafts);
-  if (!ids.length) return;
+  if (!ids.length) { if (silent) setSaveState('saved'); return; }
   const btn = $('status-save-all'); if (btn) { btn.classList.add('loading'); btn.disabled = true; }
   const ops = [];
   for (const id of ids) {
@@ -709,7 +849,9 @@ window.saveAllStats = async () => {
     const draft = _statusDrafts[id];
     const key = (s.formula_key || '').trim();
     if (draft.formula_key !== undefined && key && await isFormulaTokenTaken(key, { excludeStatId: id })) {
-      showMsg(`"${key}" já é usado por outra coisa na fórmula (status, perícia, proficiência ou palavra reservada) — escolha outro apelido.`);
+      const msg = `${key} já é usado por outra coisa nas fórmulas (status, perícia, proficiência ou palavra reservada). Escolha outro.`;
+      if (silent) { if (checkKeyInline(id, key)) { const e = $('se-key-err'); if (e) { e.textContent = msg; e.classList.add('show'); } } setSaveState('error'); return; }
+      showMsg(msg);
       if (btn) { btn.classList.remove('loading'); btn.disabled = false; }
       return;
     }
@@ -719,7 +861,9 @@ window.saveAllStats = async () => {
       const baseVals = {};
       _statusStats.forEach((b) => { if (b.kind !== 'computed' && (b.formula_key || '').trim()) baseVals[b.formula_key.trim()] = b.default_value || '0'; });
       try { computeStat(s, baseVals, undefined, 1); }
-      catch (e) { showMsg(`Fórmula inválida em "${s.name}": ${e.message}`); if (btn) { btn.classList.remove('loading'); btn.disabled = false; } return; }
+      catch (e) {
+        if (silent) { const el = $('se-val-err'); if (el) { el.textContent = 'Fórmula inválida: ' + e.message; el.classList.add('show'); } setSaveState('error'); return; }
+        showMsg(`Fórmula inválida em "${s.name}": ${e.message}`); if (btn) { btn.classList.remove('loading'); btn.disabled = false; } return; }
     }
     const patch = {};
     if (draft.name !== undefined) patch.name = s.name;
@@ -734,8 +878,10 @@ window.saveAllStats = async () => {
     ids.forEach(() => clearDirty());
     _statusDrafts = {};
     const bar = $('status-save-bar'); if (bar) bar.style.display = 'none';
-    showMsg('Salvo.', 'ok');
-  }).catch((e) => showMsg(e.message))
+    const ve = $('se-val-err'); if (ve) ve.classList.remove('show');
+    if (silent) setSaveState('saved'); else showMsg('Salvo.', 'ok');
+    paintProgress();
+  }).catch((e) => { if (silent) setSaveState('error', () => saveAllStats({ silent: true })); else showMsg(e.message); })
     .finally(() => { if (btn) { btn.classList.remove('loading'); btn.disabled = false; } });
 };
 window.onStatTypeChange = () => {
@@ -759,14 +905,15 @@ function statRowFormula(s) {
   const val = s.kind === 'computed' ? (s.formula || '—') : (s.default_value ? 'padrão ' + s.default_value : '—');
   return ((s.formula_key || '').trim() ? s.formula_key.trim() + ' = ' : '') + val;
 }
+function statSummary(s) { return s.kind === 'computed' ? (s.formula || '—') : (s.default_value ? 'padrão ' + s.default_value : 'valor por classe'); }
 function statRow(s) {
   const sel = s.id === _statSel;
   return `<div class="list-row stat-row${sel ? ' on' : ''}" data-id="${s.id}" onclick="selectStat('${s.id}')">
     ${DRAG_HANDLE_SVG}
     <i class="stat-dot" style="--sw:${esc(s.color || '#7ee6dc')}" aria-hidden="true"></i>
     <button type="button" class="stat-pick" aria-pressed="${sel}" aria-controls="sys-aside">${esc(s.name)}</button>
-    <span class="stat-row-f">${esc(statRowFormula(s))}</span>
-    <span class="stat-row-k">${statKindLabel(s)}${s.is_combat ? ' · Combate' : ''}${s.is_hidden ? ' · Oculto' : ''}</span>
+    <span class="sr-key">${esc((s.formula_key || '').trim() || '—')}</span>
+    <span class="stat-row-f">${esc(statSummary(s))}</span>
   </div>`;
 }
 // status aberto no painel lateral: id, ou '__new__' (formulário de criação — só na aba Status)
@@ -786,12 +933,10 @@ window.selectStat = (id, silent) => {
     r.querySelector('.stat-pick')?.setAttribute('aria-pressed', String(on));
   });
   renderStatEditor();
-  // em telas estreitas o painel fica em outra linha do layout — traz ele pra vista ao escolher
-  if (!silent) {
-    const aside = $('sys-aside'), r = aside.getBoundingClientRect();
-    if (r.top < 0 || r.top > innerHeight - 120) aside.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
+  // no celular o editor abre como folha inferior (com "Pronto"); no desktop é a coluna da direita
+  if (!silent) { $('sys-aside').hidden = false; $('sys-aside').classList.add('sheet-open'); $('se-name')?.focus?.({ preventScroll: true }); }
 };
+window.closeStatSheet = () => $('sys-aside').classList.remove('sheet-open');
 // reflete na linha o que está sendo digitado no painel, sem recriar a linha (a alça de arrastar tem
 // listeners próprios, ver wireDragReorder)
 function paintStatRow(id) {
@@ -799,10 +944,42 @@ function paintStatRow(id) {
   const row = document.querySelector(`#content .stat-row[data-id="${id}"]`);
   if (!s || !row) return;
   row.querySelector('.stat-pick').textContent = s.name;
-  row.querySelector('.stat-row-f').textContent = statRowFormula(s);
+  row.querySelector('.stat-row-f').textContent = statSummary(s);
+  row.querySelector('.sr-key').textContent = (s.formula_key || '').trim() || '—';
   row.querySelector('.stat-dot').style.setProperty('--sw', s.color || '#7ee6dc');
 }
-window.onStatEditorField = (k, v) => { onStatFieldChange(_statSel, k, v); paintStatRow(_statSel); };
+// cada mudança no editor salva sozinha ~0,7s depois (o estado aparece na topbar)
+let _autosaveT = 0;
+window.onStatEditorField = (k, v) => {
+  onStatFieldChange(_statSel, k, v); paintStatRow(_statSel);
+  if (k === 'formula_key') checkKeyInline(_statSel, v);
+  clearTimeout(_autosaveT); setSaveState('saving');
+  _autosaveT = setTimeout(() => saveAllStats({ silent: true }), 700);
+};
+// validação na hora, no próprio campo: "FRE já é usado por Frequência. Escolha outro."
+function checkKeyInline(id, v) {
+  const key = (v || '').trim(), err = $('se-key-err'); if (!err) return true;
+  const other = key && _statusStats.find((x) => x.id !== id && (x.formula_key || '').trim().toLowerCase() === key.toLowerCase());
+  err.textContent = other ? `${key} já é usado por ${other.name}. Escolha outro.` : '';
+  err.classList.toggle('show', !!other); $('se-key')?.classList.toggle('invalid', !!other);
+  return !other;
+}
+const STAT_TYPES = [
+  ['recurso', 'Recurso', 'Aparece na ficha com barra de atual/máximo (ex.: Vida, Mana).'],
+  ['atributo', 'Atributo', 'Número da ficha (ex.: Força). O valor de cada um vem da classe e dos pontos de status.'],
+  ['combate', 'Combate', 'Defesas, testes e ataques — ficam na seção Combate da ficha, agrupados pela categoria.'],
+  ['oculto', 'Oculto', 'Não aparece na ficha; existe só para ser usado em outras fórmulas.'],
+];
+const statTypeOf = (s) => s.is_hidden ? 'oculto' : s.is_resource ? 'recurso' : s.is_combat ? 'combate' : 'atributo';
+window.setStatType = (id, t) => {
+  const patch = { is_resource: t === 'recurso', is_combat: t === 'combate', is_hidden: t === 'oculto' };
+  const s = _statusStats.find((x) => x.id === id); if (s) Object.assign(s, patch);
+  if (t === 'recurso' && s && !s.color) patch.color = '#d2705a';
+  setSaveState('saving');
+  db.updateStat(id, patch).then(() => { setSaveState('saved'); _statSel = id; openTab(t === 'combate' ? 'combate' : 'status'); })
+    .catch((e) => setSaveState('error', () => setStatType(id, t)));
+};
+const STAT_SWATCHES = ['#d2705a', '#e3ad48', '#c9a45c', '#74c08e', '#7ec8c0', '#8fb0cc', '#b39ad6', '#b5a891'];
 function renderStatEditor() {
   const box = $('sys-aside'); if (!box) return;
   if (_statSel === '__new__') {
@@ -830,28 +1007,34 @@ function renderStatEditor() {
   if (!s) { box.innerHTML = ''; return; }
   const isC = s.kind === 'computed';
   const color = esc(s.color || '#7ee6dc');
+  const type = statTypeOf(s);
+  const key = esc((s.formula_key || '').trim());
   box.innerHTML = `<div class="ffx-panel stat-editor">
-    <div class="ffx-label">Editar status</div>
+    <div class="se-head"><span class="se-grip" aria-hidden="true"></span><h2 class="se-title">${esc(s.name) || 'Status'}</h2>
+      <button type="button" class="btn tertiary se-done" onclick="closeStatSheet()">Pronto</button></div>
     <div class="fld"><label for="se-name">Nome</label><input id="se-name" value="${esc(s.name)}" oninput="onStatEditorField('name', this.value)"></div>
-    <div class="fld"><label id="se-flags-lbl">Onde aparece</label>
-      <div class="ffx-seg" role="group" aria-labelledby="se-flags-lbl">
-        <button type="button" aria-pressed="${!!s.is_resource}" title="Recurso: mostra atual/máximo na ficha (ex.: HP)" onclick="toggleResource('${s.id}', ${!s.is_resource})">Recurso</button>
-        <button type="button" aria-pressed="${!!s.is_combat}" title="Combate: fica na aba Combate em vez de Status" onclick="toggleCombat('${s.id}', ${!s.is_combat})">Combate</button>
-        <button type="button" aria-pressed="${!!s.is_hidden}" title="Oculto: some da ficha, mas continua valendo em fórmulas" onclick="toggleHidden('${s.id}', ${!s.is_hidden})">Oculto</button>
+    <div class="fld"><label for="se-key">Nome na fórmula</label><input id="se-key" class="mono" value="${key}" placeholder="Ex.: FOR" maxlength="20" aria-describedby="se-key-help se-key-err" oninput="onStatEditorField('formula_key', this.value)">
+      <div class="fld-help" id="se-key-help">Use em fórmulas como <code>${key || 'FOR'}*2</code> ou <code>1d20+${key || 'FOR'}</code>.</div>
+      <div class="fld-err" id="se-key-err" role="alert"></div></div>
+    <div class="fld"><label id="se-type-lbl">Tipo</label>
+      <div class="ffx-seg se-types" role="group" aria-labelledby="se-type-lbl">
+        ${STAT_TYPES.map(([id, lbl]) => `<button type="button" aria-pressed="${type === id}" onclick="setStatType('${s.id}','${id}')">${lbl}</button>`).join('')}
       </div>
-      <div class="se-hint">${isC ? 'Valor calculado por fórmula' : 'Valor base — definido por classe, na aba Classes'}</div></div>
+      <div class="fld-help">${STAT_TYPES.find(([id]) => id === type)[2]}</div></div>
     <div class="fld"><label id="se-color-lbl">Cor na ficha</label>
-      <button type="button" class="color-swatch full" aria-labelledby="se-color-lbl" style="--sw:${color}" onclick="openColorPicker(this, '${color}', (v)=>{ this.style.setProperty('--sw', v); onStatEditorField('color', v); })"></button></div>
-    <div class="fld"><label for="se-key">Nome na fórmula</label><input id="se-key" class="mono" value="${esc(s.formula_key || '')}" placeholder="Ex.: HP" oninput="onStatEditorField('formula_key', this.value)"></div>
-    <div class="fld"><label for="se-val">${isC ? 'Fórmula' : 'Valor padrão'}</label>
-      <div class="se-inline"><input id="se-val" class="mono" value="${esc(isC ? s.formula : s.default_value)}" placeholder="${isC ? 'Ex.: FORCA*5 + 10' : 'valor padrão'}" oninput="onStatEditorField('${isC ? 'formula' : 'default_value'}', this.value)">
-      ${isC ? `<button type="button" class="btn sm auto" title="Inserir função ou apelido" onclick="openFuncPicker(this, document.getElementById('se-val'))">ƒ(x)</button>` : ''}</div></div>
-    <div class="fld"><label for="se-cat">Categoria <span class="se-opt">(opcional)</span></label><input id="se-cat" value="${esc(s.category || '')}" placeholder="Agrupa com outros da mesma categoria" oninput="onStatEditorField('category', this.value)"></div>
-    ${isC ? `<button type="button" class="btn sm auto" onclick="toggleTest('${s.id}')"><span class="ic">${ICONS.flask}</span>Testar fórmula</button>
-    <div id="test-${s.id}" class="stat-test" style="display:none"></div>` : ''}
-    <div class="actions">
-      <button type="button" class="btn danger" onclick="delStat('${s.id}')">Excluir</button>
-      <button type="button" class="btn go" onclick="saveAllStats()">Salvar</button>
+      <div class="se-swatches" role="group" aria-labelledby="se-color-lbl">
+        ${STAT_SWATCHES.map((c) => `<button type="button" class="se-sw" style="--sw:${c}" aria-label="Cor ${c}" aria-pressed="${(s.color || '').toLowerCase() === c}" onclick="this.parentElement.querySelectorAll('.se-sw').forEach((b)=>b.setAttribute('aria-pressed', String(b===this)));onStatEditorField('color','${c}')"></button>`).join('')}
+        <button type="button" class="btn sm se-other" onclick="openColorPicker(this, '${color}', (v)=>{ onStatEditorField('color', v); })">Outra…</button>
+      </div></div>
+    <div class="fld"><label for="se-val">${isC ? 'Fórmula' : 'Valor inicial'}</label>
+      <div class="se-inline"><input id="se-val" class="mono" value="${esc(isC ? s.formula : s.default_value)}" placeholder="${isC ? 'Ex.: FOR*5 + 10' : 'Ex.: 10'}" oninput="onStatEditorField('${isC ? 'formula' : 'default_value'}', this.value)">
+      ${isC ? `<button type="button" class="btn sm auto" title="Inserir função ou apelido" onclick="openFuncPicker(this, document.getElementById('se-val'))">ƒ(x)</button>` : ''}</div>
+      <div class="fld-err" id="se-val-err" role="alert"></div>
+      ${isC ? `<button type="button" class="btn tertiary" onclick="toggleTest('${s.id}')">Testar fórmula</button><div id="test-${s.id}" class="stat-test" style="display:none"></div>` : ''}</div>
+    <div class="fld"><label for="se-cat">Categoria <span class="se-opt">(opcional)</span></label><input id="se-cat" value="${esc(s.category || '')}" placeholder="Ex.: Defesas" oninput="onStatEditorField('category', this.value)"></div>
+    <div class="se-foot">
+      <button type="button" class="btn danger" onclick="delStat('${s.id}')">Excluir status</button>
+      <span class="se-auto">Alterações salvas automaticamente</span>
     </div>
   </div>`;
 }

@@ -387,10 +387,20 @@ function renderViaChips() {
 function renderViaLegend() {
   const el = $('via-legend'); if (!el) return;
   if (vias.length <= 1) { el.style.display = 'none'; return; }
-  el.innerHTML = vias.map((v) =>
-    `<div class="via-legend-row"><span class="via-legend-dot" style="background:${esc(v.color)}"></span><span class="via-legend-name">${esc(v.name)}</span></div>`).join('');
+  // recolhível (MELHORIAS-v1.4 P1-14): o cabeçalho "Legenda" abre/fecha; a escolha fica lembrada
+  let closed = false; try { closed = localStorage.getItem('vt_legend') === '0'; } catch (_) {}
+  el.classList.toggle('closed', closed);
+  el.innerHTML = `<button type="button" class="via-legend-head" aria-expanded="${!closed}" onclick="toggleViaLegend()">Legenda</button>` +
+    `<div class="via-legend-rows">` + vias.map((v) =>
+    `<div class="via-legend-row"><span class="via-legend-dot" style="background:${esc(v.color)}"></span><span class="via-legend-name">${esc(v.name)}</span></div>`).join('') + `</div>`;
   el.style.display = '';
 }
+window.toggleViaLegend = () => {
+  const el = $('via-legend'); if (!el) return;
+  const closed = el.classList.toggle('closed');
+  el.querySelector('.via-legend-head')?.setAttribute('aria-expanded', String(!closed));
+  try { localStorage.setItem('vt_legend', closed ? '0' : '1'); } catch (_) {}
+};
 function renderViaManager() {
   $('via-edit').innerHTML = vias.map((v) => `
     <div class="via-row">
@@ -1034,9 +1044,14 @@ function costBadgeSpriteFor(text, color) {
 // variáveis CSS (cor do tema) resolvidas de verdade — canvas não entende var(--x), precisa do
 // valor final. Cacheado e invalidado só quando o tema muda (ver doToggleTheme).
 let cssVarCache = new Map();
+// o palco da árvore é sempre escuro (docs/MELHORIAS-v1.4.md P0-3), então as CORES desenhadas no canvas
+// vêm sempre do tema escuro — no tema claro o --ink virava marrom-escuro e os rótulos sumiam no fundo.
+// Fontes e o resto continuam lidos do CSS; no tema escuro isso dá exatamente os mesmos valores de antes.
+const CANVAS_DARK = { '--ink': '#ede4d3', '--brass': '#c9a45c', '--maq': '#e0bd7a' };
 function cssVar(name, fallback) {
   if (cssVarCache.has(name)) return cssVarCache.get(name);
-  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+  const v = (document.documentElement.dataset.theme === 'light' && CANVAS_DARK[name]) ||
+    getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
   cssVarCache.set(name, v);
   return v;
 }

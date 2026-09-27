@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="lib/theme.css?v=49">
-<link rel="stylesheet" href="lib/theme-ffx.css?v=9">
+<link rel="stylesheet" href="lib/theme-ffx.css?v=10">
 </head>
 <body class="home-page"> 
 <div id="fallback" class="solid"></div>
@@ -85,9 +85,12 @@
       <div class="action-card">
         <h4>Entrar em mesa</h4>
         <p>Recebeu um código de um Mestre? Entre como Jogador.</p>
-        <form class="inline-form" onsubmit="return doJoin(event)">
-          <input id="join-code" placeholder="Código (ex.: A1B2C3)" required maxlength="12" style="text-transform:uppercase">
+        <form class="join-form" onsubmit="return doJoin(event)">
+          <div class="fld"><label for="join-code">Código de convite</label></div>
+          <div class="inline-form">
+          <input id="join-code" placeholder="A1B2C3" required maxlength="12" autocomplete="off" style="text-transform:uppercase">
           <button class="btn auto" type="submit"><span class="spin"></span>Entrar</button>
+          </div>
         </form>
       </div>
     </div>
@@ -100,7 +103,7 @@
 
     <!-- ---------- LOJA (sistemas publicados por outros criadores) ---------- -->
     <div id="sys-loja" role="tabpanel" aria-labelledby="tab-sys-loja">
-      <div class="section-title" role="heading" aria-level="2">Sistemas publicados por outros criadores</div>
+      <div class="section-title" role="heading" aria-level="2">Sistemas publicados</div>
       <div id="store-systems" class="grid"><div class="empty loading" role="status"><span>Carregando…</span></div></div>
     </div>
 
@@ -241,7 +244,7 @@
 
 <script type="module">
 import * as db from './lib/db.js?v=42';
-import { mountHelp, mountThemeToggle, openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus, wireVerticalTablist, playEnter } from './lib/ui.js?v=9';
+import { mountHelp, mountThemeToggle, openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus, wireVerticalTablist, playEnter } from './lib/ui.js?v=10';
 
 mountHelp('home');
 mountThemeToggle();
@@ -361,6 +364,7 @@ function cacheItems(list) { (list || []).forEach((it) => _itemById.set(it.id, it
 
 async function startHome() {
   const [profile, user] = await Promise.all([db.getMyProfile(), db.getUser()]);
+  _myUserId = user?.id || null;
   profileName = profile?.display_name || 'Aventureiro';
   myUserId = user?.id || null;
   myEmail = user?.email || null;
@@ -427,7 +431,7 @@ window.doLogout = async () => {
 let _sec = 'mesas', _sysSub = 'loja', _itemSub = 'loja';
 const SEC_COPY = {
   mesas: ['Lobby · Mesas', 'Crie uma mesa, entre na de um Mestre pelo código, ou continue uma campanha.'],
-  sistemas: ['Lobby · Sistemas', 'Explore sistemas publicados por outros criadores, guarde os favoritos ou monte o seu.'],
+  sistemas: ['Lobby · Sistemas', 'Explore os sistemas publicados, guarde os favoritos ou monte o seu.'],
   itens: ['Lobby · Itens', 'Itens da loja, seus favoritos e a sua biblioteca — prontos para copiar para os seus sistemas.'],
 };
 const syncMenuTabindex = wireVerticalTablist($('home-menu'));
@@ -479,11 +483,24 @@ window.showItemSub = (sub) => {
   const el = document.getElementById('side-note'); if (!el || !last || !last.id) return;
   el.innerHTML = `<span class="sn-k">Última mesa</span><a class="sn-link" href="mesa.html?id=${encodeURIComponent(last.id)}">${esc(last.name || 'Abrir')} →</a>`;
 })();
-function setMenuCount(sec, n) { const el = $('cnt-' + sec); if (!el) return; el.textContent = n == null ? '' : String(n).padStart(2, '0'); el.dataset.n = n == null ? '' : String(n); }
+function setMenuCount(sec, n) { const el = $('cnt-' + sec); if (!el) return; el.textContent = n == null ? '' : String(n); el.dataset.n = n == null ? '' : String(n); }
 
 /* ---------- sistemas ---------- */
 let _favSysIds = new Set();
 const _systemById = new Map();
+let _myUserId = null; // dono dos sistemas "Seu" na loja (P1-6)
+// "1 classe" / "2 classes" (docs/MELHORIAS-v1.4.md P1-11)
+const pl = (n, one, many) => n + ' ' + (n === 1 ? one : many);
+// "há 2 dias" — atividade da mesa (last_active_at) na linha do lobby (P1-12)
+function relTime(iso) {
+  if (!iso) return '';
+  const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (m < 2) return 'agora';
+  if (m < 60) return `há ${m} min`;
+  const h = Math.round(m / 60); if (h < 24) return `há ${h} h`;
+  const d = Math.round(h / 24); if (d < 30) return `há ${d} dia${d === 1 ? '' : 's'}`;
+  const mo = Math.round(d / 30); return `há ${mo} ${mo === 1 ? 'mês' : 'meses'}`;
+}
 function cacheSystems(list) { (list || []).forEach((s) => _systemById.set(s.id, s)); return list; }
 
 window.showSysSub = (sub) => {
@@ -507,12 +524,19 @@ async function renderSystems() {
     fillSystemPicker(mine, favorites, store);   // alimenta o seletor de sistema do "Criar mesa"
     if (!mine.length) { box.className = ''; box.innerHTML = emptyState(ICON.gear, 'Nenhum sistema ainda',
       'O sistema é o coração do seu RPG: status, fórmulas, classes, árvores e itens. Crie o primeiro no campo acima ↑'); return; }
-    box.className = 'grid';
+    // "minhas coisas" em linhas, igual às mesas (docs/MELHORIAS-v1.4.md P1-5) — cards ficam só na Loja
+    box.className = 'mesa-rows';
     box.innerHTML = mine.map((s) => `
-      <a class="card-tile" href="sistema.html?id=${s.id}">
-        <h3>${esc(s.name)}</h3>
-        <div class="meta">${s.is_published ? 'Publicado na loja · ' : ''}Abrir construtor →</div>
+      <a class="list-row mesa-row sys-row" href="sistema.html?id=${s.id}">
+        <span class="grow">
+          <span class="mesa-row-name">${esc(s.name)}</span>
+          <span class="mesa-row-meta" id="sysmeta-${s.id}">Abrir construtor →</span>
+        </span>
+        ${s.is_published ? '<span class="role published">Publicado</span>' : ''}
       </a>`).join('');
+    mine.forEach((s) => db.getSystemBundle(s.id).then((b) => {
+      const el = $('sysmeta-' + s.id); if (el) el.textContent = `${pl(b.stats.length, 'status', 'status')} · ${pl(b.classes.length, 'classe', 'classes')} · ${pl(b.trees.length, 'árvore', 'árvores')}`;
+    }).catch(() => {}));
   } catch (e) { box.className = ''; box.innerHTML = '<div class="empty">Erro: ' + esc(friendlyError(e)) + '</div>'; }
 }
 window.doCreateSystem = (ev) => { ev.preventDefault(); const name = $('sys-name').value.trim(); if (!name) return false; busy(ev.target, true);
@@ -521,13 +545,14 @@ window.doCreateSystem = (ev) => { ev.preventDefault(); const name = $('sys-name'
 /* ---------- card de sistema (Loja/Favoritos — não navega, abre modal de detalhe) ---------- */
 function systemCardHtml(s, featured) {
   const isFav = _favSysIds.has(s.id);
+  const mine = !!_myUserId && s.owner_id === _myUserId;
   return `
     <div class="card-tile${featured ? ' featured' : ''}" onclick='openSystemDetail("${s.id}")' onkeydown='if(event.key==="Enter"||event.key===" "){event.preventDefault();openSystemDetail("${s.id}")}' tabindex="0" role="button" aria-label="Ver detalhes de ${esc(s.name)}${featured ? ' (sistema em destaque)' : ''}">
       ${featured ? `<div class="featured-badge">${ICON.star}Destaque</div>` : ''}
-      <button class="poster-fav ${isFav ? 'on' : ''}" style="position:absolute;top:10px;right:10px" onclick='event.stopPropagation();toggleFavoriteSystem("${s.id}")' aria-label="${isFav ? 'Remover dos favoritos' : 'Favoritar'}" aria-pressed="${isFav}">${HEART_ICON}</button>
+      ${mine ? '' : `<button class="poster-fav ${isFav ? 'on' : ''}" style="position:absolute;top:10px;right:10px" onclick='event.stopPropagation();toggleFavoriteSystem("${s.id}")' aria-label="${isFav ? 'Remover dos favoritos' : 'Favoritar'}" aria-pressed="${isFav}">${HEART_ICON}</button>`}
       <h3 style="padding-right:26px">${esc(s.name)}</h3>
       ${s.description ? `<p class="meta" style="white-space:normal;-webkit-line-clamp:3;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;margin:2px 0">${esc(s.description)}</p>` : ''}
-      <div class="meta">por ${esc(s.creator_name || '—')}</div>
+      <div class="meta">${mine ? '<span class="role mine">Seu</span>' : 'por ' + esc(s.creator_name || '—')}</div>
     </div>`;
 }
 async function renderStoreSystems() {
@@ -629,16 +654,22 @@ async function renderMesas() {
     box.className = 'mesa-rows';
     box.innerHTML = mesas.map((m) => `
       <a class="list-row mesa-row${m.role === 'gm' ? ' gm' : ''}" href="mesa.html?id=${m.id}">
-        <span class="mesa-mark" aria-hidden="true"></span>
         ${m.image_url
           ? `<img class="mesa-av" src="${esc(m.image_url)}" alt="">`
           : `<span class="mesa-av" aria-hidden="true">${esc((m.name || '?').trim().charAt(0).toUpperCase() || '?')}</span>`}
         <span class="grow">
           <span class="mesa-row-name">${esc(m.name)}</span>
-          <span class="mesa-row-meta">${m.role === 'gm' ? 'Código: ' + esc(m.join_code) : 'Entrar na mesa →'}</span>
+          <span class="mesa-row-meta"><span class="mr-sys" data-sys="${esc(m.system_id || '')}">${esc(_systemById.get(m.system_id)?.name || '')}</span>${
+            [relTime(m.last_active_at || m.created_at), m.role === 'gm' && m.join_code ? 'Código ' + esc(m.join_code) : ''].filter(Boolean).map((t) => `<span>${t}</span>`).join('')}</span>
         </span>
         <span class="role ${m.role}">${m.role === 'gm' ? 'Mestre' : 'Jogador'}</span>
       </a>`).join('');
+    // nome do sistema de cada mesa: do cache (Meus sistemas/Loja/Favoritos) ou buscado uma vez
+    box.querySelectorAll('.mr-sys').forEach((el) => {
+      const id = el.dataset.sys; if (!id || el.textContent) return;
+      const known = _systemById.get(id); if (known) { el.textContent = known.name; return; }
+      db.getSystem(id).then((sy) => { if (sy) { cacheSystems([sy]); el.textContent = sy.name; } }).catch(() => {});
+    });
   } catch (e) { box.className = ''; box.innerHTML = '<div class="empty">Erro: ' + esc(friendlyError(e)) + '</div>'; }
 }
 window.doCreate = (ev) => { ev.preventDefault(); const name = $('new-name').value.trim(); const systemId = $('new-system').value;
@@ -679,7 +710,7 @@ window.onNewSystemChange = async () => {
   try {
     const b = await db.getSystemBundle(id);
     if ($('new-system').value !== id) return; // trocou de novo enquanto carregava
-    box.textContent = `${b.stats.length} status · ${b.classes.length} classes · ${b.trees.length} árvores · ${b.items.length} itens`;
+    box.textContent = `${pl(b.stats.length, 'status', 'status')} · ${pl(b.classes.length, 'classe', 'classes')} · ${pl(b.trees.length, 'árvore', 'árvores')} · ${pl(b.items.length, 'item', 'itens')}`;
   } catch (_) { box.textContent = ''; }
 };
 window.doJoin = (ev) => { ev.preventDefault(); const code = $('join-code').value.trim().toUpperCase(); if (!code) return false; busy(ev.target, true);

@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="lib/theme.css?v=49">
-<link rel="stylesheet" href="lib/theme-ffx.css?v=9">
+<link rel="stylesheet" href="lib/theme-ffx.css?v=10">
 <style>
   /* modo embutido (dentro da mesa, via iframe — ver mesa.html: viewSistemaInline/renderSistema):
      mesmo padrão de arvore.html — esconde a topbar própria (a mesa já tem a dela por fora) e troca
@@ -45,7 +45,15 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
   <a class="topbar-brand" href="app.html"><img class="mark logo" src="lib/logo.png" alt="" aria-hidden="true">VITALITY</a>
   <div class="title" id="sys-name" style="font-size:14px">…</div>
   <div class="spacer"></div>
-  <div class="nav-user static"><div class="chip"><span class="av" id="who-av" aria-hidden="true">·</span><b id="who">…</b></div></div>
+  <div class="nav-user" id="nav-user">
+    <button type="button" class="chip" id="nav-user-btn" aria-haspopup="menu" aria-expanded="false" onclick="toggleUserMenu()">
+      <span class="av" id="who-av" aria-hidden="true">·</span><b id="who">…</b><span style="color:var(--ink-faint)" aria-hidden="true">▾</span>
+    </button>
+    <div class="drop glass" role="menu">
+      <a role="menuitem" href="app.html"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="M11 18l-6-6 6-6"/></svg></span>Voltar ao lobby</a>
+      <button role="menuitem" id="theme-menu-item" onclick="doToggleTheme()"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z"/></svg></span><span id="theme-menu-label">Tema</span></button>
+    </div>
+  </div>
 </div>
 
 <!-- layout em colunas (docs/DESIGN-FFXIII.md §3.6): menu vertical com as 13 seções no lugar das abas
@@ -53,7 +61,6 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
      editor do status selecionado num painel fixo à direita em vez de editar dentro da própria linha -->
 <div class="ffx-layout sis-layout">
   <aside class="ffx-side">
-    <div class="ffx-menu-eyebrow" aria-hidden="true">Construtor</div>
     <div class="ffx-menu" id="tabs" role="tablist" aria-orientation="vertical" aria-label="Seções do construtor"></div>
   </aside>
   <main class="ffx-main">
@@ -69,12 +76,24 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
 
 <script type="module">
 import * as db from './lib/db.js?v=42';
-import { mountHelp, mountThemeToggle, trapFocus, wireVerticalTablist, armEnter } from './lib/ui.js?v=9';
+import { mountHelp, trapFocus, wireVerticalTablist, armEnter, toggleTheme, getTheme } from './lib/ui.js?v=10';
 
 // embutido dentro da mesa (iframe) — ver comentário grande no <style> acima e em arvore.js (mesmo
 // padrão): sem topbar/FABs próprios (a mesa já cobre isso por fora).
 const embedded = document.body.classList.contains('embedded');
-if (!embedded) { mountHelp('sistema'); mountThemeToggle(); }
+if (!embedded) mountHelp('sistema');
+// menu do usuário (mesmo padrão do lobby): o tema mora aqui, não num botão flutuante (MELHORIAS-v1.4 P1-16)
+const paintThemeLabel = () => { const l = document.getElementById('theme-menu-label'); if (l) l.textContent = getTheme() === 'light' ? 'Tema escuro' : 'Tema claro'; };
+paintThemeLabel();
+window.doToggleTheme = () => { toggleTheme(); paintThemeLabel(); };
+window.toggleUserMenu = () => {
+  const open = document.getElementById('nav-user').classList.toggle('open');
+  document.getElementById('nav-user-btn').setAttribute('aria-expanded', String(open));
+};
+document.addEventListener('click', (e) => {
+  const nu = document.getElementById('nav-user');
+  if (nu && nu.classList.contains('open') && !nu.contains(e.target)) { nu.classList.remove('open'); document.getElementById('nav-user-btn').setAttribute('aria-expanded', 'false'); }
+});
 window.goBackEmbedded = () => { try { window.parent.backFromSistemaEmbed(); } catch (_) {} };
 const $ = (id) => document.getElementById(id);
 const esc = (s) => (s == null ? '' : String(s)).replace(/[&<>"]/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
@@ -362,6 +381,13 @@ window.openTab = async (name) => {
   $('tabs').querySelectorAll('[role="tab"]').forEach((b) => { const on = b.dataset.tab === name; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); });
   syncTabsTabindex();
   (enterTab ||= armEnter($('content')))();
+  // o menu tem rolagem própria (v1.3): centraliza o item ativo nele — só mexe no scrollTop do
+  // próprio menu, nunca na página (por isso não usa scrollIntoView)
+  const side = $('tabs').closest('.ffx-side'), act = $('tab-' + name);
+  if (side && act && side.scrollHeight > side.clientHeight) {
+    const d = act.getBoundingClientRect().top - side.getBoundingClientRect().top;
+    side.scrollTop += d - side.clientHeight / 2 + act.offsetHeight / 2;
+  }
   const tabDef = TABS.find(([id]) => id === name);
   $('sis-title').textContent = tabDef ? tabLabel(tabDef[1]) : '';
   $('content').setAttribute('aria-labelledby', 'tab-' + name);
@@ -369,8 +395,15 @@ window.openTab = async (name) => {
   const aside = $('sys-aside'); aside.hidden = true; aside.innerHTML = '';
   const c = $('content'); c.innerHTML = '<div class="empty loading" role="status"><span>Carregando…</span></div>';
   ({ geral: renderGeral, status: renderStatus, combate: renderCombate, pericias: renderPericias, calculos: renderCalculos, proficiencias: renderProficiencias, classes: renderClasses, racas: renderRacas, condicoes: renderCondicoes, nivel: renderNivel, arvores: renderArvores, itens: renderItens, equipamento: renderEquipamento }[name])(c)
+    .then(() => trimLoneEyebrow(c))
     .catch((e) => { c.innerHTML = '<div class="empty">Erro: ' + esc(e.message) + '</div>'; });
 };
+// aba com um bloco só: o rótulo de seção repetiria o H1 ("Cálculos" / "CÁLCULOS") — some da tela,
+// mas continua pro leitor de tela (docs/MELHORIAS-v1.4.md P1-7)
+function trimLoneEyebrow(c) {
+  const heads = c.querySelectorAll(':scope > .section-title');
+  if (heads.length === 1 && c.firstElementChild === heads[0]) heads[0].classList.add('sr-only');
+}
 
 /* ===================== GERAL ===================== */
 let _geralDirty = false;
@@ -2116,19 +2149,21 @@ async function renderCondicoes(c) {
   wireDragReorder($('conditions-list'), '.list-row[data-id]', 'system_conditions');
 }
 function conditionRow(cond) {
-  return `<div class="list-row" data-id="${cond.id}" style="flex-direction:column;align-items:stretch;gap:8px">
-    <div style="display:flex;gap:8px;align-items:center">
+  return `<div class="list-row cond-row" data-id="${cond.id}" style="flex-direction:column;align-items:stretch;gap:8px;--cc:${esc(cond.color || '#f2585e')}">
+    <div class="cond-line" style="display:flex;gap:8px;align-items:center">
       ${DRAG_HANDLE_SVG}
-      <input value="${esc(cond.icon || '')}" placeholder="🩸" maxlength="4" onchange="onCondFieldChange('${cond.id}','icon',this.value)" id="cond-icon-${cond.id}"
+      <input value="${esc(cond.icon || '')}" placeholder="ícone" maxlength="4" onchange="onCondFieldChange('${cond.id}','icon',this.value)" id="cond-icon-${cond.id}" class="cond-icon" aria-label="Ícone da condição"
         style="width:44px;text-align:center;background:var(--field);border:1px solid var(--line2);border-radius:8px;color:var(--ink);font-size:15px;padding:8px 4px">
-      <button type="button" class="btn sm auto" style="flex-shrink:0;padding:8px 8px" title="Escolher emoji" aria-label="Escolher emoji para o ícone" onclick="openIconPicker(this, document.getElementById('cond-icon-${cond.id}'))">▾</button>
-      <input class="nm" value="${esc(cond.name)}" onchange="onCondFieldChange('${cond.id}','name',this.value)"
+      <button type="button" class="btn sm auto cond-pick" style="flex-shrink:0;padding:8px 8px" title="Escolher ícone" aria-label="Escolher ícone da condição" onclick="openIconPicker(this, document.getElementById('cond-icon-${cond.id}'))">▾</button>
+      <input class="nm" value="${esc(cond.name)}" aria-label="Nome da condição" onchange="onCondFieldChange('${cond.id}','name',this.value)"
         style="flex:1;background:transparent;border:0;color:var(--bone);font-family:var(--disp);font-size:16px">
-      <button type="button" class="color-swatch" style="--sw:${esc(cond.color || '#f2585e')}" title="Cor do selo na ficha" onclick="openColorPicker(this, '${esc(cond.color || '#f2585e')}', (v)=>updateConditionColor('${cond.id}',v))"></button>
+      <button type="button" class="color-swatch cond-color" style="--sw:${esc(cond.color || '#f2585e')}" title="Cor do selo na ficha" aria-label="Cor do selo na ficha" onclick="openColorPicker(this, '${esc(cond.color || '#f2585e')}', (v)=>{ this.closest('.cond-row')?.style.setProperty('--cc', v); updateConditionColor('${cond.id}',v); })"></button>
+      <span class="cond-actions">
       <button class="btn sm auto" onclick="toggleConditionMods('${cond.id}')">Modificadores ▾</button>
       <button class="btn sm danger auto" title="Excluir condição" aria-label="Excluir condição ${esc(cond.name)}" onclick="delCondition('${cond.id}')"><span class="ic">${ICONS.x}</span></button>
+      </span>
     </div>
-    <input value="${esc(cond.description || '')}" placeholder="Descrição (opcional) — o que essa condição significa..."
+    <input value="${esc(cond.description || '')}" aria-label="Descrição da condição" placeholder="Descrição (opcional) — o que essa condição significa..."
       onchange="onCondFieldChange('${cond.id}','description',this.value)"
       style="background:transparent;border:0;color:var(--ink-dim);font-family:var(--serif);font-size:12.5px;width:100%;padding:0 2px">
     <div class="base-panel" id="cond-mods-${cond.id}" style="display:none"></div>
@@ -2208,7 +2243,7 @@ window.addCondMod = (condId, statId = '', amount = '') => {
   const orphaned = statId && !opts.some((s) => s.id === statId);
   const row = document.createElement('div'); row.className = 'mod-row';
   row.innerHTML = `<select class="fld-input cm-stat" style="flex:1">
-      <option value="" ${orphaned ? 'selected' : ''}>${orphaned ? '⚠ status excluído — escolha outro (some ao salvar)' : '— status —'}</option>
+      <option value="" ${orphaned ? 'selected' : ''}>${orphaned ? '(status excluído) — escolha outro (some ao salvar)' : '— status —'}</option>
       ${opts.map((s) => `<option value="${s.id}" ${s.id === statId ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}
     </select>
     <input class="mv cm-amount" placeholder="+/-, ex.: -2" value="${esc(amount)}">
@@ -2532,7 +2567,7 @@ async function renderItens(c) {
       </div>`;
   };
   c.innerHTML = `
-    <div class="seg glass" id="itens-subtabs" role="tablist" style="margin-bottom:18px">
+    <div class="sub-tabs" id="itens-subtabs" role="tablist" aria-label="Itens do sistema">
       <button type="button" role="tab" aria-selected="${_itensSubTab === 'itens'}" class="${_itensSubTab === 'itens' ? 'on' : ''}" data-sub="itens" onclick="showItensSub('itens')">Itens</button>
       <button type="button" role="tab" aria-selected="${_itensSubTab === 'moedas'}" class="${_itensSubTab === 'moedas' ? 'on' : ''}" data-sub="moedas" onclick="showItensSub('moedas')">Moedas</button>
       <button type="button" role="tab" aria-selected="${_itensSubTab === 'dano'}" class="${_itensSubTab === 'dano' ? 'on' : ''}" data-sub="dano" onclick="showItensSub('dano')">Tipos de dano</button>

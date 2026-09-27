@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="lib/theme.css?v=49">
-<link rel="stylesheet" href="lib/theme-ffx.css?v=9">
+<link rel="stylesheet" href="lib/theme-ffx.css?v=10">
 </head>
 <body class="mesa-page">
 <script>try{
@@ -74,8 +74,8 @@
 
 <script type="module">
 import * as db from './lib/db.js?v=42';
-import { openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus, wireVerticalTablist, armEnter } from './lib/ui.js?v=9';
-import { mountYtPlayer } from './lib/ytplayer.js?v=5';
+import { openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus, wireVerticalTablist, armEnter } from './lib/ui.js?v=10';
+import { mountYtPlayer } from './lib/ytplayer.js?v=6';
 
 // sem mountHelp/mountThemeToggle flutuantes aqui: "Ajuda ou suporte" e "Tema" já existem como itens
 // de texto no menu de conta (#nav-user, logo acima) — os FABs eram um atalho redundante pra mesma
@@ -312,7 +312,7 @@ async function renderParty() {
   if (!members.length) { box.innerHTML = ''; return; }
   const ord = { gm: 0, player: 1 };
   members.sort((a, b) => (ord[a.role] ?? 9) - (ord[b.role] ?? 9));
-  box.innerHTML = `<div class="party-label">Grupo<span class="party-count">${String(members.length).padStart(2, '0')}</span></div>` + members.map((m) => {
+  box.innerHTML = `<div class="party-label">Grupo<span class="party-count">${members.length}</span></div>` + members.map((m) => {
     const nm = m.profile?.display_name || '—';
     const initial = (nm.trim().charAt(0) || '?').toUpperCase();
     const me = m.user_id === myId;
@@ -865,7 +865,7 @@ async function renderCombateGm(c, myToken) {
         <div class="grow"><div class="nm">${esc(p.name)}${p.type === 'npc' ? ' <span class="badge">NPC</span>' : ''}</div></div>
         <input type="number" id="combat-val-${p.type}-${p.ref}" value="${cur ? esc(String(cur.initiative_value)) : ''}" placeholder="valor"
           style="max-width:80px;background:var(--field);border:1px solid var(--line2);border-radius:8px;color:var(--ink);font-family:var(--mono);padding:7px">
-        ${p.type === 'npc' ? `<button type="button" class="btn sm auto" title="Rolar 1d20" aria-label="Rolar 1d20 pra iniciativa de ${esc(p.name)}" onclick="rollNpcInitiative('${p.ref}')">🎲</button>` : ''}
+        ${p.type === 'npc' ? `<button type="button" class="btn sm auto" title="Rolar 1d20" aria-label="Rolar 1d20 pra iniciativa de ${esc(p.name)}" onclick="rollNpcInitiative('${p.ref}')"><span class="ic">${ICONS.dice}</span></button>` : ''}
         <button class="btn sm auto" onclick="gmSetInitiative('${p.type}','${p.ref}')">Definir</button>
       </div>`;
     }).join('')}</div>`;
@@ -1754,7 +1754,7 @@ function classColor(name) { return (sys?.classes || []).find((x) => !x.parent_id
 function classSubclassChips(ch) {
   const chip = (label, color) => {
     const c = color || 'var(--ink-dim)';
-    return `<span class="char-tag class-tag" style="--tc:${c}">${esc(label)}</span>`;
+    return `<span class="char-tag class-tag" style="--tc:${c}" title="${esc(label)}">${esc(label)}</span>`;
   };
   let classHtml = '', subHtml = '';
   if (ch.char_class) {
@@ -1779,7 +1779,7 @@ function originVariantChips(ch) {
   if (!sys || !sys.origins || !sys.origins.length) return '';
   const chip = (label, color) => {
     const c = color || 'var(--ink-dim)';
-    return `<span class="char-tag class-tag" style="--tc:${c}">${esc(label)}</span>`;
+    return `<span class="char-tag class-tag" style="--tc:${c}" title="${esc(label)}">${esc(label)}</span>`;
   };
   let originHtml = '', variantHtml = '';
   // sem origem ainda: nada aqui, a escolha acontece nos cartões da Biografia (não repete um
@@ -1922,7 +1922,7 @@ function refreshClassPickers() { refreshCharTags(); refreshClassOriginSection();
 function charTagsHtml(ch) {
   const otherTags = [ch.age ? 'Idade: ' + esc(ch.age) : '', ch.gender ? esc(ch.gender) : ''].filter(Boolean);
   return `<span class="char-tag" id="char-level-tag">Nível ${ch.level || 1}</span>` +
-    otherTags.map((t) => `<span class="char-tag">${t}</span>`).join('') + classSubclassChips(ch) + originVariantChips(ch);
+    otherTags.map((t) => `<span class="char-tag" title="${t}">${t}</span>`).join('') + classSubclassChips(ch) + originVariantChips(ch);
 }
 // repinta só a etiqueta de nível/idade/gênero/classe-subclasse (usado depois de escolher
 // classe/subclasse, que troca o <select> por uma etiqueta travada) — sem recarregar a ficha toda
@@ -2013,7 +2013,10 @@ async function renderFicha(c) {
         <input type="file" id="avatar-quick-file" accept="image/*" style="display:none" onchange="onAvatarQuickFile(this)">
       </div>` : `
       <div class="char-bio-row">
-        <div class="char-portrait ph">${esc((ch.name || '?').trim().charAt(0).toUpperCase() || '?')}</div>
+        ${ch.avatar_url ? `<img class="char-portrait" src="${esc(ch.avatar_url)}" alt="">`
+          : `<button type="button" class="char-portrait ph portrait-cta" style="--pc:${esc(classColor(ch.char_class) || 'var(--brass)')}" onclick="pickAvatarQuickFile()" title="Adicionar retrato" aria-label="Adicionar retrato">
+          <span class="pm">${esc((ch.name || '?').trim().charAt(0).toUpperCase() || '?')}</span><span class="pc-lbl">+ Retrato</span></button>`}
+        <input type="file" id="avatar-quick-file" accept="image/*" style="display:none" onchange="onAvatarQuickFile(this)">
         <div class="char-info">
           <h2>${esc(ch.name) || 'Sem nome'}</h2>
           <div class="char-tags" id="char-tags">${tagsHtml}</div>
@@ -2033,19 +2036,19 @@ async function renderFicha(c) {
         <div class="hud-bars">${primaries.map(resourceRow).join('')}</div>` : ''}
 
       <div class="hud-sec-label" style="margin-top:18px">Status${secondaries.length ? '' : ' — o sistema não tem'}<span class="ln"></span></div>
-      <div class="stat-grid" id="sec-stat-grid">
+      ${hasBaseSecondary ? `<div class="points-bar" id="points-bar" data-n="${(ch.stat_points || 0)}">
+        <span class="pb-value" id="stat-points-badge">${(ch.stat_points || 0)}</span>
+        <span class="pb-label" id="stat-points-label">${(ch.stat_points || 0) === 1 ? 'ponto para distribuir' : 'pontos para distribuir'}</span>
+        <button class="btn go auto sm" id="stat-save-btn" style="display:none" onclick="commitStatPoints()"><span class="spin"></span>Salvar status</button>
+      </div>` : ''}
+      <!-- .has-points: só com pontos pra distribuir os −/+ aparecem (docs/MELHORIAS-v1.4.md P0-4) -->
+      <div class="stat-grid${hasBaseSecondary && (ch.stat_points || 0) > 0 ? ' has-points' : ''}" id="sec-stat-grid">
         ${secondaries.map(secTile).join('')}
         ${secondaries.length ? '' : '<div class="empty">Sem status.</div>'}
       </div>
-      ${hasBaseSecondary ? `<div class="points-bar">
-        <span class="pb-label">Pontos de status</span>
-        <span class="pb-value" id="stat-points-badge">${(ch.stat_points || 0)}</span>
-        <span class="pb-hint">disponíveis para distribuir nos status acima</span>
-        <button class="btn go auto sm" id="stat-save-btn" style="display:none" onclick="commitStatPoints()"><span class="spin"></span>Salvar status</button>
-      </div>` : ''}
       ${combatBlockHtml(combatStats, secTileCompact)}
       ${skills.length ? `<div class="hud-sec-label" style="margin-top:18px">Perícias<span class="ln"></span></div>
-      <div class="skill-grid">${skills.map(skillChip).join('')}</div>` : ''}
+      <div class="skill-grid">${[...skills].sort((x, y) => (x.name || '').localeCompare(y.name || '', 'pt')).map(skillChip).join('')}</div>` : ''}
       ${sys?.proficiencies?.length ? `<div class="hud-sec-label" style="margin-top:18px">Proficiências<span class="ln"></span></div>
       <div class="prof-groups">${profChipsHtml(_fichaProficiencies, false)}</div>` : ''}
       ${_fichaConditions.size ? `<div class="hud-sec-label" style="margin-top:18px">Condições<span class="ln"></span></div>
@@ -2309,6 +2312,8 @@ function refreshSecRow(statId) {
   const left = pointsLeft();
   document.querySelectorAll('[id^="secbtn-"]').forEach((b) => { b.disabled = left <= 0; });
   const badge = $('stat-points-badge'); if (badge) badge.textContent = left;
+  const lbl = $('stat-points-label'); if (lbl) lbl.textContent = left === 1 ? 'ponto para distribuir' : 'pontos para distribuir';
+  const bar = $('points-bar'); if (bar) bar.dataset.n = String(character.stat_points || 0);
   const saveBtn = $('stat-save-btn'); if (saveBtn) saveBtn.style.display = pendingSum() > 0 ? '' : 'none';
 }
 window.addDraftPoint = (statId) => {
@@ -2819,7 +2824,7 @@ function conditionBonusMap(conditions, activeIds) {
 function bonusTitle(entry) { return entry ? entry.sources.map((s) => `${s.name}: +${s.amount}`).join(', ') : ''; }
 window.recalcComputed = () => {
   _fichaAttrs.forEach((a) => { if (a.kind !== 'computed') { const el = $('attr-' + a.id); if (el) _fichaValues[a.id] = el.value; } });
-  _fichaAttrs.forEach((a) => { if (a.kind === 'computed' && !a.is_resource) { const el = $('comp-' + a.id); if (el) { const v = evalStat(a); el.innerHTML = v == null ? `<span class="ic" style="color:var(--escarlate)" title="Fórmula com erro">${ICONS.warning}</span>${a.is_skill ? '' : 'fórmula'}` : (a.is_skill ? String(v) : '= ' + v); } } });
+  _fichaAttrs.forEach((a) => { if (a.kind === 'computed' && !a.is_resource) { const el = $('comp-' + a.id); if (el) { const v = evalStat(a); el.innerHTML = v == null ? `<span class="ic" style="color:var(--escarlate)" title="Fórmula com erro">${ICONS.warning}</span>${a.is_skill ? '' : 'fórmula'}` : String(v); el.dataset.v = v == null ? '' : String(v); const tile = el.closest('.stat-tile, .skill-chip'); if (tile && a.formula) tile.title = a.formula; } } });
   _fichaAttrs.forEach((a) => { if (a.is_resource) refreshRes(a.id); });
   _fichaAttrs.forEach((a) => { if (a.kind !== 'computed' && !a.is_resource) refreshSecRow(a.id); });
 };
@@ -3175,7 +3180,7 @@ function eqBoardHtml(slots, boardedItems, readOnly = false) {
         ${it ? rarityFxLayers(rarity) : ''}
         ${it && !bg ? `<div class="eq-slot-item-fallback">${esc(it.name)}</div>` : ''}
         ${it && !readOnly ? `<button class="btn sm danger auto" style="position:absolute;top:-10px;right:-10px;padding:2px 5px;line-height:1" onclick="event.stopPropagation();unequipFromBoard('${it.id}')" title="Desequipar" aria-label="Desequipar ${esc(it.name)}">×</button>` : ''}
-        <span class="eq-slot-label">${esc(s.name)}</span>
+        ${/^novo slot$/i.test((s.name || '').trim()) ? '' : `<span class="eq-slot-label">${esc(s.name)}</span>`}
       </div>`;
     }).join('')}
   </div>`;
@@ -3448,18 +3453,18 @@ async function mountDice() {
     </div>
     <button type="button" class="dice-more-toggle" id="dice-more-toggle" aria-expanded="false" aria-controls="dice-more" onclick="toggleDiceMore()">Avançado<span class="dmt-n" id="dice-more-n"></span></button>
     <div class="dice-more" id="dice-more" hidden onchange="paintDiceMore()">
-      <select id="dice-adv" title="Rola o primeiro d20 duas vezes e fica com o maior (vantagem) ou o menor (desvantagem)">
+      <select id="dice-adv" aria-label="Vantagem ou desvantagem" title="Rola o primeiro d20 duas vezes e fica com o maior (vantagem) ou o menor (desvantagem)">
         <option value="">normal</option>
         <option value="adv">vantagem</option>
         <option value="dis">desvantagem</option>
       </select>
       ${role === 'player' ? `
-        <select id="dice-mod-type" onchange="onDiceModTypeChange()">
+        <select id="dice-mod-type" aria-label="Somar à rolagem" onchange="onDiceModTypeChange()">
           <option value="">+ nada</option>
           <option value="stat">+ Status</option>
           <option value="formula">+ Fórmula do Guia Rápido</option>
         </select>
-        <select id="dice-mod-ref" style="display:none"></select>` : ''}
+        <select id="dice-mod-ref" aria-label="Qual status ou fórmula" style="display:none"></select>` : ''}
     </div>
     <div class="rail-tabs" id="rail-tabs" role="tablist">
       <button type="button" class="on" role="tab" aria-selected="true" data-rt="rolls" onclick="selectRailTab('rolls')">Rolagens<span class="unread-dot" id="unread-rolls" style="display:none"></span></button>

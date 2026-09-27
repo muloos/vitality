@@ -12,74 +12,91 @@
 <link rel="stylesheet" href="lib/tokens.css?v=1">
 <link rel="stylesheet" href="lib/theme.css?v=50">
 <link rel="stylesheet" href="lib/theme-ffx.css?v=11">
-<link rel="stylesheet" href="lib/components.css?v=1">
+<link rel="stylesheet" href="lib/components.css?v=2">
 <style>
+  /* Login — "Latão calmo" (docs/DESIGN-v2-LATAO-CALMO.md §3.1): herói à esquerda, formulário de
+     até 400px à direita; no celular uma coluna com o botão principal preso no rodapé */
   html,body{min-height:100%}
-  /* rolagem liberada: em telas baixas o card não fica mais cortado/inacessível */
-  /* herói à esquerda + card chanfrado à direita, com quebra natural (docs/DESIGN-FFXIII.md §3.2) */
-  .wrap{position:relative;min-height:100vh;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:48px;padding:48px 6vw 110px;overflow-x:clip}
-  .hero{position:relative;flex:1 1 420px;max-width:620px;min-height:420px;display:flex;flex-direction:column;justify-content:center}
-  .hero-rings{position:absolute;left:30%;top:50%;width:0;height:0;pointer-events:none}
-  .hero-rings .ffx-ring:nth-child(1){width:520px;height:520px}
-  .hero-rings .ffx-ring:nth-child(2){width:360px;height:360px;animation-duration:80s}
-  .hero-eyebrow{position:relative;font-family:var(--mono);font-size:11px;letter-spacing:.42em;text-transform:uppercase;color:var(--ink-faint)}
-  .wordmark{position:relative;margin:18px 0 0;font-family:var(--disp);font-weight:400;font-size:clamp(52px,8vw,96px);letter-spacing:.16em;line-height:1;color:var(--bone)}
-  .hero-line{position:relative;height:1px;width:72%;margin:26px 0 24px;background:linear-gradient(90deg,var(--brass),transparent)}
-  .tagline{position:relative;font-family:var(--serif);font-size:17px;line-height:1.6;color:var(--ink-dim);max-width:440px;margin:0;text-wrap:pretty}
-  .card{flex:0 1 420px;width:100%;max-width:420px;padding:34px 32px 30px}
-  /* Entrar / Criar conta: menu vertical no topo do card, sangrando até as bordas dele */
-  .auth-menu{margin:0 -32px 24px}
-  .auth-menu button{padding:0 32px 0 44px;letter-spacing:.03em}
-  .auth-menu .on::before,.auth-menu [aria-selected="true"]::before{inset:5px 0 5px 20px}
-  .auth-menu .on::after,.auth-menu [aria-selected="true"]::after{left:12px}
-  .card .gbtn{height:46px}
-  @media (max-width:760px){
-    .wrap{padding:28px 20px 60px;gap:28px}
-    .hero{min-height:0;flex-basis:100%}
-    .hero-rings{display:none}
-    .hero-line{margin:18px 0 16px}
-    .tagline{font-size:15px}
-  }
-  form{display:block}
-  .gbtn .gicon{width:17px;height:17px;flex:0 0 auto}
-  /* mostrar/ocultar senha */
+  body{background:var(--bg)}
+  .wrap{min-height:100vh;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)}
+  .hero{display:flex;flex-direction:column;justify-content:space-between;gap:var(--space-7);padding:var(--space-7);
+    background:var(--surface-1);border-right:1px solid var(--border)}
+  .brandline{display:flex;align-items:center;gap:var(--space-3);font-family:var(--disp);font-size:var(--fs-h3);letter-spacing:.14em;color:var(--text)}
+  .brandline img{width:44px;height:22px;object-fit:contain}
+  .hero-copy{max-width:520px}
+  .hero-copy h1{margin:0 0 var(--space-4);font-family:var(--disp);font-weight:400;font-size:var(--fs-display);line-height:1.08;color:var(--text);text-wrap:balance}
+  .hero-copy p{margin:0;font-size:17px;line-height:1.6;color:var(--text-2)}
+  .hero-foot{font-size:var(--fs-small);color:var(--text-3)}
+  .side{display:flex;align-items:center;justify-content:center;padding:var(--space-7) var(--space-5)}
+  .card{width:100%;max-width:400px;display:flex;flex-direction:column;gap:var(--space-5)}
+  .card > h2{margin:0;font-family:var(--disp);font-weight:400;font-size:var(--fs-h2);line-height:32px;color:var(--text)}
+  .auth-tabs{margin-bottom:calc(var(--space-2) * -1)}
+  .auth-tabs button{flex:1}
+  #form{display:flex;flex-direction:column;gap:var(--space-4)}
+  #form[aria-busy="true"] .fld{opacity:.7}
+  .lbl-row{display:flex;align-items:baseline;justify-content:space-between;gap:var(--space-3)}
+  .lbl-row .btn.tertiary{font-family:var(--serif);font-size:var(--fs-small);font-weight:500;letter-spacing:0;text-transform:none}
   .pw-wrap{position:relative}
-  .pw-wrap input{padding-right:46px}
-  .pw-toggle{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:34px;height:34px;border:0;background:transparent;
-    color:var(--ink-faint);cursor:pointer;font-size:15px;border-radius:8px;display:flex;align-items:center;justify-content:center}
-  .pw-toggle:hover{color:var(--ink)}
-  /* link discreto (esqueci a senha / voltar pro login) — parece texto, não um botão de ação */
-  .link-btn{display:block;margin-top:8px;background:transparent;border:0;padding:0;cursor:pointer;
-    font-family:var(--mono);font-size:11px;letter-spacing:.03em;color:var(--ink-faint);text-decoration:underline;
-    text-underline-offset:2px}
-  .link-btn:hover{color:var(--ink-dim)}
-  /* barra de força da senha — 3 traços que preenchem conforme critérios básicos são atendidos
-     (comprimento, mistura de tipos de caractere); não bloqueia nada, é só um retorno visual */
-  .pw-strength-row{display:flex;align-items:center;gap:10px;margin-top:8px}
+  .pw-wrap input{width:100%;padding-right:84px !important}
+  .pw-toggle{position:absolute;right:4px;top:50%;transform:translateY(-50%);height:32px;padding:0 var(--space-3);border:0;background:transparent;cursor:pointer;
+    font-family:var(--serif);font-size:var(--fs-small);font-weight:600;color:var(--primary)}
+  .pw-toggle:hover{color:var(--primary-hover);text-decoration:underline;text-underline-offset:4px}
+  #submit{width:100%;height:44px}
+  .or{display:flex;align-items:center;gap:var(--space-3);font-size:var(--fs-small);color:var(--text-3)}
+  .or::before,.or::after{content:"";flex:1;height:1px;background:var(--border)}
+  .gbtn{width:100%;height:44px}
+  .gbtn .gicon{width:18px;height:18px;flex:0 0 auto}
+  /* aviso em linha acima dos campos (não é toast) */
+  #msg{display:none;position:static !important;transform:none !important;inset:auto !important;width:auto;max-width:none;margin:0;z-index:auto}
+  #msg.show{display:flex}
+  #form .fld{margin:0}
+  #form .fld input,#form .pw-wrap{margin:0}
+  #msg{text-align:left}
+  .back-link{width:auto}
+  .lbl-row .btn{width:auto}
+  .card > h2{display:none}
+  .card.titled > h2{display:block}
+  .back-link{align-self:flex-start}
+  .pw-strength-row{display:flex;align-items:center;gap:var(--space-3);margin-top:2px}
   .pw-strength{display:flex;gap:4px;flex:1}
-  .pw-strength i{flex:1;height:3px;border-radius:2px;background:var(--line2);transition:background .15s}
-  .pw-strength.weak i:nth-child(1){background:var(--escarlate)}
-  .pw-strength.ok i:nth-child(1),.pw-strength.ok i:nth-child(2){background:var(--brass)}
-  .pw-strength.strong i{background:#4caf6b}
-  .pw-strength-label{font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.04em;color:var(--ink-faint);flex-shrink:0}
-  @media (max-width:440px){ .card{padding:26px 20px} .auth-menu{margin:0 -20px 20px} .auth-menu button{padding:0 20px 0 36px} }
+  .pw-strength i{flex:1;height:4px;background:var(--surface-3);transition:background var(--t)}
+  .pw-strength.weak i:nth-child(1){background:var(--danger)}
+  .pw-strength.ok i:nth-child(1),.pw-strength.ok i:nth-child(2){background:var(--warning)}
+  .pw-strength.strong i{background:var(--success)}
+  .pw-strength-label{font-size:var(--fs-small);color:var(--text-3);flex-shrink:0;min-width:44px;text-align:right}
+  @media (max-width:860px){
+    .wrap{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+    .hero{gap:var(--space-5);padding:var(--space-5) var(--space-4);border-right:0;border-bottom:1px solid var(--border)}
+    .hero-copy h1{font-size:32px}
+    .hero-copy p{font-size:15px}
+    .hero-foot{display:none}
+    .side{align-items:flex-start;padding:var(--space-5) var(--space-4) 0}
+    .card{gap:var(--space-4)}
+    /* celular: o primário fica no rodapé, sempre ao alcance do polegar */
+    #submit{position:sticky;bottom:0;height:48px;margin-top:var(--space-2);box-shadow:0 -12px 16px var(--bg)}
+    .gbtn{height:48px}
+  }
 </style>
 </head>
 <body>
 <div id="fallback"></div>
 
 <div class="wrap">
-  <div class="hero">
-    <div class="hero-eyebrow">VTT · Mesa virtual</div>
-    <h1 class="wordmark">VITALITY</h1>
-    <div class="hero-line" aria-hidden="true"></div>
-    <p class="tagline">Crie seu próprio sistema de RPG e jogue com amigos: fichas, status, dados e trilha sonora — tudo numa mesa virtual.</p>
-  </div>
+  <section class="hero" aria-label="Vitality">
+    <div class="brandline"><img src="lib/logo.png" alt="" class="mark logo">VITALITY</div>
+    <div class="hero-copy">
+      <h1>Sua campanha, com as suas regras.</h1>
+      <p>Monte o sistema do seu RPG — status, classes, árvores e itens — e jogue com o grupo numa mesa virtual com fichas, dados e trilha sonora.</p>
+    </div>
+    <div class="hero-foot">Mesa virtual para RPG de mesa</div>
+  </section>
 
-  <div class="card glass">
-    <div class="ffx-menu auth-menu" id="auth-menu" role="tablist" aria-orientation="vertical" aria-label="Acesso">
+  <main class="side">
+  <div class="card" id="auth-card">
+    <h2 id="auth-title">Entrar</h2>
+    <div class="sub-tabs auth-tabs" id="auth-menu" role="tablist" aria-label="Acesso">
       <button type="button" role="tab" id="tab-signin" class="on" aria-selected="true" aria-controls="form" onclick="setMode('signin')">Entrar</button>
-      <button type="button" role="tab" id="tab-signup" aria-selected="false" aria-controls="form" onclick="setMode('signup')">Criar conta</button>
+      <button type="button" role="tab" id="tab-signup" aria-selected="false" aria-controls="form" tabindex="-1" onclick="setMode('signup')">Criar conta</button>
     </div>
 
     <div id="msg" class="msg"></div>
@@ -87,38 +104,39 @@
     <form id="form" role="tabpanel" aria-labelledby="tab-signin" onsubmit="return submitForm(event)">
       <div class="fld" id="fld-name" style="display:none">
         <label for="name">Nome de exibição</label>
-        <input id="name" type="text" autocomplete="nickname" placeholder="Como vão te chamar na mesa">
+        <input id="name" type="text" autocomplete="nickname" placeholder="Ex.: Aurora">
+        <div class="fld-help">É assim que o grupo vai te ver na mesa.</div>
       </div>
       <div class="fld" id="fld-email">
         <label for="email">Email</label>
-        <input id="email" type="email" autocomplete="email" required placeholder="voce@exemplo.com">
+        <input id="email" type="email" autocomplete="email" required placeholder="Ex.: voce@exemplo.com" aria-describedby="msg">
       </div>
       <div class="fld" id="fld-password">
-        <label for="password" id="password-label">Senha</label>
+        <div class="lbl-row"><label for="password" id="password-label">Senha</label>
+          <button type="button" class="btn tertiary" id="forgot-link" onclick="setMode('recover')">Esqueci a senha</button></div>
         <div class="pw-wrap">
-          <input id="password" type="password" autocomplete="current-password" required minlength="6" placeholder="••••••••" oninput="onPasswordInput()">
-          <button type="button" class="pw-toggle" id="pw-toggle" onclick="togglePw()" aria-label="Mostrar senha" title="Mostrar senha"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+          <input id="password" type="password" autocomplete="current-password" required minlength="6" placeholder="Mínimo de 6 caracteres" oninput="onPasswordInput()">
+          <button type="button" class="pw-toggle" id="pw-toggle" onclick="togglePw()" aria-label="Mostrar senha" aria-pressed="false">Mostrar</button>
         </div>
         <div class="pw-strength-row" id="pw-strength-row" style="display:none">
           <div class="pw-strength" id="pw-strength"><i></i><i></i><i></i></div>
           <span class="pw-strength-label" id="pw-strength-label"></span>
         </div>
-        <button type="button" class="link-btn" id="forgot-link" onclick="setMode('recover')">Esqueci minha senha</button>
       </div>
       <div class="fld" id="fld-confirm" style="display:none">
         <label for="password2">Confirmar senha</label>
-        <input id="password2" type="password" autocomplete="new-password" minlength="6" placeholder="••••••••" aria-describedby="password2-err">
+        <input id="password2" type="password" autocomplete="new-password" minlength="6" placeholder="Repita a senha" aria-describedby="password2-err">
         <div class="fld-err" id="password2-err">As senhas não são iguais.</div>
       </div>
       <button type="submit" id="submit" class="btn go">
         <span class="spin"></span><span id="submit-label">Entrar</span>
       </button>
-      <button type="button" class="link-btn" id="back-to-signin" style="display:none" onclick="setMode('signin')">← Voltar pro login</button>
+      <button type="button" class="btn tertiary back-link" id="back-to-signin" style="display:none" onclick="setMode('signin')">← Voltar para Entrar</button>
     </form>
 
-    <div class="divider" id="divider">ou</div>
+    <div class="or" id="divider">ou</div>
 
-    <button class="btn gbtn" id="google" onclick="googleLogin()">
+    <button type="button" class="btn gbtn" id="google" onclick="googleLogin()">
       <svg class="gicon" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z"/>
         <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18z"/>
@@ -128,11 +146,12 @@
       Continuar com Google
     </button>
   </div>
+  </main>
 </div>
 
 <script type="module">
 import { signInWithPassword, signUp, signInWithGoogle, getSession, resetPasswordForEmail, updatePassword, onAuthChange } from './lib/db.js?v=42';
-import { wireVerticalTablist } from './lib/ui.js?v=10';
+import './lib/ui.js?v=10';
 
 
 const APP_URL = new URL('app.html', window.location.href).href;
@@ -151,7 +170,14 @@ const GOOGLE_ENABLED = true;
 
 const $ = (id) => document.getElementById(id);
 const msgEl = $('msg');
-const syncAuthTabindex = wireVerticalTablist($('auth-menu'));
+// abas sublinhadas Entrar / Criar conta: ←/→ trocam de aba (padrão de tablist horizontal)
+$('auth-menu').addEventListener('keydown', (e) => {
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  e.preventDefault();
+  const next = mode === 'signin' ? 'signup' : 'signin';
+  setMode(next); $('tab-' + next).focus();
+});
+const syncAuthTabindex = () => ['signin', 'signup'].forEach((m) => { $('tab-' + m).tabIndex = mode === m ? 0 : -1; });
 
 function showMsg(text, kind) {
   msgEl.textContent = text;
@@ -159,17 +185,27 @@ function showMsg(text, kind) {
 }
 function clearMsg() { msgEl.className = 'msg'; }
 
+// carregando: rótulo com verbo no gerúndio + campos travados (o que já foi digitado nunca some)
+const BUSY_LABEL = { signin: 'Entrando…', signup: 'Criando conta…', recover: 'Enviando link…', reset: 'Salvando…' };
 function setLoading(on) {
   const b = $('submit');
   b.classList.toggle('loading', on);
   b.disabled = on;
   $('google').disabled = on;
+  $('form').setAttribute('aria-busy', String(on));
+  $('form').querySelectorAll('input').forEach((i) => { i.readOnly = on; });
+  $('submit-label').textContent = on ? BUSY_LABEL[mode] : SUBMIT_LABEL[mode];
+}
+// erro: aviso em linha acima dos campos + borda de erro no campo que precisa de correção
+function markInvalid(ids) {
+  ['email', 'password', 'password2', 'name'].forEach((id) => { const el = $(id); if (!el) return; const bad = ids.includes(id); el.classList.toggle('invalid', bad); el.setAttribute('aria-invalid', String(bad)); });
 }
 
 // 'signin'/'signup' são as duas abas normais; 'recover' pede só o email pra mandar o link de
 // redefinição; 'reset' aparece sozinho (sem o usuário escolher) quando a página é aberta a partir
 // do link daquele email — nesse modo as abas Entrar/Criar conta e o Google somem, já que não faz
 // sentido nenhum dos dois enquanto está no meio da troca de senha
+const SUBMIT_LABEL = { signin: 'Entrar', signup: 'Criar conta', recover: 'Enviar link de recuperação', reset: 'Salvar nova senha' };
 window.setMode = (m) => {
   mode = m;
   clearMsg();
@@ -197,8 +233,10 @@ window.setMode = (m) => {
   $('email').required = m !== 'reset';
   $('password').required = m !== 'recover';
   $('password2').required = (m === 'signup' || m === 'reset');
-  const labels = { signin: 'Entrar', signup: 'Criar conta', recover: 'Enviar link de recuperação', reset: 'Salvar nova senha' };
-  $('submit-label').textContent = labels[m];
+  $('submit-label').textContent = SUBMIT_LABEL[m];
+  $('auth-title').textContent = { signin: 'Entrar', signup: 'Criar conta', recover: 'Recuperar senha', reset: 'Nova senha' }[m];
+  $('auth-card').classList.toggle('titled', !isAuthTab); // com as abas visíveis o título repetiria a aba
+  markInvalid([]);
   $('password').setAttribute('autocomplete', m === 'signup' || m === 'reset' ? 'new-password' : 'current-password');
   if (m !== 'reset') { $('password').value = ''; $('password2').value = ''; }
 };
@@ -264,10 +302,19 @@ window.submitForm = (ev) => {
     window.location.href = DEST;
   }).catch((err) => {
     showMsg(translateError(err), 'err');
+    markInvalid(errorFields(err));
     setLoading(false);
   });
   return false;
 };
+// qual campo o erro aponta (a borda vermelha mostra onde corrigir; o email digitado nunca é apagado)
+function errorFields(err) {
+  const m = (err && err.message) || String(err);
+  if (/Invalid login credentials/i.test(m)) return ['email', 'password'];
+  if (/User already registered|Email not confirmed|invalid.*email/i.test(m)) return ['email'];
+  if (/Password should be at least/i.test(m)) return ['password'];
+  return [];
+}
 
 // o Supabase detecta sozinho o token de recuperação na URL (detectSessionInUrl, já ligado pro
 // Google) e dispara este evento — troca a tela pro modo "definir nova senha" sem o usuário ter
@@ -278,9 +325,8 @@ window.togglePw = () => {
   const i = $('password'), b = $('pw-toggle');
   const show = i.type === 'password';
   i.type = show ? 'text' : 'password';
-  b.innerHTML = show
-    ? '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.2A10.6 10.6 0 0 1 12 5c7 0 10.5 7 10.5 7a13.2 13.2 0 0 1-3 3.9M6.4 6.4C3.7 8.1 1.5 12 1.5 12S5 19 12 19a10 10 0 0 0 4.2-.9"/><path d="M9.5 9.8a3 3 0 0 0 4.2 4.2"/></svg>'
-    : '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
+  b.textContent = show ? 'Ocultar' : 'Mostrar';
+  b.setAttribute('aria-pressed', String(show));
   b.title = show ? 'Ocultar senha' : 'Mostrar senha';
   b.setAttribute('aria-label', show ? 'Ocultar senha' : 'Mostrar senha');
 };
@@ -300,7 +346,7 @@ window.googleLogin = () => {
 
 function translateError(err) {
   const m = (err && err.message) || String(err);
-  if (/Invalid login credentials/i.test(m)) return 'Email ou senha incorretos.';
+  if (/Invalid login credentials/i.test(m)) return 'Email ou senha incorretos. Confira os dois e tente de novo.';
   if (/User already registered/i.test(m)) return 'Esse email já tem conta. Tente entrar.';
   if (/Password should be at least/i.test(m)) return 'A senha precisa de pelo menos 6 caracteres.';
   if (/Email not confirmed/i.test(m)) return 'Confirme seu email antes de entrar.';

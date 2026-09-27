@@ -5,20 +5,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Vitality · Plataforma</title>
-<link rel="icon" type="image/svg+xml" href="lib/favicon.svg">
-<link rel="alternate icon" type="image/png" href="lib/favicon.png">
+<link rel="icon" type="image/png" href="lib/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="lib/theme.css?v=49">
-<link rel="stylesheet" href="lib/theme-ffx.css?v=7">
+<link rel="stylesheet" href="lib/theme-ffx.css?v=8">
 </head>
 <body class="home-page"> 
 <div id="fallback" class="solid"></div>
 
 <!-- Barra superior -->
 <header class="nav">
-  <div class="brand"><span class="mark">◈</span> VITALITY<small>VTT · MESA VIRTUAL</small></div>
+  <div class="brand"><span class="mark logo" aria-hidden="true"></span> VITALITY<small>VTT · MESA VIRTUAL</small></div>
   <div class="spacer"></div>
   <div class="nav-user" id="nav-user">
     <button type="button" class="chip" id="nav-user-btn" aria-haspopup="menu" aria-expanded="false" onclick="toggleUserMenu()">
@@ -261,7 +260,7 @@ const esc = (s) => (s == null ? '' : String(s)).replace(/[&<>"]/g, (c) => ({ '&'
 const emptyState = (icon, title, desc, cta) => `<div class="empty-cta"><div class="ec-icon">${icon}</div>
   <div class="ec-title">${title}</div><div class="ec-desc">${desc}</div>${cta || ''}</div>`;
 
-// ícones geométricos (linha do wordmark ◈) — substituem emoji em estados vazios/onboarding
+// ícones geométricos (linha fina do redesign) — substituem emoji em estados vazios/onboarding
 const ICON = {
   dice: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2.5" transform="rotate(45 12 12)"/><circle cx="12" cy="9.2" r="1" fill="currentColor" stroke="none"/><circle cx="9.2" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="14.8" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="14.8" r="1" fill="currentColor" stroke="none"/></svg>',
   gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 3.5v2.6M12 17.9v2.6M20.5 12h-2.6M6.1 12H3.5M17.7 6.3l-1.8 1.8M8.1 15.9l-1.8 1.8M17.7 17.7l-1.8-1.8M8.1 8.1 6.3 6.3"/></svg>',

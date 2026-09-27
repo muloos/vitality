@@ -67,18 +67,16 @@
 </head>
 <body>
 <div id="fallback"></div>
-<canvas id="fx"></canvas>
 
 <div class="wrap">
   <div class="hero">
-    <div class="hero-rings" aria-hidden="true"><div class="ffx-ring"></div><div class="ffx-ring"></div></div>
     <div class="hero-eyebrow">VTT · Mesa virtual</div>
     <h1 class="wordmark">VITALITY</h1>
     <div class="hero-line" aria-hidden="true"></div>
     <p class="tagline">Crie seu próprio sistema de RPG e jogue com amigos: fichas, status, dados e trilha sonora — tudo numa mesa virtual.</p>
   </div>
 
-  <div class="card glass ffx-corners">
+  <div class="card glass">
     <div class="ffx-menu auth-menu" id="auth-menu" role="tablist" aria-orientation="vertical" aria-label="Acesso">
       <button type="button" role="tab" id="tab-signin" class="on" aria-selected="true" aria-controls="form" onclick="setMode('signin')">Entrar</button>
       <button type="button" role="tab" id="tab-signup" aria-selected="false" aria-controls="form" onclick="setMode('signup')">Criar conta</button>
@@ -133,11 +131,9 @@
 </div>
 
 <script type="module">
-import { startParticles } from './lib/particles.js?v=3';
 import { signInWithPassword, signUp, signInWithGoogle, getSession, resetPasswordForEmail, updatePassword, onAuthChange } from './lib/db.js?v=42';
 import { wireVerticalTablist } from './lib/ui.js?v=10';
 
-startParticles(document.getElementById('fx'), '214,184,132'); // latão (--glow1), P2-18
 
 const APP_URL = new URL('app.html', window.location.href).href;
 // `next` volta pro app.html/mesa.html/etc. de onde o usuário veio (só caminhos internos, nunca URL externa).

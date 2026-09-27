@@ -32,22 +32,14 @@ body{background:transparent}
 /* árvore: o fundo é a cor que o Mestre escolheu (com os degradês próprios do arvore.js) — as camadas
    de brilho/linhas do redesign ficam fora dela, senão pintam por cima do céu da árvore */
 body.arvore-page #fallback::before,body.arvore-page #fallback::after{content:none}
-#fallback::before{content:"";position:absolute;inset:-20%;
-  background:radial-gradient(900px 700px at 28% 24%,var(--glow1),transparent 60%),radial-gradient(1000px 800px at 76% 82%,var(--glow2),transparent 62%);
-  animation:vtDrift 26s ease-in-out infinite}
-/* vinheta + linhas horizontais a cada 96px (linhas a ~35% da cor de linha, §4.12) */
-#fallback::after{content:"";position:absolute;inset:0;
-  background:radial-gradient(1600px 1100px at 50% 40%,transparent 40%,var(--edge) 100%),
-    linear-gradient(color-mix(in srgb,var(--line) 35%,transparent) 1px,transparent 1px) 0 0/100% 96px}
+/* sem camadas decorativas no fundo (Latão calmo §4: nada de deriva, vinheta ou textura) */
+#fallback::before,#fallback::after{content:none}
 
 /* ---------- painel de vidro ---------- */
 /* superfície (fundo, borda, chanfro) é do lib/components.css */
 .ffx-panel,.glass,.surface,.action-card,.card-tile{position:relative}
 .action-card{padding:22px}
-.ffx-corners::before,.ffx-corners::after,
-.action-row > .action-card:first-child::before,.action-row > .action-card:first-child::after{content:"";position:absolute;width:10px;height:10px;pointer-events:none}
-.ffx-corners::before,.action-row > .action-card:first-child::before{top:7px;right:7px;border-top:1px solid var(--brass);border-right:1px solid var(--brass)}
-.ffx-corners::after,.action-row > .action-card:first-child::after{bottom:7px;left:7px;border-bottom:1px solid var(--brass);border-left:1px solid var(--brass)}
+
 /* selo "Destaque": no theme.css ele fica metade pra fora do cartão (translateY(-50%)); com o chanfro
    (clip-path) essa metade era cortada. Entra no cartão, logo depois do corte do canto. */
 .card-tile.featured .featured-badge{top:0;left:calc(var(--cut) + 4px);transform:none}
@@ -82,7 +74,7 @@ body .card-tile.featured{padding-top:38px}
 .ffx-menu .on::before,.ffx-menu [aria-selected="true"]::before{content:"";position:absolute;inset:4px 0 4px 12px;
   background:linear-gradient(90deg,var(--sel-a),transparent 92%);border-left:2px solid var(--brass);z-index:-1}
 .ffx-menu .on::after,.ffx-menu [aria-selected="true"]::after{content:"";position:absolute;left:4px;top:50%;width:7px;height:7px;margin-top:-3.5px;
-  background:var(--brass);box-shadow:0 0 10px var(--brass);transform:rotate(45deg);animation:vtPulse 1.6s ease-in-out infinite}
+  background:var(--brass);box-shadow:0 0 10px var(--brass);transform:rotate(45deg)}
 .ffx-menu .count{font-family:var(--mono);font-size:11px;color:var(--ink-faint)}
 .ffx-menu .sub{height:34px;padding-left:44px;font-size:13.5px}
 .ffx-menu > *{isolation:isolate}
@@ -315,8 +307,6 @@ body.home-page .home-head h1{letter-spacing:.01em}
   .mesa-page .mesa-main{padding:28px 32px 48px}
   .mesa-page .dice-panel{width:300px;max-width:300px;background:var(--panel);border-left:1px solid var(--line);
     -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
-  .mesa-page .dice-panel::before{content:"";position:absolute;top:8px;right:8px;width:10px;height:10px;pointer-events:none;
-    border-top:1px solid var(--brass);border-right:1px solid var(--brass)}
   .rail-toggle{display:none !important}
   .mesa-page.rail-collapsed:not(.onboard-solo) .mesa-body{grid-template-columns:250px 1fr}
   .mesa-page.rail-collapsed:not(.onboard-solo) .mesa-rail-left{transform:none;opacity:1;pointer-events:auto}
@@ -327,7 +317,7 @@ body.home-page .home-head h1{letter-spacing:.01em}
 /* ---------- ficha: capa → Recursos → Status → pontos → Combate → Perícias ---------- */
 /* capa sem foto: faixa hachurada de 190px com retrato chanfrado e nome grande */
 .char-bio-row{position:relative;min-height:190px;align-items:flex-end;gap:20px;padding:24px;margin-bottom:22px;--cut:22px;
-  background:repeating-linear-gradient(135deg,var(--field) 0 10px,transparent 10px 20px),linear-gradient(180deg,transparent,var(--panel-2));
+  background:var(--surface-1);
   box-shadow:inset 0 0 0 1px var(--line2)}
 .char-bio-row > .btn{align-self:flex-end}
 .char-bio-row .char-portrait,.char-cover-info .char-portrait{width:92px;height:92px;border:0;border-radius:0;
@@ -422,8 +412,7 @@ body.arvore-page .arvore-toolbar{top:58px}
 }
 
 /* ---------- anéis decorativos (login / árvore) ---------- */
-.ffx-ring{position:absolute;left:50%;top:50%;border-radius:50%;border:1px dashed var(--line2);transform:translate(-50%,-50%);
-  animation:vtSpin 120s linear infinite;pointer-events:none}
+.ffx-ring{display:none}
 
 /* ---------- movimento ---------- */
 /* "Animações" desligada nas Configurações (lib/ui.js → html[data-motion="off"]): o mesmo que o
@@ -515,8 +504,6 @@ body.home-page .card-tile .mesa-av,.mesa-av{border-radius:0 !important;
 .btn.overlay:hover{box-shadow:inset 0 0 0 1px var(--brass)}
 
 /* brilho automático só no CTA principal; nos outros, no hover */
-.btn.go::after{animation:none;transform:translateX(-120%)}
-.btn.go:hover::after,.btn.go.cta::after,.card .btn.go#submit::after{animation:vtSweep 3.8s ease-in-out infinite}
 .btn:active:not(:disabled){transform:scale(.97)}
 
 /* foco por teclado em tudo que é clicável */
@@ -675,8 +662,7 @@ body.home-page .card-tile .mesa-av,.mesa-av{border-radius:0 !important;
 .ffx-cursor{position:absolute;left:4px;top:0;width:7px;height:7px;pointer-events:none;z-index:2;
   transition:transform var(--t-slow) var(--ease),opacity var(--t)}
 .ffx-cursor.no-anim{transition:none}
-.ffx-cursor::before{content:"";position:absolute;inset:0;background:var(--brass);box-shadow:0 0 10px var(--brass);
-  transform:rotate(45deg);animation:vtPulse 1.6s ease-in-out infinite}
+.ffx-cursor::before{content:"";position:absolute;inset:0;background:var(--primary);transform:rotate(45deg)}
 .auth-menu .ffx-cursor{left:12px}
 @media (prefers-reduced-motion:reduce){.ffx-cursor{transition:none}}
 
@@ -902,8 +888,8 @@ body:has(#theme-menu-item) .theme-fab{display:none}
 .points-bar{display:flex;align-items:center;gap:10px;margin:0 0 12px !important;padding:10px 14px !important;
   border:0 !important;border-left:0 !important;background:transparent !important;
   box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--brass) 40%,transparent) !important}
-.points-bar::before{content:"";flex:0 0 auto;width:7px;height:7px;background:var(--brass);box-shadow:0 0 10px var(--brass);
-  transform:rotate(45deg);animation:vtPulse 1.6s ease-in-out 2}
+.points-bar::before{content:"";flex:0 0 auto;width:7px;height:7px;background:var(--primary);
+  transform:rotate(45deg)}
 .points-bar .pb-value{font-family:var(--disp);font-size:20px;color:var(--bone)}
 .points-bar .pb-label{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--brass)}
 .points-bar .btn{margin-left:auto}

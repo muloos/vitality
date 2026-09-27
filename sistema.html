@@ -806,7 +806,7 @@ window.onStatEditorField = (k, v) => { onStatFieldChange(_statSel, k, v); paintS
 function renderStatEditor() {
   const box = $('sys-aside'); if (!box) return;
   if (_statSel === '__new__') {
-    box.innerHTML = `<div class="ffx-panel ffx-corners stat-editor">
+    box.innerHTML = `<div class="ffx-panel stat-editor">
       <div class="ffx-label">Novo status</div>
       <form onsubmit="return addStat(event)">
         <div class="fld"><label for="st-name">Nome</label><input id="st-name" placeholder="Ex.: Pontos de Vida" maxlength="40" required></div>
@@ -830,7 +830,7 @@ function renderStatEditor() {
   if (!s) { box.innerHTML = ''; return; }
   const isC = s.kind === 'computed';
   const color = esc(s.color || '#7ee6dc');
-  box.innerHTML = `<div class="ffx-panel ffx-corners stat-editor">
+  box.innerHTML = `<div class="ffx-panel stat-editor">
     <div class="ffx-label">Editar status</div>
     <div class="fld"><label for="se-name">Nome</label><input id="se-name" value="${esc(s.name)}" oninput="onStatEditorField('name', this.value)"></div>
     <div class="fld"><label id="se-flags-lbl">Onde aparece</label>

@@ -10,14 +10,14 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="lib/theme.css?v=49">
-<link rel="stylesheet" href="lib/theme-ffx.css?v=8">
+<link rel="stylesheet" href="lib/theme-ffx.css?v=9">
 </head>
 <body class="home-page"> 
 <div id="fallback" class="solid"></div>
 
 <!-- Barra superior -->
 <header class="nav">
-  <div class="brand"><span class="mark logo" aria-hidden="true"></span> VITALITY<small>VTT · MESA VIRTUAL</small></div>
+  <div class="brand"><img class="mark logo" src="lib/logo.png" alt="" aria-hidden="true"> VITALITY<small>VTT · MESA VIRTUAL</small></div>
   <div class="spacer"></div>
   <div class="nav-user" id="nav-user">
     <button type="button" class="chip" id="nav-user-btn" aria-haspopup="menu" aria-expanded="false" onclick="toggleUserMenu()">
@@ -52,7 +52,7 @@
       <button type="button" role="tab" class="sub" id="tab-itens-criar" data-parent="itens" data-sub="criar" aria-selected="false" aria-controls="itens-criar" hidden onclick="showItemSub('criar')">Criar</button>
       <button type="button" role="tab" class="sub" id="tab-itens-pacotes" data-parent="itens" data-sub="pacotes" aria-selected="false" aria-controls="itens-pacotes" hidden onclick="showItemSub('pacotes')">Pacotes</button>
     </div>
-    <div class="ffx-side-note">Dúvidas? Toque no <b>?</b> no canto da tela.</div>
+    <div class="ffx-side-note" id="side-note">Dúvidas? Toque no <b>?</b> no canto da tela.</div>
   </aside>
 
   <main class="ffx-main">
@@ -241,7 +241,7 @@
 
 <script type="module">
 import * as db from './lib/db.js?v=42';
-import { mountHelp, mountThemeToggle, openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus, wireVerticalTablist, playEnter } from './lib/ui.js?v=8';
+import { mountHelp, mountThemeToggle, openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus, wireVerticalTablist, playEnter } from './lib/ui.js?v=9';
 
 mountHelp('home');
 mountThemeToggle();
@@ -473,7 +473,13 @@ window.showItemSub = (sub) => {
   showSec('itens');
 };
 // contadores à direita de cada item do menu (§3.3) — mono, sempre com 2 dígitos, como "03"
-function setMenuCount(sec, n) { const el = $('cnt-' + sec); if (el) el.textContent = n == null ? '' : String(n).padStart(2, '0'); }
+// atalho "Última mesa" no lugar da dica do menu (docs/MELHORIAS-v1.3.md P2-2) — mesa.html grava vt_last_mesa
+(function paintLastMesa() {
+  let last = null; try { last = JSON.parse(localStorage.getItem('vt_last_mesa') || 'null'); } catch (_) {}
+  const el = document.getElementById('side-note'); if (!el || !last || !last.id) return;
+  el.innerHTML = `<span class="sn-k">Última mesa</span><a class="sn-link" href="mesa.html?id=${encodeURIComponent(last.id)}">${esc(last.name || 'Abrir')} →</a>`;
+})();
+function setMenuCount(sec, n) { const el = $('cnt-' + sec); if (!el) return; el.textContent = n == null ? '' : String(n).padStart(2, '0'); el.dataset.n = n == null ? '' : String(n); }
 
 /* ---------- sistemas ---------- */
 let _favSysIds = new Set();

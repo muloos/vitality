@@ -745,3 +745,183 @@ body.home-page .card-tile .mesa-av,.mesa-av{border-radius:0 !important;
 .brand .mark.logo{width:42px;height:21px;margin-right:4px}
 .mark.logo.sm{width:22px;height:11px}
 @media (max-width:760px){.topbar-brand .mark.logo{width:44px;height:22px}}
+
+/* ============================================================
+   v1.3 — revisão visual (docs/MELHORIAS-v1.3.md)
+   ============================================================ */
+/* ---------- P0-1 · selo Mestre/Jogador em qualquer lugar (não só dentro de .card-tile) ---------- */
+.role{display:inline-block;width:fit-content;white-space:nowrap;font-family:var(--mono);font-size:10px;font-weight:400;
+  letter-spacing:.16em;text-transform:uppercase;padding:5px 10px;line-height:1;border:0 !important;border-radius:0}
+.role.gm{background:var(--brass);color:var(--on-primary);
+  clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px)}
+.role.player{background:transparent;color:var(--maq);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--maq) 45%,transparent)}
+
+/* ---------- P0-2 · menu do construtor: altura da janela com rolagem própria + blocos ---------- */
+@media (min-width:761px){
+  .sis-layout > .ffx-side{max-height:calc(100vh - 100px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain}
+  body.embedded .sis-layout > .ffx-side{max-height:calc(100vh - 76px)}
+}
+.ffx-menu .ffx-menu-group{font-family:var(--mono);font-size:9.5px;letter-spacing:.3em;text-transform:uppercase;
+  color:var(--ink-faint);padding:18px 0 6px 26px}
+.ffx-menu .ffx-menu-group:first-child{padding-top:4px}
+
+/* ---------- P0-3 · painel de rolagem: histórico sempre com espaço ---------- */
+@media (min-width:821px){
+  .mesa-page .dice-panel{display:flex !important;flex-direction:column;overflow-y:auto}
+  .mesa-page .dice-panel > *{flex:0 0 auto}
+  .mesa-page .dice-panel .dice-log,.mesa-page .dice-panel .chat-log{flex:1 1 180px;min-height:180px}
+}
+.dice-quick{grid-template-columns:repeat(6,1fr);gap:4px}
+.dice-quick button{height:32px;font-size:11px}
+.dice-builder{display:flex;flex-wrap:nowrap;gap:6px;align-items:stretch}
+.dice-builder .dice-qty{flex:0 0 52px}
+.dice-builder select{flex:1 1 64px;min-width:0}
+.dice-builder .btn{flex:0 0 auto;width:auto;min-width:0;padding-left:14px;padding-right:14px}
+.dice-more-toggle{display:flex;align-items:center;gap:6px;width:100%;border:0;background:none;cursor:pointer;
+  padding:4px 16px 10px;font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-dim);
+  transition:color .2s,transform .25s var(--ease)}
+.dice-more-toggle::before{content:"";width:6px;height:6px;box-shadow:inset 0 0 0 1px currentColor;transform:rotate(45deg);transition:background .2s}
+.dice-more-toggle[aria-expanded="true"]::before{background:currentColor}
+.dice-more-toggle:hover{color:var(--bone);transform:translateX(4px)}
+.dice-more-toggle .dmt-n{color:var(--brass);letter-spacing:.1em}
+.dice-more{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 12px}
+.dice-more[hidden]{display:none}
+.dice-more select{flex:1 1 110px;min-width:0}
+@media (max-height:760px) and (min-width:821px){
+  .dl-val{font-size:40px}
+  .dice-last{padding-bottom:8px}
+  .dice-quick{display:none}
+  .dice-panel .dh{padding-top:10px;padding-bottom:10px}
+}
+
+/* ---------- P0-4 · logo como <img> com a cor do latão por filtro (a máscara falhava fora do servidor) ---------- */
+img.mark.logo{display:inline-block;flex:0 0 auto;width:38px;height:19px;object-fit:contain;vertical-align:middle;
+  -webkit-mask:none;mask:none;background:none;
+  filter:invert(66%) sepia(32%) saturate(571%) hue-rotate(1deg) brightness(95%) contrast(92%)}
+:root[data-theme="light"] img.mark.logo{filter:invert(39%) sepia(14%) saturate(5237%) hue-rotate(17deg) brightness(98%) contrast(73%)}
+.brand img.mark.logo{width:42px;height:21px;margin-right:4px}
+img.mark.logo.sm{width:22px;height:11px}
+@media (max-width:760px){.topbar-brand img.mark.logo{width:44px;height:22px}}
+
+/* ---------- P1-1 · controles nativos na língua do redesign ---------- */
+select:not([multiple]){-webkit-appearance:none;appearance:none;padding-right:32px !important;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23c9a45c' stroke-width='1.4'/%3E%3C/svg%3E") !important;
+  background-repeat:no-repeat !important;background-position:right 12px center !important;background-size:10px 6px !important}
+:root[data-theme="light"] select:not([multiple]){
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%239c6f22' stroke-width='1.4'/%3E%3C/svg%3E") !important}
+input[type=checkbox]{-webkit-appearance:none;appearance:none;width:16px;height:16px;margin:0;flex:0 0 auto;display:inline-grid;place-items:center;
+  background:var(--field);border:0;border-radius:0;box-shadow:inset 0 0 0 1px var(--line2);cursor:pointer;vertical-align:middle;
+  transition:box-shadow .15s,background .15s}
+.check-row input[type=checkbox]{margin-top:2px}
+input[type=checkbox]:hover{box-shadow:inset 0 0 0 1px var(--brass)}
+input[type=checkbox]:checked{background:var(--sel-a);box-shadow:inset 0 0 0 1px var(--brass)}
+input[type=checkbox]::after{content:"";width:7px;height:7px;background:var(--maq);transform:rotate(45deg) scale(0);transition:transform .15s var(--ease)}
+input[type=checkbox]:checked::after{transform:rotate(45deg) scale(1)}
+input[type=checkbox]:focus-visible{outline:1px solid var(--brass);outline-offset:2px}
+input[type=checkbox]:disabled{opacity:.45;cursor:not-allowed}
+input[type=range]{-webkit-appearance:none;appearance:none;height:2px !important;border-radius:0 !important;border:0;outline:none;cursor:pointer;accent-color:var(--brass);
+  background:linear-gradient(90deg,var(--brass),color-mix(in srgb,var(--brass) 18%,var(--line2))) !important}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:10px !important;height:10px !important;border:0;border-radius:0 !important;
+  background:var(--brass);transform:rotate(45deg);box-shadow:0 0 6px color-mix(in srgb,var(--brass) 60%,transparent)}
+input[type=range]::-moz-range-thumb{width:9px;height:9px;border:0;border-radius:0;background:var(--brass);transform:rotate(45deg)}
+input[type=range]:focus-visible{outline:1px solid var(--brass);outline-offset:6px}
+/* amostra de cor "cheia": quadradinho chanfrado + código hex (lib/ui.js preenche data-hex) */
+.color-swatch.full{display:inline-flex;align-items:center;gap:10px;width:auto !important;max-width:100%;height:34px;padding:0 14px 0 3px;
+  background:var(--field) !important;border:0 !important;box-shadow:inset 0 0 0 1px var(--line2);transition:box-shadow .2s,transform .25s var(--ease)}
+.color-swatch.full::before{content:"";flex:0 0 auto;width:28px;height:28px;background:var(--sw);
+  clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px)}
+.color-swatch.full::after{content:attr(data-hex);font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--ink)}
+.color-swatch.full:hover{transform:translateY(-2px);box-shadow:inset 0 0 0 1px var(--brass)}
+
+/* ---------- P1-2 · parágrafo é texto corrido (Hanken), mono só em rótulo curto ---------- */
+p[style*="font-family:var(--mono)"],.tab-note,.ficha-hint,.empty-cta p,.card-tile p.meta,.cls-row .sub,.skill-row .sub,#content li{
+  font-family:var(--serif) !important;font-size:14px !important;letter-spacing:0 !important;line-height:1.6 !important;
+  text-transform:none !important;color:var(--ink-dim) !important}
+p[style*="font-family:var(--mono)"],.tab-note{max-width:68ch}
+.tab-note{margin:18px 2px 0}
+.card-tile p.meta{font-size:13.5px !important}
+p[style*="font-family:var(--mono)"] b,.tab-note b,#content li b{font-weight:500;color:var(--bone)}
+
+/* ---------- P1-3 · selo de habilidade: losango + rótulo, à direita ---------- */
+.skill-row{align-items:flex-start;gap:16px}
+.skill-type{flex:0 0 auto;margin-left:auto;padding-top:4px;display:inline-flex;align-items:center;gap:7px;
+  font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--carne)}
+.skill-type::before{content:"";width:6px;height:6px;transform:rotate(45deg);background:currentColor}
+.skill-type.core{color:var(--brass)}
+.skill-type.passive{color:var(--ink-dim)}
+.skill-type.passive::before{background:none;box-shadow:inset 0 0 0 1px currentColor}
+
+/* ---------- P1-4 · tags de classe/raça: cor do sistema só como acento ---------- */
+.char-tag.class-tag[style*="--tc"]{border:0 !important;background:color-mix(in srgb,var(--tc) 12%,transparent) !important;
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--tc) 40%,transparent),inset 2px 0 0 var(--tc);
+  color:color-mix(in srgb,var(--tc) 35%,var(--bone)) !important}
+
+/* ---------- P1-5 · barras de recurso: trilho ocupa o espaço, marcações a cada 25% ---------- */
+.hud-bars{container-type:inline-size}
+@media (min-width:561px){
+  .res-row{grid-template-columns:minmax(0,auto) minmax(120px,1fr) 88px auto}
+  .res-label{max-width:132px}
+}
+.res-track{height:6px;background:repeating-linear-gradient(90deg,transparent 0 calc(25% - 1px),var(--line2) calc(25% - 1px) 25%),var(--field) !important}
+/* ficha estreita (painel de rolagem aberto no tablet): rótulo + valor + botões em cima, trilho inteiro embaixo */
+@container (max-width:440px){
+  .res-row{grid-template-columns:1fr auto auto !important;row-gap:8px}
+  .res-label{grid-column:1;grid-row:1;max-width:none}
+  .res-amt-line{grid-column:2;grid-row:1}
+  .res-step{grid-column:3;grid-row:1}
+  .res-track{grid-column:1 / -1;grid-row:2}
+  .res-shield-track{grid-column:1 / -1;grid-row:3}
+}
+
+/* ---------- P1-6 · slots de equipamento: nome dentro do slot vazio, faixa de raridade no ocupado ---------- */
+.eq-slot{clip-path:none !important;border-radius:0 !important}
+.eq-slot:not(.filled) .eq-slot-label{position:static;transform:none;padding:4px;max-width:100%;overflow:hidden;white-space:normal;text-align:center;
+  font-size:9px;letter-spacing:.2em;text-transform:uppercase;line-height:1.3;color:var(--ink-faint)}
+.eq-slot.filled{box-shadow:inset 0 2px 0 var(--rc,var(--brass)),inset 0 0 0 1px var(--line2)}
+
+/* ---------- P1-7 · classes/raças: tipo como selo, ações em ícone, filhas penduradas na linha-guia ---------- */
+.cls-row{gap:12px}
+.cls-row .cls-type{flex:0 0 auto;font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint)}
+.cls-row .cls-actions{display:flex;gap:6px;flex:0 0 auto;opacity:0;transition:opacity .2s}
+.cls-row:hover .cls-actions,.cls-row:focus-within .cls-actions{opacity:1}
+@media (hover:none){.cls-row .cls-actions{opacity:1}}
+.cls-row .btn.icon{width:32px;height:32px;padding:0 !important;display:inline-flex;align-items:center;justify-content:center}
+.cls-row .btn.icon .ic{margin:0}
+.cls-row .btn.danger{background:transparent !important;color:var(--ink-dim) !important;box-shadow:inset 0 0 0 1px var(--line2) !important}
+.cls-row .btn.danger:hover{color:var(--carne) !important;box-shadow:inset 0 0 0 1px var(--carne) !important}
+.sub-list{display:flex;flex-direction:column;gap:8px;margin:8px 0 12px 22px;padding-left:16px;
+  border-left:1px solid color-mix(in srgb,var(--brass) 40%,transparent)}
+.cls-row.is-sub{padding-top:10px;padding-bottom:10px}
+
+/* ---------- P1-8 · Criar mesa e Entrar em mesa com o mesmo esqueleto ---------- */
+.action-row{align-items:stretch}
+.action-card{display:flex;flex-direction:column}
+.action-card > form:not(.inline-form){flex:1;display:flex;flex-direction:column}
+.action-card .inline-form{margin-top:auto;flex-wrap:nowrap}
+.action-card .inline-form input{flex:1 1 auto;min-width:0}
+
+/* ---------- P1-9 · cartão de árvore com miniatura do Crystarium ---------- */
+.tree-card{display:flex;flex-direction:column;gap:8px}
+.tree-mini{display:block;width:100%;height:140px;margin-bottom:4px;background:radial-gradient(circle at 50% 50%,var(--sel-a),transparent 70%)}
+.tree-prog{font-family:var(--disp);font-size:16px;color:var(--ink-dim);min-height:1.3em}
+.tree-card .btn{align-self:flex-start;margin-top:4px}
+
+/* ---------- P2-1 · botões flutuantes não cobrem conteúdo; tema fica só no menu do usuário ---------- */
+.ffx-main{padding-bottom:88px}
+body:has(#theme-menu-item) .theme-fab{display:none}
+
+/* ---------- P2-2 · contador zerado some; dica vira atalho da última mesa ---------- */
+.ffx-menu .count[data-n="0"]{visibility:hidden}
+.ffx-side-note .sn-k{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.3em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:6px}
+.ffx-side-note .sn-link{display:inline-block;font-family:var(--disp);font-size:15px;line-height:1.3;color:var(--bone);text-decoration:none;
+  transition:transform .25s var(--ease),color .2s}
+.ffx-side-note .sn-link:hover{color:var(--brass);transform:translateX(5px)}
+
+/* ---------- P2-3 · o botão de recolher é uma aba presa na borda do painel ---------- */
+@media (min-width:821px) and (max-width:1199px){
+  .rail-toggle.right{width:18px;height:56px;border:0 !important;background:var(--panel-solid) !important;color:var(--brass);
+    box-shadow:inset 0 0 0 1px var(--line2);clip-path:polygon(6px 0,100% 0,100% 100%,6px 100%,0 calc(100% - 6px),0 6px);
+    flex-direction:column;align-items:center;justify-content:center;gap:6px}
+  .rail-toggle.right::before{content:"";width:5px;height:5px;background:currentColor;transform:rotate(45deg)}
+  .rail-toggle.right:hover{color:var(--bone)}
+}

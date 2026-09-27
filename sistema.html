@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="lib/theme.css?v=49">
-<link rel="stylesheet" href="lib/theme-ffx.css?v=8">
+<link rel="stylesheet" href="lib/theme-ffx.css?v=9">
 <style>
   /* modo embutido (dentro da mesa, via iframe — ver mesa.html: viewSistemaInline/renderSistema):
      mesmo padrão de arvore.html — esconde a topbar própria (a mesa já tem a dela por fora) e troca
@@ -42,7 +42,7 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
 
 <div class="topbar">
   <a class="iconbtn" href="app.html" title="Voltar" style="text-decoration:none"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="M11 18l-6-6 6-6"/></svg></a>
-  <a class="topbar-brand" href="app.html"><span class="mark logo" aria-hidden="true"></span>VITALITY</a>
+  <a class="topbar-brand" href="app.html"><img class="mark logo" src="lib/logo.png" alt="" aria-hidden="true">VITALITY</a>
   <div class="title" id="sys-name" style="font-size:14px">…</div>
   <div class="spacer"></div>
   <div class="nav-user static"><div class="chip"><span class="av" id="who-av" aria-hidden="true">·</span><b id="who">…</b></div></div>
@@ -69,7 +69,7 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
 
 <script type="module">
 import * as db from './lib/db.js?v=42';
-import { mountHelp, mountThemeToggle, trapFocus, wireVerticalTablist, armEnter } from './lib/ui.js?v=8';
+import { mountHelp, mountThemeToggle, trapFocus, wireVerticalTablist, armEnter } from './lib/ui.js?v=9';
 
 // embutido dentro da mesa (iframe) — ver comentário grande no <style> acima e em arvore.js (mesmo
 // padrão): sem topbar/FABs próprios (a mesa já cobre isso por fora).
@@ -236,6 +236,7 @@ window.openColorPicker = (trigger, current, onPick) => {
   }, 0);
 };
 const ICONS = {
+  pencil: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
   gear: ic('<circle cx="12" cy="12" r="3.2"/><path d="M12 3.5v2.6M12 17.9v2.6M20.5 12h-2.6M6.1 12H3.5M17.7 6.3l-1.8 1.8M8.1 15.9l-1.8 1.8M17.7 17.7l-1.8-1.8M8.1 8.1 6.3 6.3"/>'),
   bolt: ic('<path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/>'),
   shield: ic('<path d="M12 3l7 3v6c0 4.5-3 7.8-7 9-4-1.2-7-4.5-7-9V6l7-3Z"/>'),
@@ -327,7 +328,15 @@ const TABS = [['geral', `<span class="ic">${ICONS.gear}</span>Geral`], ['status'
   $('sys-name').innerHTML = esc(system.name) + '<small>CONSTRUTOR DE SISTEMA</small>';
   $('sis-eyebrow').textContent = 'Sistema · ' + system.name;
   // menu vertical: só o texto da aba (o ícone de cada uma continua nos cartões-guia da aba Geral)
-  $('tabs').innerHTML = TABS.map(([id, label]) => `<button type="button" data-tab="${id}" id="tab-${id}" role="tab" aria-selected="false" aria-controls="content" onclick="openTab('${id}')">${tabLabel(label)}</button>`).join('');
+  // 13 abas em 3 blocos com eyebrow (docs/MELHORIAS-v1.3.md P0-2) — o rótulo do bloco é só visual
+  // (role="presentation"), a navegação por seta continua pulando direto de aba em aba
+  const TAB_GROUP = { geral: 'Regras', classes: 'Personagem', arvores: 'Conteúdo', itens: 'Conteúdo' };
+  let lastGroup = '';
+  $('tabs').innerHTML = TABS.map(([id, label]) => {
+    const g = TAB_GROUP[id]; const head = g && g !== lastGroup ? `<div class="ffx-menu-group" role="presentation">${g}</div>` : '';
+    if (g) lastGroup = g;
+    return head + `<button type="button" data-tab="${id}" id="tab-${id}" role="tab" aria-selected="false" aria-controls="content" onclick="openTab('${id}')">${tabLabel(label)}</button>`;
+  }).join('');
   syncTabsTabindex = wireVerticalTablist($('tabs'));
   // deep-link: a mesa manda direto pra aba pedida (ex.: "Editar Itens" já abre em "itens") em vez
   // de sempre cair em "Geral" — ignora valores desconhecidos/a aba Árvores quando embutido
@@ -1434,21 +1443,23 @@ async function renderClasses(c) {
   // proficiências, resistências, traços, item inicial) — antes eram 7 controles amontoados aqui,
   // com até 5 painéis abrindo pra baixo ao mesmo tempo
   const classCard = (cl, isSub) => `
-    <div class="list-row" style="${isSub ? 'margin-left:22px;border-color:var(--line)' : ''}">
+    <div class="list-row cls-row${isSub ? ' is-sub' : ''}">
       ${!isSub ? DRAG_HANDLE_SVG : ''}
       <div class="grow">
         <div class="nm" style="font-family:var(--disp);font-size:${isSub ? 14 : 16}px;color:${isSub ? 'var(--ink)' : 'var(--bone)'}">${esc(cl.name)}</div>
         ${cl.description ? `<div class="sub" style="margin-top:2px">${esc(cl.description)}</div>` : ''}
       </div>
-      <span class="badge">${isSub ? 'Subclasse' : 'Classe'}</span>
-      <button class="btn sm auto" onclick="openClassEditor('${cl.id}')">Editar</button>
-      <button class="btn sm danger auto" title="Excluir classe" aria-label="Excluir classe ${esc(cl.name)}" onclick="delClass('${cl.id}')"><span class="ic">${ICONS.x}</span></button>
+      <span class="cls-type">${isSub ? 'Subclasse' : 'Classe'}</span>
+      <span class="cls-actions">
+      <button class="btn sm auto icon" title="Editar" aria-label="Editar ${esc(cl.name)}" onclick="openClassEditor('${cl.id}')"><span class="ic">${ICONS.pencil}</span></button>
+      <button class="btn sm danger auto icon" title="Excluir classe" aria-label="Excluir classe ${esc(cl.name)}" onclick="delClass('${cl.id}')"><span class="ic">${ICONS.x}</span></button>
+      </span>
     </div>
-    ${!isSub ? subs(cl.id).map((s) => classCard(s, true)).join('') + `
-      <form class="inline-form" style="margin-left:22px;margin-bottom:8px" onsubmit="return addSub(event,'${cl.id}')">
+    ${!isSub ? `<div class="sub-list">` + subs(cl.id).map((s) => classCard(s, true)).join('') + `
+      <form class="inline-form" onsubmit="return addSub(event,'${cl.id}')">
         <input placeholder="Nova subclasse de ${esc(cl.name)}" required maxlength="40">
         <button class="btn go auto sm" type="submit">+ Subclasse</button>
-      </form>` : ''}`;
+      </form></div>` : ''}`;
   c.innerHTML = `
     <div class="section-title" role="heading" aria-level="2">Classes e subclasses</div>
     <div class="list" id="classes-list">${roots.length ? roots.map((cl) => `<div class="class-block" data-id="${cl.id}">${classCard(cl, false)}</div>`).join('') : emptyState(ICONS.shield, 'Nenhuma classe ainda',
@@ -1801,21 +1812,23 @@ async function renderRacas(c) {
   const roots = origins.filter((x) => !x.parent_id);
   const variants = (pid) => origins.filter((x) => x.parent_id === pid);
   const originCard = (o, isVariant) => `
-    <div class="list-row" style="${isVariant ? 'margin-left:22px;border-color:var(--line)' : ''}">
+    <div class="list-row cls-row${isVariant ? ' is-sub' : ''}">
       ${!isVariant ? DRAG_HANDLE_SVG : ''}
       <div class="grow">
         <div class="nm" style="font-family:var(--disp);font-size:${isVariant ? 14 : 16}px;color:${isVariant ? 'var(--ink)' : 'var(--bone)'}">${esc(o.name)}</div>
         ${o.description ? `<div class="sub" style="margin-top:2px">${esc(o.description)}</div>` : ''}
       </div>
-      <span class="badge">${isVariant ? 'Variação' : 'Raça'}</span>
-      <button class="btn sm auto" onclick="openOriginEditor('${o.id}')">Editar</button>
-      <button class="btn sm danger auto" title="Excluir raça" aria-label="Excluir raça ${esc(o.name)}" onclick="delOrigin('${o.id}')"><span class="ic">${ICONS.x}</span></button>
+      <span class="cls-type">${isVariant ? 'Variação' : 'Raça'}</span>
+      <span class="cls-actions">
+      <button class="btn sm auto icon" title="Editar" aria-label="Editar ${esc(o.name)}" onclick="openOriginEditor('${o.id}')"><span class="ic">${ICONS.pencil}</span></button>
+      <button class="btn sm danger auto icon" title="Excluir raça" aria-label="Excluir raça ${esc(o.name)}" onclick="delOrigin('${o.id}')"><span class="ic">${ICONS.x}</span></button>
+      </span>
     </div>
-    ${!isVariant ? variants(o.id).map((v) => originCard(v, true)).join('') + `
-      <form class="inline-form" style="margin-left:22px;margin-bottom:8px" onsubmit="return addOriginVariant(event,'${o.id}')">
+    ${!isVariant ? `<div class="sub-list">` + variants(o.id).map((v) => originCard(v, true)).join('') + `
+      <form class="inline-form" onsubmit="return addOriginVariant(event,'${o.id}')">
         <input placeholder="Nova variação de ${esc(o.name)}" required maxlength="40">
         <button class="btn go auto sm" type="submit">+ Variação</button>
-      </form>` : ''}`;
+      </form></div>` : ''}`;
   c.innerHTML = `
     <div class="section-title" role="heading" aria-level="2">Raças, espécies e variações</div>
     <p style="font-family:var(--mono);font-size:11px;color:var(--ink-dim);line-height:1.6;margin:0 0 14px">

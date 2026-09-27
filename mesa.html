@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="lib/theme.css?v=49">
-<link rel="stylesheet" href="lib/theme-ffx.css?v=8">
+<link rel="stylesheet" href="lib/theme-ffx.css?v=9">
 </head>
 <body class="mesa-page">
 <script>try{
@@ -23,7 +23,7 @@
 <div id="fallback" class="solid"></div>
 
 <div class="topbar">
-  <a class="topbar-brand" href="app.html"><span class="mark logo" aria-hidden="true"></span>VITALITY</a>
+  <a class="topbar-brand" href="app.html"><img class="mark logo" src="lib/logo.png" alt="" aria-hidden="true">VITALITY</a>
   <div class="mesa-menu nav-user" id="mesa-menu">
     <button type="button" class="chip mesa-menu-chip" id="mesa-menu-btn" aria-haspopup="menu" aria-expanded="false" onclick="toggleMesaMenu()">
       <span class="hamburger"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></span>
@@ -74,7 +74,7 @@
 
 <script type="module">
 import * as db from './lib/db.js?v=42';
-import { openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus, wireVerticalTablist, armEnter } from './lib/ui.js?v=8';
+import { openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus, wireVerticalTablist, armEnter } from './lib/ui.js?v=9';
 import { mountYtPlayer } from './lib/ytplayer.js?v=5';
 
 // sem mountHelp/mountThemeToggle flutuantes aqui: "Ajuda ou suporte" e "Tema" já existem como itens
@@ -208,6 +208,7 @@ function tabsFor() {
 
   const sysName = sys?.system?.name;
   $('mesa-name').innerHTML = esc(mesa.name) + '<small>' + (role === 'gm' ? 'MESTRE' : 'JOGADOR') + (sysName ? ' · SISTEMA: ' + esc(sysName).toUpperCase() : '') + '</small>';
+  try { localStorage.setItem('vt_last_mesa', JSON.stringify({ id: campaignId, name: mesa.name })); } catch (_) {}
   paintMesaAvatar();
 
   if (role === 'player') {
@@ -278,6 +279,7 @@ function mountLiveSync() {
     mesa = { ...mesa, ...row };
     const sysName = sys?.system?.name;
     $('mesa-name').innerHTML = esc(mesa.name) + '<small>' + (role === 'gm' ? 'MESTRE' : 'JOGADOR') + (sysName ? ' · SISTEMA: ' + esc(sysName).toUpperCase() : '') + '</small>';
+  try { localStorage.setItem('vt_last_mesa', JSON.stringify({ id: campaignId, name: mesa.name })); } catch (_) {}
     paintMesaAvatar();
   }, 300));
 }
@@ -1517,11 +1519,14 @@ async function renderArvores(c) {
     }
     c.innerHTML = `
       <div class="section-title" role="heading" aria-level="2">Árvores do sistema (${trees.length})</div>
-      <div class="grid">${trees.length ? trees.map((t) => `
-        <div class="card-tile glass" style="cursor:default"><h3>${esc(t.name)}</h3>
-          <button class="btn sm auto" style="margin-top:6px" onclick="viewTreeInline('${t.id}')"><span class="ic">${ICONS.externalLink}</span>${gm ? 'Abrir/editar' : 'Ver árvore'}</button></div>`).join('') : '<div class="empty">Este sistema não tem árvores.</div>'}</div>
-      <p style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);line-height:1.6;margin:18px 2px 0">
-        As árvores vêm do sistema da mesa. ${gm ? 'Você edita direto no editor.' : 'Jogar/desbloquear as habilidades com pontos entra numa próxima fase.'}</p>`;
+      <div class="grid tree-cards">${trees.length ? trees.map((t) => `
+        <div class="card-tile glass tree-card" style="cursor:default">
+          <canvas class="tree-mini" id="tmini-${t.id}" aria-hidden="true"></canvas>
+          <h3>${esc(t.name)}</h3>
+          <div class="tree-prog" id="tprog-${t.id}">&nbsp;</div>
+          <button class="btn go sm auto" onclick="viewTreeInline('${t.id}')">Abrir Crystarium</button></div>`).join('') : '<div class="empty">Este sistema não tem árvores.</div>'}</div>
+      <p class="tab-note">As árvores vêm do sistema da mesa. ${gm ? 'Abra o Crystarium pra editar esferas, conexões e custos.' : 'Abra o Crystarium pra ver o caminho e desbloquear habilidades com seus pontos.'}</p>`;
+    trees.forEach((t) => paintTreeCard(t, gm).catch(() => { const el = $('tprog-' + t.id); if (el) el.textContent = ''; }));
     return;
   }
   // esta mesa não tem sistema vinculado (só mesas bem antigas — hoje app.html exige um sistema
@@ -1534,6 +1539,50 @@ async function renderArvores(c) {
     ${emptyState(ICONS.warning, 'Mesa sem sistema vinculado',
       `O editor de árvores (com habilidades, custos e desbloqueio por pontos) não está disponível aqui. ${gm ? 'Vincule um sistema à mesa (ou crie uma mesa nova escolhendo um sistema) pra usar árvores de verdade.' : 'Fale com o Mestre sobre vincular um sistema à mesa.'}`)}
     ${trees.length ? `<div class="grid" id="arvores-grid" style="margin-top:18px">${trees.map((t) => treeCardHtml(t, gm)).join('')}</div>` : ''}`;
+}
+// miniatura do Crystarium no cartão da árvore (docs/MELHORIAS-v1.3.md P1-9): anéis finos em volta do
+// Núcleo, conexões e esferas — acesas (cor da via) as já liberadas; pro Mestre, a árvore inteira acesa.
+// Embaixo, o progresso: "7 de 32 nós · 3 pontos livres" (mesma conta de pontos do arvore.js).
+async function paintTreeCard(t, gm) {
+  const [data, unl, pts] = await Promise.all([
+    db.loadSystemTree(t.id),
+    gm ? Promise.resolve(new Set()) : db.getMyUnlocks(t.id).catch(() => new Set()),
+    gm ? Promise.resolve(0) : db.getMyProgress(t.id).catch(() => 0),
+  ]);
+  const nodes = data?.nodes || [], edges = data?.edges || [];
+  const lit = (n) => gm || n.kind === 'core' || unl.has(n.id);
+  const litCount = nodes.filter(lit).length;
+  const spent = nodes.filter((n) => lit(n) && n.kind !== 'core').reduce((a, n) => a + (n.cost || 0), 0);
+  const prog = $('tprog-' + t.id);
+  if (prog) prog.textContent = gm ? `${nodes.length} nós · ${edges.length} conexões`
+    : `${litCount} de ${nodes.length} nós · ${Math.max(0, (pts || 0) - spent)} ponto${Math.max(0, (pts || 0) - spent) === 1 ? '' : 's'} livre${Math.max(0, (pts || 0) - spent) === 1 ? '' : 's'}`;
+  const cv = $('tmini-' + t.id); if (!cv || !nodes.length) return;
+  const dpr = Math.min(devicePixelRatio || 1, 2), W = cv.clientWidth || 240, H = cv.clientHeight || 140;
+  cv.width = W * dpr; cv.height = H * dpr;
+  const g = cv.getContext('2d'); g.scale(dpr, dpr);
+  const css = getComputedStyle(document.documentElement), tok = (k, f) => css.getPropertyValue(k).trim() || f;
+  const lineC = tok('--line2', 'rgba(233,221,201,.17)'), fieldC = tok('--field', 'rgba(40,32,23,.7)'), brass = tok('--brass', '#c9a45c');
+  const vias = t.vias || [];
+  const colorOf = (n) => n.color || (vias.find((v) => v.key === n.fac) || {}).color || brass;
+  const core = nodes.find((n) => n.kind === 'core') || nodes[0];
+  const maxD = Math.max(1, ...nodes.map((n) => Math.hypot(n.x - core.x, n.y - core.y)));
+  const k = (Math.min(W, H) / 2 - 10) / maxD, cx = W / 2, cy = H / 2;
+  const P = (n) => [cx + (n.x - core.x) * k, cy + (n.y - core.y) * k];
+  g.strokeStyle = lineC; g.lineWidth = 1;
+  [0.34, 0.67, 1].forEach((f) => { g.beginPath(); g.arc(cx, cy, maxD * k * f, 0, Math.PI * 2); g.stroke(); });
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  edges.forEach((e) => {
+    const A = byId.get(e.a), B = byId.get(e.b); if (!A || !B) return;
+    const on = lit(A) && lit(B);
+    g.strokeStyle = on ? colorOf(B) : lineC; g.globalAlpha = on ? .75 : 1; g.lineWidth = on ? 1.2 : 1;
+    g.beginPath(); g.moveTo(...P(A)); g.lineTo(...P(B)); g.stroke(); g.globalAlpha = 1;
+  });
+  nodes.forEach((n) => {
+    const [x, y] = P(n), r = n.kind === 'core' ? 4.5 : 2.6;
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2);
+    if (lit(n)) { g.shadowColor = colorOf(n); g.shadowBlur = 8; g.fillStyle = colorOf(n); g.fill(); g.shadowBlur = 0; }
+    else { g.fillStyle = fieldC; g.fill(); g.strokeStyle = lineC; g.stroke(); }
+  });
 }
 function treeCardHtml(t, gm) {
   return `<div class="card-tile glass" style="cursor:default" data-id="${t.id}">
@@ -1705,7 +1754,7 @@ function classColor(name) { return (sys?.classes || []).find((x) => !x.parent_id
 function classSubclassChips(ch) {
   const chip = (label, color) => {
     const c = color || 'var(--ink-dim)';
-    return `<span class="char-tag class-tag" style="border-color:${c};color:${c};background:color-mix(in srgb, ${c} 16%, transparent)">${esc(label)}</span>`;
+    return `<span class="char-tag class-tag" style="--tc:${c}">${esc(label)}</span>`;
   };
   let classHtml = '', subHtml = '';
   if (ch.char_class) {
@@ -1730,7 +1779,7 @@ function originVariantChips(ch) {
   if (!sys || !sys.origins || !sys.origins.length) return '';
   const chip = (label, color) => {
     const c = color || 'var(--ink-dim)';
-    return `<span class="char-tag class-tag" style="border-color:${c};color:${c};background:color-mix(in srgb, ${c} 16%, transparent)">${esc(label)}</span>`;
+    return `<span class="char-tag class-tag" style="--tc:${c}">${esc(label)}</span>`;
   };
   let originHtml = '', variantHtml = '';
   // sem origem ainda: nada aqui, a escolha acontece nos cartões da Biografia (não repete um
@@ -3302,13 +3351,14 @@ function abilityCardHtml(a) {
   const kindLabel = a.kind === 'core' ? 'Núcleo' : a.kind === 'active' ? 'Ativa' : 'Passiva';
   const color = a.via_color || '#7ee6dc';
   const modLabel = (m) => { const s = (sys?.stats || []).find((x) => x.id === m.stat_id); return (s ? esc(s.name) : '(atributo removido)') + ': ' + (m.amount >= 0 ? '+' : '') + esc(String(m.amount)); };
-  return `<div class="list-row" style="border-left:3px solid ${esc(color)}">
+  return `<div class="list-row skill-row" style="border-left:3px solid ${esc(color)}">
     <div class="grow">
-      <div class="nm">${esc(a.name || '(sem nome)')} <span class="badge" style="border-color:${esc(color)};color:${esc(color)}">${esc(kindLabel)}</span></div>
+      <div class="nm">${esc(a.name || '(sem nome)')}</div>
       <div class="sub">${esc(a.tree_name)} · ${esc(a.via_name)}</div>
       ${a.descr ? `<div class="sub" style="margin-top:4px">${esc(a.descr)}</div>` : ''}
       ${(a.modifiers || []).length ? `<div class="mods" style="margin-top:5px">${a.modifiers.map((m) => `<span class="badge mod">${modLabel(m)}</span>`).join('')}</div>` : ''}
     </div>
+    <span class="skill-type ${esc(a.kind || 'passive')}">${esc(kindLabel)}</span>
   </div>`;
 }
 async function renderHabilidades(c) {
@@ -3392,8 +3442,12 @@ async function mountDice() {
       ${['d4', 'd6', 'd8', 'd10', 'd12', 'd20'].map((d) => `<button type="button" onclick="quickRoll('${d}')">${d}</button>`).join('')}
     </div>
     <div class="dice-builder">
-      <input type="number" id="dice-qty" min="1" max="20" value="1" class="dice-qty" title="Quantidade de dados">
-      <select id="dice-die">${diceOpts.map((d) => `<option ${d === 'd20' ? 'selected' : ''}>${d}</option>`).join('')}</select>
+      <input type="number" id="dice-qty" min="1" max="20" value="1" class="dice-qty" title="Quantidade de dados" aria-label="Quantidade de dados">
+      <select id="dice-die" aria-label="Dado">${diceOpts.map((d) => `<option ${d === 'd20' ? 'selected' : ''}>${d}</option>`).join('')}</select>
+      <button class="btn go sm" type="button" onclick="rollBuilder()"><span class="ic">${ICONS.dice}</span>Rolar</button>
+    </div>
+    <button type="button" class="dice-more-toggle" id="dice-more-toggle" aria-expanded="false" aria-controls="dice-more" onclick="toggleDiceMore()">Avançado<span class="dmt-n" id="dice-more-n"></span></button>
+    <div class="dice-more" id="dice-more" hidden onchange="paintDiceMore()">
       <select id="dice-adv" title="Rola o primeiro d20 duas vezes e fica com o maior (vantagem) ou o menor (desvantagem)">
         <option value="">normal</option>
         <option value="adv">vantagem</option>
@@ -3406,7 +3460,6 @@ async function mountDice() {
           <option value="formula">+ Fórmula do Guia Rápido</option>
         </select>
         <select id="dice-mod-ref" style="display:none"></select>` : ''}
-      <button class="btn go sm" type="button" onclick="rollBuilder()"><span class="ic">${ICONS.dice}</span>Rolar</button>
     </div>
     <div class="rail-tabs" id="rail-tabs" role="tablist">
       <button type="button" class="on" role="tab" aria-selected="true" data-rt="rolls" onclick="selectRailTab('rolls')">Rolagens<span class="unread-dot" id="unread-rolls" style="display:none"></span></button>
@@ -3419,12 +3472,29 @@ async function mountDice() {
       <button type="submit" aria-label="Enviar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"></path><path d="M22 2 11 13"></path></svg></button>
     </form>`;
   document.body.appendChild(fab); document.body.appendChild(panel);
+  let moreOpen = innerHeight > 760; try { const v = localStorage.getItem('vt_dice_more'); if (v) moreOpen = v === '1'; } catch (_) {}
+  setDiceMore(moreOpen);
   try { renderRolls(await db.listRolls(campaignId)); } catch (_) {}
   try { renderChat(await db.listMessages(campaignId)); } catch (_) {}
   _unsub = db.subscribeRolls(campaignId, addRollToLog);
   _unsubChat = db.subscribeMessages(campaignId, addMsgToLog);
   loadStatMap();
 }
+// "Avançado" (vantagem + modificador): recolhível pra sobrar altura pro histórico em telas baixas
+// (docs/MELHORIAS-v1.3.md P0-3). Aberto por padrão só em janela alta; a escolha fica lembrada. Com
+// ele fechado, o botão mostra quantas opções estão valendo, pra ninguém rolar com vantagem sem saber.
+function setDiceMore(open) {
+  const box = $('dice-more'), btn = $('dice-more-toggle'); if (!box || !btn) return;
+  box.hidden = !open; btn.setAttribute('aria-expanded', String(open));
+}
+window.toggleDiceMore = () => {
+  const open = $('dice-more').hidden; setDiceMore(open);
+  try { localStorage.setItem('vt_dice_more', open ? '1' : '0'); } catch (_) {}
+};
+window.paintDiceMore = () => {
+  const n = ['dice-adv', 'dice-mod-type'].filter((id) => $(id)?.value).length;
+  const el = $('dice-more-n'); if (el) el.textContent = n ? ' · ' + n : '';
+};
 // dado rápido (grade 3×2): 1 dado puro, sem modificador — o montador abaixo continua pras rolagens
 // com quantidade, vantagem e status/fórmula somados
 window.quickRoll = (die) => doRoll('1' + die, null, null);

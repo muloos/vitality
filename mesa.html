@@ -36,6 +36,8 @@
     box-shadow:inset 0 0 0 1px var(--border);--c:var(--cut-md);clip-path:var(--chamfer)}
   .char-bio-row .char-portrait{width:96px;height:96px;--c:var(--cut-md);clip-path:var(--chamfer);font-size:40px}
   .char-bio-row .char-info h2{font-size:32px;line-height:40px}
+  /* o "Editar" fica no canto (absoluto): o nome não corre por baixo dele */
+  @media (min-width:761px){.char-bio-row .char-info h2{padding-right:112px}}
   /* status: grade de 6; clicar rola; a dica mostra a fórmula */
   .mesa-main .stat-grid:not(.compact){grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}
   @media (min-width:1280px){.mesa-main .stat-grid:not(.compact){grid-template-columns:repeat(6,minmax(0,1fr))}}
@@ -47,6 +49,13 @@
   .stat-pend{color:var(--success)}
   @keyframes rollTap{50%{transform:scale(.97)}}
   .rolled{animation:rollTap .24s var(--ease)}
+  /* recursos: os rótulos dividem uma coluna só, então todas as barras começam no mesmo x */
+  @media (min-width:561px){
+    .hud-bars{display:grid;grid-template-columns:minmax(0,max-content) minmax(80px,1fr) 88px auto;column-gap:14px}
+    .hud-bars > .res-row{grid-column:1 / -1}
+    .hud-bars .res-label{max-width:168px}
+    @container (min-width:441px){.hud-bars > .res-row{grid-template-columns:subgrid}}
+  }
   /* combate: lista de 3 colunas "Nome …… valor" */
   .mesa-main .stat-grid.compact{grid-template-columns:repeat(3,minmax(0,1fr));gap:0 var(--space-5)}
   .mesa-main .stat-tile.compact{flex-direction:row;align-items:baseline;justify-content:space-between;gap:var(--space-2);min-height:40px;

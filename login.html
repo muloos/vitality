@@ -9,10 +9,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="lib/tokens.css?v=1">
-<link rel="stylesheet" href="lib/theme.css?v=50">
-<link rel="stylesheet" href="lib/theme-ffx.css?v=11">
-<link rel="stylesheet" href="lib/components.css?v=6">
+<link rel="stylesheet" href="lib/tokens.css?v=2">
+<link rel="stylesheet" href="lib/theme.css?v=51">
+<link rel="stylesheet" href="lib/theme-ffx.css?v=12">
+<link rel="stylesheet" href="lib/components.css?v=7">
 <style>
   /* Login — "Latão calmo" (docs/DESIGN-v2-LATAO-CALMO.md §3.1): herói à esquerda, formulário de
      até 400px à direita; no celular uma coluna com o botão principal preso no rodapé */
@@ -37,7 +37,7 @@
   .lbl-row{display:flex;align-items:baseline;justify-content:space-between;gap:var(--space-3)}
   .lbl-row .btn.tertiary{font-family:var(--serif);font-size:var(--fs-small);font-weight:500;letter-spacing:0;text-transform:none}
   .pw-wrap{position:relative}
-  .pw-wrap input{width:100%;padding-right:84px !important}
+  .pw-wrap input{width:100%;padding-right:84px}
   .pw-toggle{position:absolute;right:4px;top:50%;transform:translateY(-50%);height:32px;padding:0 var(--space-3);border:0;background:transparent;cursor:pointer;
     font-family:var(--serif);font-size:var(--fs-small);font-weight:600;color:var(--primary)}
   .pw-toggle:hover{color:var(--primary-hover);text-decoration:underline;text-underline-offset:4px}
@@ -47,7 +47,7 @@
   .gbtn{width:100%;height:44px}
   .gbtn .gicon{width:18px;height:18px;flex:0 0 auto}
   /* aviso em linha acima dos campos (não é toast) */
-  #msg{display:none;position:static !important;transform:none !important;inset:auto !important;width:auto;max-width:none;margin:0;z-index:auto}
+  #msg{display:none;position:static;transform:none;inset:auto;width:auto;max-width:none;margin:0;z-index:auto}
   #msg.show{display:flex}
   #form .fld{margin:0}
   #form .fld input,#form .pw-wrap{margin:0}

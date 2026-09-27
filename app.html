@@ -9,16 +9,18 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="lib/tokens.css?v=1">
-<link rel="stylesheet" href="lib/theme.css?v=50">
-<link rel="stylesheet" href="lib/theme-ffx.css?v=11">
-<link rel="stylesheet" href="lib/components.css?v=6">
+<link rel="stylesheet" href="lib/tokens.css?v=2">
+<link rel="stylesheet" href="lib/theme.css?v=51">
+<link rel="stylesheet" href="lib/theme-ffx.css?v=12">
+<link rel="stylesheet" href="lib/components.css?v=7">
 <style>
   /* Lobby — "Latão calmo" (docs/DESIGN-v2-LATAO-CALMO.md §3.2) */
   .home-head{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--space-4);flex-wrap:wrap;margin:0 0 var(--space-5)}
   .home-head h1{margin:var(--space-1) 0 0;font-family:var(--disp);font-weight:400;font-size:var(--fs-h1);line-height:40px;color:var(--text)}
   .home-head p{margin:var(--space-2) 0 0;font-family:var(--serif);font-size:var(--fs-body);letter-spacing:0;color:var(--text-2)}
   .head-actions{display:flex;gap:var(--space-2);flex-wrap:wrap}
+  /* título de seção logo no topo da seção: sem o respiro de 32px de quem vem depois de conteúdo */
+  [role="tabpanel"] > .section-title:first-child{margin-top:var(--space-2)}
   .head-actions[hidden]{display:none}
   .head-actions .btn,.ec-actions .btn,.box.dlg .actions .btn,#mesas .btn{width:auto}
   .list-toolbar{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--space-4);flex-wrap:wrap;margin-bottom:var(--space-4)}
@@ -48,33 +50,33 @@
   #mesas .msg-body{flex:1}
   .ec-actions{display:flex;gap:var(--space-2);flex-wrap:wrap;justify-content:center;margin-top:var(--space-2)}
   /* diálogos */
-  .ui-modal[hidden]{display:none !important}
+  .ui-modal[hidden]{display:none}
   .box.dlg{max-width:480px;display:flex;flex-direction:column;gap:var(--space-4)}
   .box.dlg .ghead{display:flex;align-items:center;gap:var(--space-3)}
   .box.dlg .ghead h3{flex:1;margin:0}
   .box.dlg .x{width:40px;height:40px;border:0;background:none;color:var(--text-2);font-size:22px;cursor:pointer}
   .box.dlg .x:hover{color:var(--text)}
   .box.dlg form,.dlg-done{display:flex;flex-direction:column;gap:var(--space-4)}
-  .box.dlg [hidden]{display:none !important}
+  .box.dlg [hidden]{display:none}
   .dlg-lead{margin:0;color:var(--text-2)}
   .box.dlg .actions{display:flex;justify-content:flex-end;gap:var(--space-2);flex-wrap:wrap;margin-top:var(--space-2)}
-  .code-input{font-family:var(--mono) !important;font-size:20px !important;letter-spacing:.3em;text-transform:uppercase}
+  .code-input{font-family:var(--mono);font-size:20px;letter-spacing:.3em;text-transform:uppercase}
   .code-big{font-family:var(--mono);font-size:22px;letter-spacing:.3em;color:var(--text);padding:var(--space-4);text-align:center;box-shadow:inset 0 0 0 1px var(--border-strong)}
   /* "Meus itens" (Itens → Criar) em linhas, como mesas e sistemas; a Loja continua em cards */
-  #items.item-grid{display:flex !important;flex-direction:column;gap:var(--space-2)}
+  #items.item-grid{display:flex;flex-direction:column;gap:var(--space-2)}
   #items .rar-frame{width:100%}
-  #items .poster-card{display:flex !important;flex-direction:row;align-items:center;gap:var(--space-4);min-height:72px;height:auto;
-    padding:var(--space-3) var(--space-4) !important;text-align:left;clip-path:none}
-  #items .poster-icon{width:40px !important;height:40px !important;flex:0 0 auto;margin:0 4px !important}
-  #items .poster-body{flex:1;min-width:0;display:flex;flex-direction:row !important;flex-wrap:wrap;align-items:baseline !important;gap:2px var(--space-3);padding:0}
+  #items .poster-card{display:flex;flex-direction:row;align-items:center;gap:var(--space-4);min-height:72px;height:auto;
+    padding:var(--space-3) var(--space-4);text-align:left;clip-path:none}
+  #items .poster-icon{width:40px;height:40px;flex:0 0 auto;margin:0 4px}
+  #items .poster-body{flex:1;min-width:0;display:flex;flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:2px var(--space-3);padding:0}
   #items .poster-name{margin:0;font-size:18px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   #items .poster-desc{flex-basis:100%;margin:0;-webkit-line-clamp:1;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;text-align:left}
   #items .poster-meta{display:none}
   #items .poster-pub,#items .poster-fav{position:static;flex:0 0 auto}
-  #items .poster-card{text-align:left !important;justify-content:flex-start !important}
-  #items .poster-icon{order:0} #items .poster-body{order:1;justify-content:flex-start !important;text-align:left !important}
+  #items .poster-card{text-align:left;justify-content:flex-start}
+  #items .poster-icon{order:0} #items .poster-body{order:1;justify-content:flex-start;text-align:left}
   #items .poster-pub{order:2} #items .poster-fav{order:3}
-  #items .poster-name,#items .poster-desc{text-align:left !important}
+  #items .poster-name,#items .poster-desc{text-align:left}
   /* celular: barra inferior com os 4 destinos; o menu lateral vira só as sub-abas da seção */
   .bottom-nav{display:none}
   @media (max-width:760px){
@@ -85,9 +87,9 @@
     .bottom-nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.6}
     .bottom-nav [aria-current="page"]{color:var(--primary);box-shadow:inset 0 2px 0 var(--primary)}
     body.home-page{padding-bottom:calc(72px + env(safe-area-inset-bottom))}
-    .help-fab{bottom:calc(84px + env(safe-area-inset-bottom)) !important}
+    .help-fab{bottom:calc(84px + env(safe-area-inset-bottom))}
     .ffx-layout.lobby > .ffx-side .ffx-menu-eyebrow,.ffx-layout.lobby > .ffx-side .ffx-side-note,
-    #home-menu > [data-sec]{display:none !important}
+    #home-menu > [data-sec]{display:none}
     #home-menu{flex-direction:row;overflow-x:auto;border-bottom:1px solid var(--border)}
     #home-menu .sub{flex:0 0 auto;padding:0 var(--space-4);height:44px;box-shadow:none}
     #home-menu .sub.on,#home-menu .sub[aria-selected="true"]{box-shadow:inset 0 -2px 0 var(--primary)}

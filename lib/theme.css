@@ -1,3 +1,6 @@
+/* camada de legado (docs/DESIGN-v2-LATAO-CALMO.md §6.3): tudo aqui perde para lib/components.css e
+   para o CSS das páginas, que ficam fora de camada — por isso eles não precisam de !important */
+@layer legacy {
 /* ============================================================
    Tema Vitality — tokens visuais reaproveitados do protótipo
    (liquid glass, fundo cósmico, fontes, botões e campos).
@@ -391,7 +394,6 @@ select option{background:var(--panel);color:var(--ink)}
 /* selo de publicação — só aparece nos seus próprios itens/sistemas */
 .poster-pub{position:absolute;top:8px;left:8px;z-index:3;font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.08em;text-transform:uppercase;
   padding:3px 7px;border-radius:6px;color:rgba(255,255,255,.85);background:rgba(10,12,18,.6);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
-.poster-pub.on{color:var(--maq)}
 @media (prefers-reduced-motion:reduce){.rar-frame{animation:none !important;transform:none !important}}
 
 /* checkbox de publicar (item/sistema na loja) */
@@ -409,7 +411,6 @@ select option{background:var(--panel);color:var(--ink)}
 .item-detail .idet-actions .btn.on svg{fill:var(--escarlate);stroke:var(--escarlate)}
 
 .badge{font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:6px;border:1px solid var(--line2);color:var(--ink-dim);white-space:nowrap}
-.badge.mod{color:var(--maq);border-color:rgba(224,189,122,.35);text-transform:none;letter-spacing:.02em}
 .badge.cat{color:var(--ink-dim)}
 .badge.r-comum{color:#b9c2c6;border-color:rgba(185,194,198,.4)}
 .badge.r-incomum{color:#8fe6a0;border-color:rgba(143,230,160,.4)}
@@ -553,12 +554,6 @@ select option{background:var(--panel);color:var(--ink)}
 /* selo de raridade nos cards — pílula preenchida, cor por tier */
 .rar-pill{font-family:var(--mono);font-size:var(--fs-label);font-weight:600;letter-spacing:.12em;text-transform:uppercase;
   padding:4px 8px;border-radius:999px;white-space:nowrap}
-.rar-pill[data-rarity="Comum"]{color:#c3c9d3;background:rgba(174,180,192,.14);border:1px solid rgba(174,180,192,.30)}
-.rar-pill[data-rarity="Incomum"]{color:#5fe0a0;background:rgba(95,224,160,.14);border:1px solid rgba(95,224,160,.30)}
-.rar-pill[data-rarity="Raro"]{color:#6fb2ff;background:rgba(111,178,255,.14);border:1px solid rgba(111,178,255,.32)}
-.rar-pill[data-rarity="Épico"]{color:#d59cff;background:rgba(213,156,255,.14);border:1px solid rgba(213,156,255,.32)}
-.rar-pill[data-rarity="Lendário"]{color:#ffd47a;background:rgba(255,212,122,.14);border:1px solid rgba(255,212,122,.34)}
-.rar-pill[data-rarity="Único"]{color:#ff6773;background:rgba(255,45,63,.16);border:1px solid rgba(255,80,95,.42)}
 
 @media (prefers-reduced-motion:reduce){
   .rar-frame{animation:none !important}
@@ -1865,3 +1860,5 @@ body.home-page .card-tile.featured{overflow:visible}
   .char-card .char-portrait{width:64px;height:64px}
   .ficha-hint{display:none}
 }
+
+} /* fim @layer legacy */

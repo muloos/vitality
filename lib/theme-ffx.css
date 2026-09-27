@@ -1,3 +1,6 @@
+/* camada de legado (docs/DESIGN-v2-LATAO-CALMO.md §6.3): tudo aqui perde para lib/components.css e
+   para o CSS das páginas, que ficam fora de camada — por isso eles não precisam de !important */
+@layer legacy {
 /* ============================================================
    Vitality × FFXIII — camada visual (v1)
    Carregar DEPOIS de lib/theme.css. Ver docs/DESIGN-FFXIII.md.
@@ -148,7 +151,7 @@ body.embedded .ffx-layout.sis-layout{padding-top:60px}
 .stat-new:hover{color:var(--brass);border-color:var(--brass);transform:translateY(-2px)}
 
 /* painel do editor (fixo à direita) */
-.stat-editor{--cut:18px;padding:24px;display:flex;flex-direction:column;gap:4px;box-shadow:inset 0 0 0 1px var(--line2),var(--shadow) !important}
+.stat-editor{--cut:18px;padding:24px;display:flex;flex-direction:column;gap:4px;box-shadow:inset 0 0 0 1px var(--line2),var(--shadow)}
 .stat-editor .ffx-label{margin-bottom:12px}
 .ui-modal .ffx-label{margin:4px 0 14px}
 .ui-modal .ffx-label ~ .ffx-label{margin-top:22px}
@@ -177,7 +180,6 @@ body.home-page .home-head h1{letter-spacing:.01em}
 .seg,.seg button{border-radius:0}
 
 /* ---------- linhas de lista (o resto é do lib/components.css) ---------- */
-.list-row.on,.list-row[aria-selected="true"]{background:var(--surface-2) !important;box-shadow:inset 2px 0 0 var(--primary),inset 0 0 0 1px var(--border) !important}
 
 /* ---------- barras de recurso ---------- */
 /* grade da §4.7 ([rótulo][trilho][valor][−][+]) sem mexer no HTML: .res-head/.res-bar-row somem da
@@ -194,7 +196,7 @@ body.home-page .home-head h1{letter-spacing:.01em}
 }
 .res-label{font-family:var(--mono);font-weight:400;font-size:var(--fs-label);letter-spacing:.18em;line-height:1.35}
 .res-track{height:8px;border-radius:0 !important;background:var(--field);box-shadow:inset 0 0 0 1px var(--line);transform:skewX(-24deg);overflow:hidden}
-.res-fill{border-radius:0 !important;background:linear-gradient(90deg,var(--res-color),color-mix(in oklch,var(--res-color),white 35%)) !important;
+.res-fill{border-radius:0;background:linear-gradient(90deg,var(--res-color),color-mix(in oklch,var(--res-color),white 35%));
   box-shadow:0 0 12px var(--res-color);transition:width var(--t-slow) var(--ease)}
 .res-shield-track,.res-shield-fill{border-radius:0 !important}
 .res-shield-track{transform:skewX(-24deg)}
@@ -207,7 +209,7 @@ body.home-page .home-head h1{letter-spacing:.01em}
 .res-btn.heal:hover{box-shadow:inset 0 0 0 1px var(--good);color:var(--good)}
 
 /* ---------- tiles de status ---------- */
-.stat-tile{padding:16px 16px 12px;background:var(--panel) !important;border:0 !important;box-shadow:inset 0 0 0 1px var(--line)}
+.stat-tile{padding:16px 16px 12px;background:var(--panel);border:0;box-shadow:inset 0 0 0 1px var(--line)}
 .stat-tile .stat-name{order:-1;font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint)}
 .stat-tile .stat-val{font-family:var(--disp);font-weight:400;font-size:34px;line-height:1;color:var(--bone)}
 .stat-tile .stat-val.calc{color:var(--stc,var(--maq))}
@@ -222,7 +224,6 @@ body.home-page .home-head h1{letter-spacing:.01em}
 
 /* ---------- chips / selos ---------- */
 .badge{font-size:var(--fs-label);letter-spacing:.12em;padding:4px 10px}
-.badge.mod{letter-spacing:.04em}
 .char-tag{font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.12em;text-transform:uppercase;padding:4px 10px}
 
 /* ---------- card de item ---------- */
@@ -246,14 +247,11 @@ body.home-page .home-head h1{letter-spacing:.01em}
    pseudo-elemento girado de volta, grande o bastante pra cobrir o losango inteiro */
 .poster-icon:not(.ph)::before{content:"";position:absolute;inset:-21%;background:inherit;transform:rotate(-45deg)}
 .poster-name{font-family:var(--disp);font-weight:400;font-size:15px}
-.poster-card .rar-pill{font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.14em;background:transparent;border:0;color:var(--rc,var(--ink-dim));padding:0}
 .poster-desc{font-size:12px}
 /* as cores de raridade são claras (feitas pro fundo escuro): no creme do tema claro o texto some */
-:root[data-theme="light"] .poster-card .rar-pill{color:color-mix(in srgb,var(--rc,var(--ink-dim)) 35%,var(--ink))}
 /* o selo "Publicado/Equipado" tem fundo escuro fixo nos dois temas (theme.css); o --maq do tema claro
    é marrom-escuro e ficava invisível sobre ele */
 .poster-pub{border-radius:0}
-:root[data-theme="light"] .poster-pub.on{color:var(--primary-hover)}
 
 /* ============================================================
    Mesa (mesa.html, §3.4) — menu do personagem + Grupo | conteúdo | rolagem
@@ -348,7 +346,6 @@ body.home-page .home-head h1{letter-spacing:.01em}
 /* Combate: linhas nome/valor */
 .stat-grid.compact{display:flex;flex-wrap:wrap;gap:10px}
 .stat-tile.compact{flex:1 1 150px;flex-direction:row;align-items:center;justify-content:space-between;padding:12px 18px;--cut:0px;clip-path:none}
-.stat-tile.compact .stat-name{font-family:var(--serif);font-size:14px;letter-spacing:0;text-transform:none;color:var(--ink-dim)}
 .stat-tile.compact .stat-val{font-family:var(--disp);font-weight:400;font-size:20px;color:var(--bone)}
 .stat-tile.compact .stat-val.calc{color:var(--bone)}
 /* Perícias: chips retos com o valor em latão */
@@ -782,9 +779,6 @@ p[style*="font-family:var(--mono)"] b,.tab-note b,#content li b{font-weight:500;
 .skill-type.passive::before{background:none;box-shadow:inset 0 0 0 1px currentColor}
 
 /* ---------- P1-4 · tags de classe/raça: cor do sistema só como acento ---------- */
-.char-tag.class-tag[style*="--tc"]{border:0 !important;background:color-mix(in srgb,var(--tc) 12%,transparent) !important;
-  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--tc) 40%,transparent),inset 2px 0 0 var(--tc);
-  color:color-mix(in srgb,var(--tc) 35%,var(--bone)) !important}
 
 /* ---------- P1-5 · barras de recurso: trilho ocupa o espaço, marcações a cada 25% ---------- */
 .hud-bars{container-type:inline-size}
@@ -817,8 +811,6 @@ p[style*="font-family:var(--mono)"] b,.tab-note b,#content li b{font-weight:500;
 @media (hover:none){.cls-row .cls-actions{opacity:1}}
 .cls-row .btn.icon{width:32px;height:32px;padding:0;display:inline-flex;align-items:center;justify-content:center}
 .cls-row .btn.icon .ic{margin:0}
-.cls-row .btn.danger{background:transparent;color:var(--ink-dim);box-shadow:inset 0 0 0 1px var(--line2)}
-.cls-row .btn.danger:hover{color:var(--carne);box-shadow:inset 0 0 0 1px var(--carne)}
 .sub-list{display:flex;flex-direction:column;gap:8px;margin:8px 0 12px 22px;padding-left:16px;
   border-left:1px solid color-mix(in srgb,var(--brass) 40%,transparent)}
 .cls-row.is-sub{padding-top:10px;padding-bottom:10px}
@@ -959,15 +951,11 @@ body:has(#theme-menu-item) .theme-fab{display:none}
 .cond-row .cond-icon{width:34px !important;height:34px;padding:0 !important;border:0 !important;font-size:16px !important;
   background:color-mix(in srgb,var(--cc) 25%,var(--field)) !important;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--cc) 45%,transparent);
   clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px)}
-.cond-row .cond-pick{width:22px;height:34px;padding:0 !important;margin-left:-6px;color:var(--ink-faint);box-shadow:none !important;background:none !important}
-.cond-row .cond-pick:hover{color:var(--brass)}
 .cond-row .color-swatch.cond-color{width:24px;height:24px;border:0 !important;
   clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px)}
 .cond-row .cond-actions{display:flex;gap:6px;flex:0 0 auto;opacity:0;transition:opacity var(--t)}
 .cond-row:hover .cond-actions,.cond-row:focus-within .cond-actions{opacity:1}
 @media (hover:none){.cond-row .cond-actions{opacity:1}}
-.cond-row .btn.danger{background:transparent;color:var(--ink-dim);box-shadow:inset 0 0 0 1px var(--line2)}
-.cond-row .btn.danger:hover{color:var(--carne);box-shadow:inset 0 0 0 1px var(--carne)}
 
 /* ---------- P1-11 · Entrar em mesa com rótulo, campo alinhado ao do Criar ---------- */
 .action-card > .join-form{flex:1;display:flex;flex-direction:column}
@@ -999,8 +987,6 @@ body:has(#theme-menu-item) .theme-fab{display:none}
 .via-legend-dot{border-radius:0 !important;transform:rotate(45deg) scale(.8)}
 body.arvore-page .tools,body.arvore-page .zoom,body.arvore-page .tool,body.arvore-page #shape-select,body.arvore-page .color-swatch{border-radius:0 !important}
 body.arvore-page .tools,body.arvore-page .zoom{clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px)}
-.nav-user .chip b,#nav-user .chip b{text-transform:none !important;letter-spacing:0 !important}
-body.arvore-page #fx{z-index:0}
 
 /* ---------- P1-15 · barra de música ---------- */
 #yt-bar{border-top:1px solid color-mix(in srgb,var(--brass) 35%,transparent) !important}
@@ -1032,3 +1018,5 @@ body.arvore-page #fx{z-index:0}
 .brand small{font-size:11px !important;letter-spacing:.18em !important;color:var(--ink-dim) !important}
 .ffx-menu .count{opacity:0;transition:opacity var(--t)}
 .ffx-menu button:hover .count,.ffx-menu button:focus-visible .count,.ffx-menu .on .count,.ffx-menu [aria-selected="true"] .count{opacity:1}
+
+} /* fim @layer legacy */

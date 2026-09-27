@@ -1,3 +1,4 @@
+@layer legacy;
 /* ============================================================
    Vitality — tokens ("Latão calmo", docs/DESIGN-v2-LATAO-CALMO.md §2)
    Fonte única de cor, tipo, espaço, forma, movimento e camadas. Carregado ANTES do theme.css em

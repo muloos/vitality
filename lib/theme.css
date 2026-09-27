@@ -16,13 +16,8 @@
    Cada um nasceu do componente que precisava dele, não de uma escala compartilhada — por isso os
    valores não são redondos nem múltiplos entre si. Ao adicionar um breakpoint novo, prefira
    reaproveitar um destes em vez de inventar mais um valor. */
-:root{
-  /* escala tipográfica fechada (docs/MELHORIAS-v1.4.md P2-1): 11 rótulo mono · 13 meta · 14.5 corpo · 18 subtítulo */
-  --fs-label:11px;--fs-meta:13px;--fs-body:14.5px;--fs-sub:18px;
-  /* três durações de transição e a escala de camadas (P2-2) */
-  --t-fast:120ms;--t:200ms;--t-slow:360ms;
-  --z-base:1;--z-sticky:10;--z-drawer:40;--z-overlay:80;--z-modal:100;--z-toast:120;
-}
+/* cores, tipo, espaço, movimento e camadas moram em lib/tokens.css (carregado antes deste arquivo);
+   aqui ficam só as famílias de fonte e a nebulosa de fundo do login */
 :root{
   color-scheme: dark;
   /* "Mesa de Jogo" — ink & brass. Nasceu de uma exploração de direção de design (ver Figma) pra
@@ -33,40 +28,18 @@
      "equipado", nome de fórmula) — precisa se distinguir por luminosidade, não por matiz, nos
      ~250 lugares que já usam esses tokens em todo o site. */
   --bgA:201,164,92; --bgB:143,123,101; --bgC:110,84,56; --bgGlow:255,238,204; --bgDeep:#1c150d; --bgEdge:#0b0704;
-  --maq:#e0bd7a; --carne:#d1603f; --escarlate:#d1603f; --brass:#c9a45c; --good:#7fae5b; --bone:#ede4d3;--on-primary:#20170a;
-  --ink:#ede4d3; --ink-dim:#a89b85; --ink-faint:#7a7061;
-  --line:rgba(233,221,201,.10); --line2:rgba(233,221,201,.17);
-  /* tokens de superfície (semânticos — trocam por tema) */
-  --app-bg:#0e0b08;
-  --field:#1e1812; --field-2:#191309;
-  --panel:#171310; --surface:#171310;
-  --bar:#171310;
   --title-grad:linear-gradient(90deg,var(--bone),var(--bone));
   --disp:'Fraunces',serif; --serif:'Hanken Grotesk',system-ui,sans-serif; --mono:'JetBrains Mono',monospace;
-  --glass:#171310;
-  --glass-rim:0 0 #0000;
-  --glass-lift:0 8px 24px rgba(0,0,0,.5);
-  /* movimento — curva "expo-out" (assentamento premium, tipo Linear/Vercel) */
-  --ease:cubic-bezier(0.16,1,0.3,1); --ease-in:cubic-bezier(0.4,0,1,1);
-  --dur-1:.12s; --dur-2:.2s; --dur-3:.34s;
+  --ease-in:cubic-bezier(0.4,0,1,1);
 }
 /* ---------- TEMA CLARO ---------- */
 :root[data-theme="light"]{
   color-scheme: light;
-  --maq:#8a6423; --carne:#b3492f; --escarlate:#b3492f; --brass:#9c6f22; --good:#4f7a34; --bone:#20180f;--on-primary:#ffffff;
-  --ink:#2a2118; --ink-dim:#6b5d4a; --ink-faint:#8a7c68;
-  --line:rgba(42,33,24,.12); --line2:rgba(42,33,24,.18);
+
   /* pergaminho neutro (em vez do cinza-neutro sem viés de antes) — mesma lógica de "nenhuma
      superfície em luminância máxima", só que puxando pro creme quente da direção "Mesa de Jogo"
      em vez do branco/cinza clínico. */
-  --app-bg:#f3ede1;
-  --field:#ece2cd; --field-2:#e3d6bc;
-  --panel:#f7f2e6; --surface:#f7f2e6;
-  --bar:#f7f2e6;
   --title-grad:linear-gradient(90deg,var(--bone),var(--bone));
-  --glass:#f7f2e6;
-  --glass-rim:inset 1px 1px 0 rgba(255,255,255,.6), inset 0 0 0 1px rgba(42,33,24,.05);
-  --glass-lift:0 10px 28px rgba(60,45,20,.12), 0 2px 6px rgba(60,45,20,.06);
   /* nebulosa de fundo (login e telas sem fundo sólido) — mesma família quente, clareada pro tema claro */
   --bgA:214,184,132; --bgB:196,164,120; --bgC:170,136,96; --bgGlow:255,252,244;
   --bgDeep:#f2ece0; --bgEdge:#e6dac0;

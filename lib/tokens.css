@@ -1,0 +1,85 @@
+/* ============================================================
+   Vitality — tokens ("Latão calmo", docs/DESIGN-v2-LATAO-CALMO.md §2)
+   Fonte única de cor, tipo, espaço, forma, movimento e camadas. Carregado ANTES do theme.css em
+   todas as páginas. Os nomes antigos (--brass, --bone, --ink-*, --line*, --panel* …) continuam
+   existindo como apelidos dos novos, pra nenhuma regra antiga quebrar enquanto a limpeza avança.
+   ============================================================ */
+:root,[data-theme="dark"]{
+  /* superfícies e bordas */
+  --bg:#0d0a07;
+  --surface-1:#16120e;
+  --surface-2:#1f1a14;
+  --surface-3:#2a231b;
+  --border:#3a3026;
+  --border-strong:#76654f;
+  /* texto */
+  --text:#eee5d4;
+  --text-2:#b5a891;
+  --text-3:#8f8472;
+  --text-disabled:#6f6456;
+  /* ação */
+  --primary:#c9a45c;
+  --primary-hover:#d8b56e;
+  --on-primary:#1a1208;
+  --secondary:#8fb0cc;
+  /* estados */
+  --success:#74c08e;
+  --warning:#e3ad48;
+  --danger:#e2735a;
+  /* recursos da ficha */
+  --res-vida:#d2705a; --res-psique:#8fb0cc; --res-mental:#b39ad6;
+  --shadow-float:0 16px 40px rgba(0,0,0,.5);
+  color-scheme:dark;
+}
+[data-theme="light"],:root[data-theme="light"]{
+  --bg:#f5f0e7;
+  --surface-1:#fcf9f3;
+  --surface-2:#efe8dc;
+  --surface-3:#e5dccd;
+  --border:#d6cbb9;
+  --border-strong:#8a7c66;
+  --text:#1f1a13;
+  --text-2:#54493b;
+  --text-3:#6f6352;
+  --text-disabled:#a3988a;
+  --primary:#85611f;
+  --primary-hover:#6f5019;
+  --on-primary:#fffaf0;
+  --secondary:#3d6687;
+  --success:#2e7747;
+  --warning:#8d5c00;
+  --danger:#b13d25;
+  --shadow-float:0 16px 40px rgba(60,40,10,.18);
+  color-scheme:light;
+}
+
+:root{
+  /* tipografia (§2.2) — piso de 11px */
+  --fs-display:40px; --fs-h1:32px; --fs-h2:24px; --fs-h3:18px; --fs-body:15px; --fs-btn:14px;
+  --fs-small:13px; --fs-label:11px; --fs-num:28px;
+  --fs-meta:var(--fs-small); --fs-sub:var(--fs-h3);
+  /* espaço, base 4 (§2.3) */
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:24px; --space-6:32px; --space-7:48px; --space-8:64px;
+  /* forma (§2.4): o chanfro tem significado — 6px em controle/selo, 12px em superfície; o resto é reto */
+  --cut-sm:6px; --cut-md:12px;
+  --chamfer:polygon(var(--c) 0,100% 0,100% calc(100% - var(--c)),calc(100% - var(--c)) 100%,0 100%,0 var(--c));
+  /* movimento e camadas */
+  --t-fast:120ms; --t:200ms; --t-slow:360ms; --ease:cubic-bezier(.2,.7,.2,1);
+  --z-base:1; --z-sticky:10; --z-drawer:40; --z-overlay:80; --z-modal:100; --z-toast:120;
+
+  /* ---------- apelidos dos tokens antigos (theme.css / theme-ffx.css) ---------- */
+  --app-bg:var(--bg);
+  --panel:var(--surface-1); --surface:var(--surface-1); --glass:var(--surface-1); --bar:var(--surface-1);
+  --panel-2:var(--surface-2); --panel-solid:var(--surface-2);
+  --field:var(--surface-2); --field-2:var(--surface-1);
+  --line:var(--surface-3); --line2:var(--border);
+  --ink:var(--text); --bone:var(--text); --ink-dim:var(--text-2); --ink-faint:var(--text-3);
+  --brass:var(--primary); --maq:var(--primary-hover);
+  --good:var(--success); --carne:var(--danger); --escarlate:var(--danger);
+  --sel-a:color-mix(in srgb,var(--primary) 16%,transparent);
+  --glow1:transparent; --glow2:transparent; --edge:var(--bg);
+  --shadow:var(--shadow-float); --glass-rim:0 0 #0000; --glass-lift:0 0 #0000;
+  --dur-1:var(--t-fast); --dur-2:var(--t); --dur-3:var(--t-slow);
+}
+@media (max-width:760px){:root{--fs-body:16px}}
+@media (min-width:1100px){:root{--fs-display:56px}}

@@ -3,26 +3,11 @@
    Carregar DEPOIS de lib/theme.css. Ver docs/DESIGN-FFXIII.md.
    ============================================================ */
 :root{
-  --app-bg:#0c0906; --panel:rgba(26,21,16,.72); --panel-2:rgba(34,27,20,.78); --field:rgba(40,32,23,.7);
-  --surface:var(--panel); --glass:var(--panel); --bar:var(--panel);
   /* vidro NÃO serve pra camada que flutua sobre conteúdo sem blur próprio (menu dentro da topbar —
      backdrop-filter aninhado não renderiza no Chromium —, toasts, popovers, modais): o theme.css
      exigia fundo opaco nesses casos e o vidro deixava o texto de trás aparecer. */
-  --panel-solid:#1a1510;
-  --bone:#f3ead9; --line:rgba(233,221,201,.09); --line2:rgba(233,221,201,.17);
-  --sel-a:rgba(201,164,92,.26); --glow1:rgba(201,164,92,.16); --glow2:rgba(143,123,101,.14);
-  --edge:#050302; --shadow:0 24px 60px rgba(0,0,0,.5);
   --via-lamina:oklch(0.76 0.11 80); --via-arcano:oklch(0.76 0.11 200); --via-vigor:oklch(0.76 0.11 140);
   --cut:16px;
-}
-:root[data-theme="light"]{
-  --app-bg:#efe7d8; --panel:rgba(250,245,235,.78); --panel-2:rgba(246,239,226,.9); --field:rgba(236,226,205,.8);
-  /* o bloco claro do theme.css (mesma especificidade, carregado antes) define --surface/--glass/--bar
-     como sólidos — sem repetir aqui, só o tema escuro virava vidro */
-  --surface:var(--panel); --glass:var(--panel); --bar:var(--panel); --panel-solid:#f8f3e8;
-  --bone:#20180f; --line:rgba(42,33,24,.10); --line2:rgba(42,33,24,.18);
-  --sel-a:rgba(156,111,34,.18); --glow1:rgba(214,184,132,.45); --glow2:rgba(196,164,120,.30);
-  --edge:#e2d5bb; --shadow:0 20px 50px rgba(60,45,20,.14);
 }
 
 /* ---------- keyframes ---------- */
@@ -488,8 +473,6 @@ html[data-motion="off"] :is(.pc-sweep,.pc-ring,.pc-core,.pc-glint,.pc-highlight,
 /* ============================================================
    v1.1 — correções da revisão ao vivo (docs/MELHORIAS-v1.1.md)
    ============================================================ */
-:root{--ink-faint:#8c8170}
-:root[data-theme="light"]{--ink-faint:#74675a}
 ::selection{background:var(--sel-a);color:var(--bone)}
 *{scrollbar-width:thin;scrollbar-color:var(--line2) transparent}
 ::-webkit-scrollbar{width:6px;height:6px}

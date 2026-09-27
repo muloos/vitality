@@ -5,12 +5,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Vitality · Plataforma</title>
-<link rel="icon" type="image/png" href="lib/favicon.png">
+<link rel="icon" type="image/svg+xml" href="lib/favicon.svg">
+<link rel="alternate icon" type="image/png" href="lib/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="lib/theme.css?v=48">
-<link rel="stylesheet" href="lib/theme-ffx.css?v=5">
+<link rel="stylesheet" href="lib/theme.css?v=49">
+<link rel="stylesheet" href="lib/theme-ffx.css?v=7">
 </head>
 <body class="home-page"> 
 <div id="fallback" class="solid"></div>
@@ -92,7 +93,7 @@
       </div>
     </div>
     <div class="section-title" role="heading" aria-level="2">Minhas mesas</div>
-    <div id="mesas"><div class="empty">Carregando…</div></div>
+    <div id="mesas"><div class="empty loading" role="status"><span>Carregando…</span></div></div>
   </section>
 
   <!-- ===================== SISTEMAS ===================== -->
@@ -101,13 +102,13 @@
     <!-- ---------- LOJA (sistemas publicados por outros criadores) ---------- -->
     <div id="sys-loja" role="tabpanel" aria-labelledby="tab-sys-loja">
       <div class="section-title" role="heading" aria-level="2">Sistemas publicados por outros criadores</div>
-      <div id="store-systems" class="grid"><div class="empty">Carregando…</div></div>
+      <div id="store-systems" class="grid"><div class="empty loading" role="status"><span>Carregando…</span></div></div>
     </div>
 
     <!-- ---------- FAVORITOS ---------- -->
     <div id="sys-favoritos" role="tabpanel" aria-labelledby="tab-sys-favoritos" style="display:none">
       <div class="section-title" role="heading" aria-level="2">Sistemas favoritados</div>
-      <div id="fav-systems" class="grid"><div class="empty">Carregando…</div></div>
+      <div id="fav-systems" class="grid"><div class="empty loading" role="status"><span>Carregando…</span></div></div>
     </div>
 
     <!-- ---------- CRIAR (sistemas do próprio usuário) ---------- -->
@@ -123,7 +124,7 @@
         </div>
       </div>
       <div class="section-title" role="heading" aria-level="2">Meus sistemas</div>
-      <div id="systems" class="grid"><div class="empty">Carregando…</div></div>
+      <div id="systems" class="grid"><div class="empty loading" role="status"><span>Carregando…</span></div></div>
     </div>
   </section>
 
@@ -139,7 +140,7 @@
         </div>
         <select id="store-cat-f" class="fld-input" onchange="paintStore()"></select>
       </div>
-      <div id="store-items" class="item-grid"><div class="empty">Carregando…</div></div>
+      <div id="store-items" class="item-grid"><div class="empty loading" role="status"><span>Carregando…</span></div></div>
     </div>
 
     <!-- ---------- FAVORITOS ---------- -->
@@ -151,7 +152,7 @@
         </div>
         <select id="fav-cat-f" class="fld-input" onchange="paintFavorites()"></select>
       </div>
-      <div id="fav-items" class="item-grid"><div class="empty">Carregando…</div></div>
+      <div id="fav-items" class="item-grid"><div class="empty loading" role="status"><span>Carregando…</span></div></div>
     </div>
 
     <!-- ---------- CRIAR (biblioteca do próprio usuário) ---------- -->
@@ -219,7 +220,7 @@
         </form>
       </div>
 
-      <div id="items" class="item-grid"><div class="empty">Carregando…</div></div>
+      <div id="items" class="item-grid"><div class="empty loading" role="status"><span>Carregando…</span></div></div>
     </div>
 
     <!-- ---------- PACOTES (grupos de itens da biblioteca, pra importar de uma vez num sistema) ---------- -->
@@ -233,7 +234,7 @@
 
       <div id="package-editor" class="surface" style="display:none;margin-bottom:20px"></div>
 
-      <div id="packages" class="list"><div class="empty">Carregando…</div></div>
+      <div id="packages" class="list"><div class="empty loading" role="status"><span>Carregando…</span></div></div>
     </div>
   </section>
   </main>
@@ -241,7 +242,7 @@
 
 <script type="module">
 import * as db from './lib/db.js?v=42';
-import { mountHelp, mountThemeToggle, openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus, wireVerticalTablist } from './lib/ui.js?v=7';
+import { mountHelp, mountThemeToggle, openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus, wireVerticalTablist, playEnter } from './lib/ui.js?v=8';
 
 mountHelp('home');
 mountThemeToggle();
@@ -366,7 +367,7 @@ async function startHome() {
   myEmail = user?.email || null;
   $('nav-name').textContent = profileName;
   $('nav-av').textContent = profileName.charAt(0).toUpperCase();
-  $('greet').textContent = 'Bem-vindo, ' + profileName;
+  paintMenu();
   $('home').style.visibility = 'visible';
   renderMesas();
   renderSystems();
@@ -398,7 +399,7 @@ window.openProfile = () => {
       try { await db.updateDisplayName(name); } catch (e) { throw new Error(friendlyError(e)); }
       profileName = name;
       $('nav-name').textContent = profileName; $('nav-av').textContent = profileName.charAt(0).toUpperCase();
-      $('greet').textContent = 'Bem-vindo, ' + profileName;
+      paintMenu();
       showMsg('Nome atualizado.', 'ok');
     },
   });
@@ -448,16 +449,20 @@ function paintMenu() {
     }
   });
   const [eyebrow, intro] = SEC_COPY[_sec];
-  $('sec-eyebrow').textContent = eyebrow;
+  const titles = { mesas: 'Bem-vindo, ' + (profileName || 'Aventureiro'), sistemas: 'Sistemas', itens: 'Itens' };
+  $('sec-eyebrow').textContent = _sec === 'mesas' ? eyebrow : eyebrow + ' · ' + (profileName || '');
+  $('greet').textContent = titles[_sec];
   $('sec-intro').textContent = intro;
   syncMenuTabindex();
 }
 window.showSec = (sec) => {
+  const changed = _sec !== sec;
   _sec = sec;
   $('sec-mesas').style.display = sec === 'mesas' ? '' : 'none';
   $('sec-sistemas').style.display = sec === 'sistemas' ? '' : 'none';
   $('sec-itens').style.display = sec === 'itens' ? '' : 'none';
   paintMenu();
+  if (changed) playEnter($('sec-' + sec)); // troca de seção: fade + deslize curto (P2-10)
 };
 window.showItemSub = (sub) => {
   _itemSub = sub;
@@ -615,19 +620,19 @@ async function renderMesas() {
     _mesaCount = mesas.length; renderOnboard(); setMenuCount('mesas', mesas.length);
     if (!mesas.length) { box.className = ''; box.innerHTML = emptyState(ICON.dice, 'Nenhuma mesa ainda',
       'Crie a sua no card acima escolhendo um sistema, ou entre na mesa de um Mestre com o código de convite.'); return; }
-    box.className = 'grid';
+    // lista em linhas (docs/DESIGN-FFXIII.md §3.3): losango à esquerda (cheio = Mestre), selo de papel à direita
+    box.className = 'mesa-rows';
     box.innerHTML = mesas.map((m) => `
-      <a class="card-tile" href="mesa.html?id=${m.id}">
-        <div class="tile-head">
-          ${m.image_url
-            ? `<img class="mesa-av" src="${esc(m.image_url)}" alt="">`
-            : `<span class="mesa-av">${esc((m.name || '?').trim().charAt(0).toUpperCase() || '?')}</span>`}
-          <div class="grow" style="min-width:0">
-            <span class="role ${m.role}">${m.role === 'gm' ? 'Mestre' : 'Jogador'}</span>
-            <h3 style="margin:6px 0 0">${esc(m.name)}</h3>
-          </div>
-        </div>
-        <div class="meta">${m.role === 'gm' ? 'Código: ' + esc(m.join_code) : 'Entrar na mesa →'}</div>
+      <a class="list-row mesa-row${m.role === 'gm' ? ' gm' : ''}" href="mesa.html?id=${m.id}">
+        <span class="mesa-mark" aria-hidden="true"></span>
+        ${m.image_url
+          ? `<img class="mesa-av" src="${esc(m.image_url)}" alt="">`
+          : `<span class="mesa-av" aria-hidden="true">${esc((m.name || '?').trim().charAt(0).toUpperCase() || '?')}</span>`}
+        <span class="grow">
+          <span class="mesa-row-name">${esc(m.name)}</span>
+          <span class="mesa-row-meta">${m.role === 'gm' ? 'Código: ' + esc(m.join_code) : 'Entrar na mesa →'}</span>
+        </span>
+        <span class="role ${m.role}">${m.role === 'gm' ? 'Mestre' : 'Jogador'}</span>
       </a>`).join('');
   } catch (e) { box.className = ''; box.innerHTML = '<div class="empty">Erro: ' + esc(friendlyError(e)) + '</div>'; }
 }

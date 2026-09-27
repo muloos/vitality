@@ -5,12 +5,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Vitality · Mesa</title>
-<link rel="icon" type="image/png" href="lib/favicon.png">
+<link rel="icon" type="image/svg+xml" href="lib/favicon.svg">
+<link rel="alternate icon" type="image/png" href="lib/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="lib/theme.css?v=48">
-<link rel="stylesheet" href="lib/theme-ffx.css?v=5">
+<link rel="stylesheet" href="lib/theme.css?v=49">
+<link rel="stylesheet" href="lib/theme-ffx.css?v=7">
 </head>
 <body class="mesa-page">
 <script>try{
@@ -74,7 +75,7 @@
 
 <script type="module">
 import * as db from './lib/db.js?v=42';
-import { openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus, wireVerticalTablist } from './lib/ui.js?v=7';
+import { openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus, wireVerticalTablist, armEnter } from './lib/ui.js?v=8';
 import { mountYtPlayer } from './lib/ytplayer.js?v=5';
 
 // sem mountHelp/mountThemeToggle flutuantes aqui: "Ajuda ou suporte" e "Tema" já existem como itens
@@ -326,6 +327,7 @@ async function renderParty() {
 window.selectTab = (id) => { closeMesaMenu(); openTab(id); };
 
 let _lastSistemaEmbedTabRendered; // sentinela pro guard abaixo — mesmo truque de _lastArvoreRenderedId
+let enterTab = null; // animação de entrada do #content na troca de aba (P2-10, ver armEnter)
 window.openTab = async (name) => {
   // reclicar na aba Árvores enquanto a mesma árvore já está aberta não deve recriar o iframe do
   // zero — só troca de aba (currentTab muda) ou troca de árvore (_arvoreViewingId muda) precisa
@@ -345,13 +347,14 @@ window.openTab = async (name) => {
   // daquele personagem — senão ela ficaria viva pra sempre no fundo, mesmo sem ninguém olhando
   if (_unsubGmView) { _unsubGmView(); _unsubGmView = null; }
   currentTab = name;
-  [...$('tabs').children].forEach((b) => {
+  $('tabs').querySelectorAll('[role="tab"]').forEach((b) => {
     const on = b.dataset.tab === name;
     b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on));
   });
   syncTabsTabindex();
+  (enterTab ||= armEnter($('content')))();
   const c = $('content');
-  c.innerHTML = '<div class="empty">Carregando…</div>';
+  c.innerHTML = '<div class="empty loading" role="status"><span>Carregando…</span></div>';
   if (name === 'arvores') _lastArvoreRenderedId = _arvoreViewingId;
   if (name === 'atributos') _lastSistemaEmbedTabRendered = _sistemaEmbedTab;
   const fn = { jogadores: renderJogadores, criaturas: renderCriaturas, combate: renderCombate, atributos: renderAtributos, arvores: renderArvores,
@@ -598,7 +601,7 @@ window.delNpc = async (id) => {
 let _npcViewId = null, _npcViewData = null, _npcViewValues = {}, _npcViewResources = {};
 window.viewNpc = async (id) => {
   const c = $('content');
-  c.innerHTML = '<div class="empty">Carregando ficha…</div>';
+  c.innerHTML = '<div class="empty loading" role="status"><span>Carregando ficha…</span></div>';
   try {
     const [npcs, values, resources] = await Promise.all([db.listNpcs(campaignId), db.getNpcAttributesValues(id), db.getNpcResources(id)]);
     const npc = npcs.find((x) => x.id === id);
@@ -960,7 +963,7 @@ async function viewPlayer(userId, name) {
   // troca de personagem visto sempre volta pra "Ficha"; reabrir o MESMO personagem (ex.: uma
   // atualização ao vivo dele) preserva a sub-aba que o Mestre já estava lendo, sem jogar ele de
   // volta pro topo no meio da leitura
-  if (!sameUser) { c.innerHTML = '<div class="empty">Carregando ficha…</div>'; _gmViewTab = 'ficha'; }
+  if (!sameUser) { c.innerHTML = '<div class="empty loading" role="status"><span>Carregando ficha…</span></div>'; _gmViewTab = 'ficha'; }
   _gmViewUserId = userId; _gmViewName = name;
   // troca de personagem visto (ou reabrir o mesmo) sempre reinicia a assinatura — nunca acumula
   if (_unsubGmView) { _unsubGmView(); _unsubGmView = null; }
@@ -2552,11 +2555,38 @@ function resourceRow(a) {
       </div>
     </div></div>`;
 }
+// movimento reduzido do sistema OU "Animações" desligada (html[data-motion="off"], ver lib/ui.js)
+const motionOff = () => matchMedia('(prefers-reduced-motion:reduce)').matches || document.documentElement.dataset.motion === 'off';
+// P2-11: o número de Vida/Mana conta até o valor novo (300ms) em vez de trocar seco
+function countTo(el, to) {
+  const from = Number(el.textContent);
+  cancelAnimationFrame(el._countRaf);
+  if (motionOff() || !Number.isFinite(from) || from === to) { el.textContent = to; return; }
+  const t0 = performance.now();
+  const step = (now) => {
+    const k = Math.min(1, (now - t0) / 300), e = 1 - (1 - k) ** 3;
+    el.textContent = k < 1 ? Math.round(from + (to - from) * e) : to;
+    if (k < 1) el._countRaf = requestAnimationFrame(step);
+  };
+  el._countRaf = requestAnimationFrame(step);
+}
+// P2-11: rastro fantasma (40%) que fica no valor antigo e só alcança o novo 400ms depois do dano —
+// o feedback clássico de HUD de RPG. Na cura (ou sem animação) acompanha na hora.
+function ghostTrail(track, fromPct, toPct) {
+  let g = track.querySelector('.res-ghost');
+  if (!g) { g = document.createElement('div'); g.className = 'res-ghost'; track.insertBefore(g, track.firstChild); }
+  clearTimeout(g._t);
+  g.style.transition = 'none';
+  if (toPct >= fromPct || motionOff()) { g.style.width = toPct + '%'; return; }
+  g.style.width = Math.max(fromPct, parseFloat(g.style.width) || 0) + '%'; // golpes seguidos: o rastro não encolhe
+  void g.offsetWidth;
+  g._t = setTimeout(() => { g.style.transition = 'width .45s var(--ease)'; g.style.width = toPct + '%'; }, 400);
+}
 function refreshRes(id) {
   const a = _fichaAttrs.find((x) => x.id === id); if (!a) return;
   const max = resMax(a);
   let cur = _fichaResources[id]; if (cur == null || cur === '') cur = max; cur = Number(cur);
-  const cb = $('rescur-' + id); if (cb) cb.textContent = cur;
+  const cb = $('rescur-' + id); if (cb) countTo(cb, cur);
   const mb = $('resmax-' + id); if (mb) mb.textContent = max;
   const track = $('restrack-' + id); if (!track) return;
   const fill = track.querySelector('.res-fill'); if (!fill) return;
@@ -2564,6 +2594,7 @@ function refreshRes(id) {
   const prevPct = parseFloat(fill.style.width) || 0;
   fill.style.width = pct + '%';
   if (Math.round(pct) === Math.round(prevPct)) return;
+  ghostTrail(track, prevPct, pct);
   // pillar III (§4.4): dano/cura ainda dá um flash visual — não varre mais segmento por segmento
   // (não existem mais pips), mas a barra inteira pisca pra confirmar a mudança
   const healing = pct > prevPct;
@@ -3399,9 +3430,12 @@ async function mountDice() {
 // com quantidade, vantagem e status/fórmula somados
 window.quickRoll = (die) => doRoll('1' + die, null, null);
 // último resultado em destaque no topo do painel (de qualquer pessoa da mesa, igual ao log)
-function paintLastRoll(r) {
+function paintLastRoll(r, fresh) {
   const v = $('dice-last-val'), d = $('dice-last-die'); if (!v || !r) return;
   v.textContent = r.total ?? '—';
+  // P2-12: rolagem que acabou de chegar entra com escala + brilho; crítico natural fica em --maq com anel
+  v.classList.toggle('crit', rollExtremity(r.detail) === 'max');
+  if (fresh) { v.classList.remove('pop'); void v.offsetWidth; v.classList.add('pop'); }
   d.textContent = (r.formula || '') + (r.roller_name ? ' · ' + r.roller_name : '');
 }
 window.toggleDice = () => { const p = $('dice-panel'); const open = !p.classList.contains('open'); p.classList.toggle('open'); if (open) { loadStatMap(); const fabDot = $('unread-fab'); if (fabDot) fabDot.style.display = 'none'; const activeTab = $('rail-tabs')?.querySelector('button.on')?.dataset.rt; if (activeTab) markRailTabRead(activeTab); } };
@@ -3606,7 +3640,7 @@ function addRollToLog(r) {
   if (log.querySelector(`[data-id="${r.id}"]`)) return;   // evita duplicar (realtime + eco local)
   const empty = log.querySelector('.empty'); if (empty) empty.remove();
   log.insertBefore(rollEl(r, true), log.firstChild);
-  paintLastRoll(r);
+  paintLastRoll(r, true);
   markRailTabUnread('rolls');
 }
 

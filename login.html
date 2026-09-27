@@ -5,12 +5,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Vitality · Acesso</title>
-<link rel="icon" type="image/png" href="lib/favicon.png">
+<link rel="icon" type="image/svg+xml" href="lib/favicon.svg">
+<link rel="alternate icon" type="image/png" href="lib/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="lib/theme.css?v=48">
-<link rel="stylesheet" href="lib/theme-ffx.css?v=5">
+<link rel="stylesheet" href="lib/theme.css?v=49">
+<link rel="stylesheet" href="lib/theme-ffx.css?v=7">
 <style>
   html,body{min-height:100%}
   /* rolagem liberada: em telas baixas o card não fica mais cortado/inacessível */
@@ -131,11 +132,11 @@
 </div>
 
 <script type="module">
-import { startParticles } from './lib/particles.js?v=2';
+import { startParticles } from './lib/particles.js?v=3';
 import { signInWithPassword, signUp, signInWithGoogle, getSession, resetPasswordForEmail, updatePassword, onAuthChange } from './lib/db.js?v=42';
-import { wireVerticalTablist } from './lib/ui.js?v=7';
+import { wireVerticalTablist } from './lib/ui.js?v=8';
 
-startParticles(document.getElementById('fx'));
+startParticles(document.getElementById('fx'), '214,184,132'); // latão (--glow1), P2-18
 
 const APP_URL = new URL('app.html', window.location.href).href;
 // `next` volta pro app.html/mesa.html/etc. de onde o usuário veio (só caminhos internos, nunca URL externa).

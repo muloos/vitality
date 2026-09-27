@@ -490,7 +490,7 @@ async function renderJogadores(c) {
 
     <div class="section-title" role="heading" aria-level="2">Jogadores <span id="jogadores-count">(${players.length})</span></div>
     <div class="list" id="jogadores-list">${members.map(memberRowHtml).join('')}</div>
-    <p id="jogadores-empty-hint" style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin:10px 2px;${players.length ? 'display:none' : ''}">Nenhum jogador entrou ainda.</p>
+    <p id="jogadores-empty-hint" style="font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint);margin:10px 2px;${players.length ? 'display:none' : ''}">Nenhum jogador entrou ainda.</p>
 
     <div class="section-title" role="heading" aria-level="2">Configurações da mesa</div>
     <div class="fld row"><label>Nome da mesa <span class="autosave-hint">salva ao sair do campo</span></label>
@@ -1027,7 +1027,7 @@ async function viewPlayer(userId, name) {
         <button role="tab" aria-selected="false" data-tab="arvores" onclick="gmViewTab('arvores')">Árvores</button>
       </nav>
       <div id="gmview-content"></div>
-      <p style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin:16px 2px 0">As anotações do jogador são privadas e não aparecem aqui.</p>`;
+      <p style="font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint);margin:16px 2px 0">As anotações do jogador são privadas e não aparecem aqui.</p>`;
     gmViewTab(_gmViewTab);
   } catch (e) { c.innerHTML = '<div class="empty">Erro: ' + esc(e.message) + '</div>'; }
 }
@@ -1903,7 +1903,7 @@ async function classOriginInner(ch) {
   if (!sys) return '';
   const [classHtml, originHtml] = await Promise.all([classAxisHtml(ch), originAxisHtml(ch)]);
   if (!classHtml && !originHtml) return '';
-  const hint = inOnboarding ? `<p style="font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);margin:10px 2px 0">Pode trocar à vontade — só trava quando você concluir o personagem lá embaixo.</p>` : '';
+  const hint = inOnboarding ? `<p style="font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint);margin:10px 2px 0">Pode trocar à vontade — só trava quando você concluir o personagem lá embaixo.</p>` : '';
   return classHtml + originHtml + hint;
 }
 async function classOriginSection(ch) {
@@ -2057,7 +2057,7 @@ async function renderFicha(c) {
     ${profChoicePool.length ? profChoiceCardHtml(profChoiceNode, profChoicePool) : ''}
 
     <div class="section-title" role="heading" aria-level="2"><span class="ic">${ICONS.calc}</span>Guia rápido</div>
-    <p style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);line-height:1.6;margin:0 0 12px">
+    <p style="font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint);line-height:1.6;margin:0 0 12px">
       Monte suas próprias fórmulas combinando itens do inventário e status da ficha — ex.: dano de uma arma + sua Força.</p>
     <div id="formula-list">${_fichaFormulas.length ? _fichaFormulas.map(formulaRow).join('') : '<div class="empty">Nenhuma fórmula ainda.</div>'}</div>
     <div id="formula-builder"></div>
@@ -2223,7 +2223,7 @@ function termItemModSelect(t, i) {
   const item = _fichaInventory.find((it) => it.id === t.itemId);
   const mods = (item && item.modifiers) || [];
   if (!item) return '';
-  if (!mods.length) return '<span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint)">(sem modificadores)</span>';
+  if (!mods.length) return '<span style="font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint)">(sem modificadores)</span>';
   return `<select onchange="setTermItemMod(${i}, this.value)">
     <option value="">— modificador —</option>
     ${mods.map((m) => `<option value="${esc(m.stat_id)}" ${t.modStatId === m.stat_id ? 'selected' : ''}>${itemModLabel(m, _fichaAttrs)}</option>`).join('')}</select>`;
@@ -3000,7 +3000,7 @@ async function renderInventario(c) {
   const unequipped = items.filter((it) => !it.equipped);
   c.innerHTML = `
     <div class="section-title" role="heading" aria-level="2">Mochila</div>
-    <p style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);line-height:1.6;margin:0 0 14px">
+    <p style="font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint);line-height:1.6;margin:0 0 14px">
       ${eqSlots.length ? 'Arraste um item da mochila pra um espaço do boneco pra equipar (ou use o botão no card).'
         : 'Arraste um item entre Mochila e Equipado pra trocar de estado (ou use o botão no card, se preferir).'}</p>
 

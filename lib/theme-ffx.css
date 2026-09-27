@@ -66,7 +66,7 @@ body.arvore-page #fallback::before,body.arvore-page #fallback::after{content:non
 .action-row > .action-card:first-child::before,.action-row > .action-card:first-child::after{content:"";position:absolute;width:10px;height:10px;pointer-events:none}
 .ffx-corners::before,.action-row > .action-card:first-child::before{top:7px;right:7px;border-top:1px solid var(--brass);border-right:1px solid var(--brass)}
 .ffx-corners::after,.action-row > .action-card:first-child::after{bottom:7px;left:7px;border-bottom:1px solid var(--brass);border-left:1px solid var(--brass)}
-.card-tile{transition:transform .25s var(--ease),box-shadow .25s}
+.card-tile{transition:transform var(--t) var(--ease),box-shadow var(--t)}
 .card-tile:hover{transform:translateY(-4px);box-shadow:inset 0 0 0 1px var(--brass),0 18px 40px -20px var(--brass) !important}
 .card-tile.featured{box-shadow:inset 0 0 0 1px var(--brass) !important}
 /* selo "Destaque": no theme.css ele fica metade pra fora do cartão (translateY(-50%)); com o chanfro
@@ -82,7 +82,7 @@ body .card-tile.featured{padding-top:38px}
 .arvore-toolbar::after{display:none}
 .topbar-brand::after{content:"";display:block;width:1px;height:22px;margin-left:14px;background:var(--line2)}
 .topbar .title{font-weight:400;font-size:15px;letter-spacing:.04em}
-.topbar .title small{font-size:9px;letter-spacing:.3em}
+.topbar .title small{font-size:var(--fs-label);letter-spacing:.18em}
 .nav-user .chip .av{border-radius:0;clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px)}
 
 /* ---------- layout com menu vertical ---------- */
@@ -93,11 +93,11 @@ body .card-tile.featured{padding-top:38px}
 
 /* ---------- menu vertical ---------- */
 .ffx-menu{display:flex;flex-direction:column;gap:2px}
-.ffx-menu-eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.34em;text-transform:uppercase;color:var(--ink-faint);padding:0 0 12px 26px}
+.ffx-menu-eyebrow{font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.18em;text-transform:uppercase;color:var(--ink-faint);padding:0 0 12px 26px}
 .ffx-menu button,.ffx-menu a{position:relative;display:flex;align-items:center;justify-content:space-between;gap:10px;height:42px;
   padding:0 14px 0 26px;background:transparent;border:0;text-align:left;cursor:pointer;text-decoration:none;
   font-family:var(--serif);font-size:15px;letter-spacing:.02em;color:var(--ink-dim);
-  transition:transform .22s var(--ease),color .2s}
+  transition:transform var(--t) var(--ease),color var(--t)}
 .ffx-menu button:hover,.ffx-menu a:hover{transform:translateX(5px);color:var(--bone)}
 .ffx-menu .on,.ffx-menu [aria-selected="true"]{color:var(--bone)}
 .ffx-menu .on::before,.ffx-menu [aria-selected="true"]::before{content:"";position:absolute;inset:4px 0 4px 12px;
@@ -169,11 +169,11 @@ body.embedded .ffx-layout.sis-layout{padding-top:60px}
 /* a fórmula é a primeira a encolher (reticências) — o nome nunca some */
 .stat-row-f{flex:0 100 auto;min-width:0;max-width:40%;font-family:var(--mono);font-size:11px;color:var(--ink-faint);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.stat-row-k{flex:0 0 auto;min-width:84px;text-align:center;font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;
+.stat-row-k{flex:0 0 auto;min-width:84px;text-align:center;font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.14em;
   text-transform:uppercase;padding:4px 8px;color:var(--ink-dim);box-shadow:inset 0 0 0 1px var(--line2)}
 .stat-new{display:flex;align-items:center;justify-content:center;width:100%;height:46px;margin-top:6px;cursor:pointer;
   background:transparent;border:1px dashed var(--line2);font-family:var(--mono);font-size:11px;letter-spacing:.14em;
-  text-transform:uppercase;color:var(--ink-faint);transition:color .2s,border-color .2s,transform .25s var(--ease)}
+  text-transform:uppercase;color:var(--ink-faint);transition:color var(--t),border-color var(--t),transform var(--t) var(--ease)}
 .stat-new:hover{color:var(--brass);border-color:var(--brass);transform:translateY(-2px)}
 
 /* painel do editor (fixo à direita) */
@@ -187,30 +187,30 @@ body.embedded .ffx-layout.sis-layout{padding-top:60px}
 .stat-editor input.mono{font-family:var(--mono) !important}
 .se-inline{display:flex;gap:8px;align-items:stretch}
 .se-inline input{flex:1;min-width:0}
-.se-hint{font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-top:7px}
+.se-hint{font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint);margin-top:7px}
 .se-opt{text-transform:none;letter-spacing:0}
 .stat-test{margin-top:10px;padding:12px;background:var(--field);box-shadow:inset 0 0 0 1px var(--line)}
 /* segmentado reto (tipo/flags) — §4.10: retos, mono, sem raio */
 .ffx-seg{display:flex;gap:4px}
 .ffx-seg button{flex:1;padding:9px 0;border:0;cursor:pointer;background:transparent;box-shadow:inset 0 0 0 1px var(--line2);
-  font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim);transition:color .2s,box-shadow .2s,background .2s}
+  font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim);transition:color var(--t),box-shadow var(--t),background var(--t)}
 .ffx-seg button:hover{color:var(--bone);box-shadow:inset 0 0 0 1px var(--brass)}
 .ffx-seg button[aria-pressed="true"]{background:var(--brass);color:var(--on-primary);box-shadow:none}
 
 /* ---------- rótulo de seção ---------- */
-.ffx-label,.section-title,.hud-sec-label{display:flex;align-items:center;gap:14px;font-family:var(--mono);font-size:10px;
-  letter-spacing:.3em;text-transform:uppercase;color:var(--ink-faint)}
+.ffx-label,.section-title,.hud-sec-label{display:flex;align-items:center;gap:14px;font-family:var(--mono);font-size:var(--fs-label);
+  letter-spacing:.18em;text-transform:uppercase;color:var(--ink-faint)}
 /* a home do theme.css reescreve o rótulo com mais especificidade (11px/.24em) */
-body.home-page .section-title{font-size:10px;letter-spacing:.3em}
+body.home-page .section-title{font-size:var(--fs-label);letter-spacing:.18em}
 .ffx-label::after,.section-title::after{content:"";flex:1;height:1px;background:var(--line)}
-.ffx-eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.34em;text-transform:uppercase;color:var(--brass)}
+.ffx-eyebrow{font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.18em;text-transform:uppercase;color:var(--brass)}
 .home-head h1,.ffx-h1{font-family:var(--disp);font-weight:400;font-size:40px;letter-spacing:.01em}
 body.home-page .home-head h1{letter-spacing:.01em}
 
 /* ---------- campos ---------- */
 .fld input,.fld select,.fld textarea,.inline-form input,select.fld-input,.toolbar input,.ffx-field{
   background:var(--field) !important;border:0 !important;border-bottom:1px solid var(--line2) !important;border-radius:0 !important;
-  transition:border-color .2s,box-shadow .2s}
+  transition:border-color var(--t),box-shadow var(--t)}
 .fld input:focus,.fld select:focus,.fld textarea:focus,.inline-form input:focus,select.fld-input:focus,.toolbar input:focus,.ffx-field:focus{
   outline:none;border-bottom-color:var(--brass) !important;box-shadow:0 8px 16px -12px var(--brass)}
 /* estado de erro do theme.css pintava a borda inteira — sem borda inteira, vai pra linha de baixo */
@@ -222,7 +222,7 @@ body.home-page .home-head h1{letter-spacing:.01em}
 .btn:hover{box-shadow:inset 0 0 0 1px var(--brass);color:var(--bone)}
 .btn:disabled,.btn:disabled:hover{background:var(--field);color:var(--ink-faint);box-shadow:none}
 .btn.go{position:relative;overflow:hidden;box-shadow:none;letter-spacing:.16em;
-  transition:filter .2s,letter-spacing .25s,transform var(--dur-1) var(--ease)}
+  transition:filter var(--t),letter-spacing var(--t),transform var(--dur-1) var(--ease)}
 .btn.go:hover{filter:brightness(1.08);letter-spacing:.22em;color:var(--on-primary)}
 .btn.go::after{content:"";position:absolute;top:0;left:0;width:30%;height:100%;pointer-events:none;
   background:linear-gradient(100deg,transparent,rgba(255,255,255,.35),transparent);animation:vtSweep 3.8s ease-in-out infinite}
@@ -234,7 +234,7 @@ body.home-page .home-head h1{letter-spacing:.01em}
 
 /* ---------- linhas de lista ---------- */
 .list-row{padding:16px 22px;background:var(--panel);border:0 !important;box-shadow:inset 0 0 0 1px var(--line);
-  transition:transform .25s var(--ease),box-shadow .25s,background .25s}
+  transition:transform var(--t) var(--ease),box-shadow var(--t),background var(--t)}
 .list-row:hover{transform:translateX(6px);background:var(--panel-2);box-shadow:inset 0 0 0 1px var(--brass),inset 3px 0 0 var(--brass)}
 .list-row.on,.list-row[aria-selected="true"]{background:linear-gradient(90deg,var(--sel-a),var(--panel) 70%);box-shadow:inset 2px 0 0 var(--brass),inset 0 0 0 1px var(--line2)}
 
@@ -251,10 +251,10 @@ body.home-page .home-head h1{letter-spacing:.01em}
   .res-step{grid-column:4;grid-row:1}
   .res-shield-track{grid-column:2;grid-row:2}
 }
-.res-label{font-family:var(--mono);font-weight:400;font-size:10px;letter-spacing:.18em;line-height:1.35}
+.res-label{font-family:var(--mono);font-weight:400;font-size:var(--fs-label);letter-spacing:.18em;line-height:1.35}
 .res-track{height:8px;border-radius:0 !important;background:var(--field);box-shadow:inset 0 0 0 1px var(--line);transform:skewX(-24deg);overflow:hidden}
 .res-fill{border-radius:0 !important;background:linear-gradient(90deg,var(--res-color),color-mix(in oklch,var(--res-color),white 35%)) !important;
-  box-shadow:0 0 12px var(--res-color);transition:width .45s var(--ease)}
+  box-shadow:0 0 12px var(--res-color);transition:width var(--t-slow) var(--ease)}
 .res-shield-track,.res-shield-fill{border-radius:0 !important}
 .res-shield-track{transform:skewX(-24deg)}
 .res-amt-line{font-size:13px;color:var(--ink-faint)}
@@ -267,7 +267,7 @@ body.home-page .home-head h1{letter-spacing:.01em}
 
 /* ---------- tiles de status ---------- */
 .stat-tile{padding:16px 16px 12px;background:var(--panel) !important;border:0 !important;box-shadow:inset 0 0 0 1px var(--line)}
-.stat-tile .stat-name{order:-1;font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint)}
+.stat-tile .stat-name{order:-1;font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint)}
 .stat-tile .stat-val{font-family:var(--disp);font-weight:400;font-size:34px;line-height:1;color:var(--bone)}
 .stat-tile .stat-val.calc{color:var(--stc,var(--maq))}
 /* cores de status/perícia/categoria vêm do sistema e costumam ser claras (pensadas pro fundo escuro) */
@@ -281,9 +281,9 @@ body.home-page .home-head h1{letter-spacing:.01em}
 
 /* ---------- chips / selos ---------- */
 .badge,.char-tag,.role,.rar-pill,.featured-badge{border-radius:0 !important}
-.badge{font-size:9.5px;letter-spacing:.12em;padding:4px 10px}
+.badge{font-size:var(--fs-label);letter-spacing:.12em;padding:4px 10px}
 .badge.mod{letter-spacing:.04em}
-.char-tag{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:4px 10px}
+.char-tag{font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.12em;text-transform:uppercase;padding:4px 10px}
 
 /* ---------- card de item ---------- */
 /* --rc (cor da raridade) só era definida em .rarity-fx; o card da grade fica dentro de
@@ -291,7 +291,7 @@ body.home-page .home-head h1{letter-spacing:.01em}
 [data-rarity="Comum"]{--rc:var(--rar-comum)} [data-rarity="Incomum"]{--rc:var(--rar-incomum)} [data-rarity="Raro"]{--rc:var(--rar-raro)}
 [data-rarity="Épico"]{--rc:var(--rar-epico)} [data-rarity="Lendário"]{--rc:var(--rar-lendario)} [data-rarity="Único"]{--rc:var(--rar-unico)}
 .poster-card{background:var(--panel);box-shadow:inset 0 0 0 1px var(--line2),inset 0 2px 0 var(--rc,var(--line2));
-  transition:transform .25s var(--ease),box-shadow .25s}
+  transition:transform var(--t) var(--ease),box-shadow var(--t)}
 .poster-card:hover{transform:translateY(-4px);box-shadow:inset 0 0 0 1px var(--line2),inset 0 2px 0 var(--brass),0 16px 30px -18px var(--brass)}
 /* dentro da moldura .rar-frame (theme.css: padding de 1.5px + fundo em degradê animado fazendo papel de
    borda) o card PRECISA ser opaco — com o vidro, o degradê da raridade vazava pelo card inteiro */
@@ -306,7 +306,7 @@ body.home-page .home-head h1{letter-spacing:.01em}
    pseudo-elemento girado de volta, grande o bastante pra cobrir o losango inteiro */
 .poster-icon:not(.ph)::before{content:"";position:absolute;inset:-21%;background:inherit;transform:rotate(-45deg)}
 .poster-name{font-family:var(--disp);font-weight:400;font-size:15px}
-.poster-card .rar-pill{font-family:var(--mono);font-size:9px;letter-spacing:.14em;background:transparent;border:0;color:var(--rc,var(--ink-dim));padding:0}
+.poster-card .rar-pill{font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.14em;background:transparent;border:0;color:var(--rc,var(--ink-dim));padding:0}
 .poster-desc{font-size:12px}
 /* as cores de raridade são claras (feitas pro fundo escuro): no creme do tema claro o texto some */
 :root[data-theme="light"] .poster-card .rar-pill{color:color-mix(in srgb,var(--rc,var(--ink-dim)) 35%,var(--ink))}
@@ -322,8 +322,8 @@ body.home-page .home-head h1{letter-spacing:.01em}
 .mesa-rail-left > .ffx-menu-eyebrow{padding-top:4px}
 .mesa-rail-left > .ffx-menu button{height:40px;font-size:15px}
 /* Grupo: linhas compactas (avatar chanfrado 28px, nome, papel e ponto de presença à direita) */
-.party-label{display:flex;align-items:center;justify-content:space-between;font-family:var(--mono);font-size:10px;font-weight:400;
-  letter-spacing:.34em;color:var(--ink-faint);margin:0;padding:26px 14px 10px 26px}
+.party-label{display:flex;align-items:center;justify-content:space-between;font-family:var(--mono);font-size:var(--fs-label);font-weight:400;
+  letter-spacing:.18em;color:var(--ink-faint);margin:0;padding:26px 14px 10px 26px}
 .party-count{font-size:11px;letter-spacing:0}
 .party-row{gap:10px;margin:0;padding:7px 14px 7px 26px;background:transparent;border:0;border-radius:0}
 .party-row.me{background:linear-gradient(90deg,var(--sel-a),transparent 85%);border:0}
@@ -332,7 +332,7 @@ body.home-page .home-head h1{letter-spacing:.01em}
 .party-row.me .party-av{box-shadow:none}
 .party-info{flex:1}
 .party-name{font-weight:400;color:var(--ink)}
-.party-role{font-size:9.5px;letter-spacing:.06em}
+.party-role{font-size:var(--fs-label);letter-spacing:.06em}
 .presence-dot{position:static;flex:0 0 auto;width:6px;height:6px;border:0;background:var(--line2)}
 .presence-dot.on{background:var(--good);box-shadow:0 0 6px var(--good)}
 #mesa-requests,.mesa-extra{margin-left:26px}
@@ -344,14 +344,14 @@ body.home-page .home-head h1{letter-spacing:.01em}
 #mesa-requests .list-row .btn{flex:1 1 auto}
 
 /* painel de rolagem */
-.dice-panel .dh b{font-family:var(--mono);font-weight:400;font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--ink-faint)}
+.dice-panel .dh b{font-family:var(--mono);font-weight:400;font-size:var(--fs-label);letter-spacing:.18em;text-transform:uppercase;color:var(--ink-faint)}
 .dice-panel .dh .ic{display:none}
 .dice-last{display:flex;align-items:baseline;flex-wrap:wrap;gap:10px;padding:4px 16px 14px}
 .dl-val{font-family:var(--disp);font-weight:400;font-size:56px;line-height:1;color:var(--bone)}
 .dl-die{font-family:var(--mono);font-size:12px;color:var(--brass);min-width:0;overflow-wrap:anywhere}
 .dice-quick{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:0 16px 12px}
 .dice-quick button{height:36px;border:0;cursor:pointer;background:var(--field);box-shadow:inset 0 0 0 1px var(--line2);
-  font-family:var(--mono);font-size:12px;color:var(--ink-dim);transition:box-shadow .2s,color .2s,transform .12s var(--ease)}
+  font-family:var(--mono);font-size:12px;color:var(--ink-dim);transition:box-shadow var(--t),color var(--t),transform var(--t-fast) var(--ease)}
 .dice-quick button:hover{color:var(--bone);box-shadow:inset 0 0 0 1px var(--brass);transform:translateY(-2px)}
 .dice-quick button:active{transform:scale(.94)}
 .dice-builder{border-top:1px solid var(--line);padding-top:12px}
@@ -555,7 +555,7 @@ body.home-page .card-tile .mesa-av,.mesa-av{border-radius:0 !important;
 .onboard{clip-path:polygon(16px 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%,0 16px)}
 .ostep .n,.onboard .n,.ob-num,.step-num{border-radius:0 !important;transform:rotate(45deg) scale(.8)}
 .ostep .n > *,.onboard .n > *{transform:rotate(-45deg)}
-.code-chip .code{font-family:var(--disp);font-weight:400;letter-spacing:.3em}
+.code-chip .code{font-family:var(--disp);font-weight:400;letter-spacing:.18em}
 .empty-cta .ec-icon{color:var(--brass)}
 
 /* moldura de raridade chanfrada (acompanha o card) */
@@ -664,7 +664,7 @@ body.home-page .card-tile .mesa-av,.mesa-av{border-radius:0 !important;
 /* equipamento: slots chanfrados */
 .eq-slot{clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px)}
 /* topbar: chip do usuário reto, hover com a cor de seleção */
-.nav-user .chip,.mesa-menu .chip{transition:background .2s,transform .25s var(--ease)}
+.nav-user .chip,.mesa-menu .chip{transition:background var(--t),transform var(--t) var(--ease)}
 .nav-user .chip:hover,.mesa-menu .chip:hover{background:var(--sel-a);transform:translateY(-2px)}
 .nav-user.static .chip{cursor:default}
 .nav-user.static .chip:hover{background:transparent;transform:none}
@@ -691,7 +691,7 @@ body.home-page .card-tile .mesa-av,.mesa-av{border-radius:0 !important;
 .mesa-row .grow{display:flex;flex-direction:column;gap:3px}
 .mesa-row .mesa-row-name{font-family:var(--disp);font-weight:400;font-size:18px;line-height:1.2;color:var(--bone);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mesa-row .mesa-row-meta{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;color:var(--ink-faint)}
+.mesa-row .mesa-row-meta{font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.12em;color:var(--ink-faint)}
 .mesa-row .role{flex:0 0 auto}
 
 /* P0-A 13 — topbar do construtor com o mesmo chip de usuário das outras telas */
@@ -729,7 +729,7 @@ body.home-page .card-tile .mesa-av,.mesa-av{border-radius:0 !important;
 .ffx-menu.has-cursor{position:relative}
 .ffx-menu.has-cursor .on::after,.ffx-menu.has-cursor [aria-selected="true"]::after{display:none}
 .ffx-cursor{position:absolute;left:4px;top:0;width:7px;height:7px;pointer-events:none;z-index:2;
-  transition:transform .3s var(--ease),opacity .2s}
+  transition:transform var(--t-slow) var(--ease),opacity var(--t)}
 .ffx-cursor.no-anim{transition:none}
 .ffx-cursor::before{content:"";position:absolute;inset:0;background:var(--brass);box-shadow:0 0 10px var(--brass);
   transform:rotate(45deg);animation:vtPulse 1.6s ease-in-out infinite}
@@ -750,7 +750,7 @@ body.home-page .card-tile .mesa-av,.mesa-av{border-radius:0 !important;
    v1.3 — revisão visual (docs/MELHORIAS-v1.3.md)
    ============================================================ */
 /* ---------- P0-1 · selo Mestre/Jogador em qualquer lugar (não só dentro de .card-tile) ---------- */
-.role{display:inline-block;width:fit-content;white-space:nowrap;font-family:var(--mono);font-size:10px;font-weight:400;
+.role{display:inline-block;width:fit-content;white-space:nowrap;font-family:var(--mono);font-size:var(--fs-label);font-weight:400;
   letter-spacing:.16em;text-transform:uppercase;padding:5px 10px;line-height:1;border:0 !important;border-radius:0}
 .role.gm{background:var(--brass);color:var(--on-primary);
   clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px)}
@@ -761,7 +761,7 @@ body.home-page .card-tile .mesa-av,.mesa-av{border-radius:0 !important;
   .sis-layout > .ffx-side{max-height:calc(100vh - 100px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain}
   body.embedded .sis-layout > .ffx-side{max-height:calc(100vh - 76px)}
 }
-.ffx-menu .ffx-menu-group{font-family:var(--mono);font-size:9.5px;letter-spacing:.3em;text-transform:uppercase;
+.ffx-menu .ffx-menu-group{font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.18em;text-transform:uppercase;
   color:var(--ink-faint);padding:18px 0 6px 26px}
 .ffx-menu .ffx-menu-group:first-child{padding-top:4px}
 
@@ -778,9 +778,9 @@ body.home-page .card-tile .mesa-av,.mesa-av{border-radius:0 !important;
 .dice-builder select{flex:1 1 64px;min-width:0}
 .dice-builder .btn{flex:0 0 auto;width:auto;min-width:0;padding-left:14px;padding-right:14px}
 .dice-more-toggle{display:flex;align-items:center;gap:6px;width:100%;border:0;background:none;cursor:pointer;
-  padding:4px 16px 10px;font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-dim);
-  transition:color .2s,transform .25s var(--ease)}
-.dice-more-toggle::before{content:"";width:6px;height:6px;box-shadow:inset 0 0 0 1px currentColor;transform:rotate(45deg);transition:background .2s}
+  padding:4px 16px 10px;font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.2em;text-transform:uppercase;color:var(--ink-dim);
+  transition:color var(--t),transform var(--t) var(--ease)}
+.dice-more-toggle::before{content:"";width:6px;height:6px;box-shadow:inset 0 0 0 1px currentColor;transform:rotate(45deg);transition:background var(--t)}
 .dice-more-toggle[aria-expanded="true"]::before{background:currentColor}
 .dice-more-toggle:hover{color:var(--bone);transform:translateX(4px)}
 .dice-more-toggle .dmt-n{color:var(--brass);letter-spacing:.1em}
@@ -811,11 +811,11 @@ select:not([multiple]){-webkit-appearance:none;appearance:none;padding-right:32p
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%239c6f22' stroke-width='1.4'/%3E%3C/svg%3E") !important}
 input[type=checkbox]{-webkit-appearance:none;appearance:none;width:16px;height:16px;margin:0;flex:0 0 auto;display:inline-grid;place-items:center;
   background:var(--field);border:0;border-radius:0;box-shadow:inset 0 0 0 1px var(--line2);cursor:pointer;vertical-align:middle;
-  transition:box-shadow .15s,background .15s}
+  transition:box-shadow var(--t-fast),background var(--t-fast)}
 .check-row input[type=checkbox]{margin-top:2px}
 input[type=checkbox]:hover{box-shadow:inset 0 0 0 1px var(--brass)}
 input[type=checkbox]:checked{background:var(--sel-a);box-shadow:inset 0 0 0 1px var(--brass)}
-input[type=checkbox]::after{content:"";width:7px;height:7px;background:var(--maq);transform:rotate(45deg) scale(0);transition:transform .15s var(--ease)}
+input[type=checkbox]::after{content:"";width:7px;height:7px;background:var(--maq);transform:rotate(45deg) scale(0);transition:transform var(--t-fast) var(--ease)}
 input[type=checkbox]:checked::after{transform:rotate(45deg) scale(1)}
 input[type=checkbox]:focus-visible{outline:1px solid var(--brass);outline-offset:2px}
 input[type=checkbox]:disabled{opacity:.45;cursor:not-allowed}
@@ -827,7 +827,7 @@ input[type=range]::-moz-range-thumb{width:9px;height:9px;border:0;border-radius:
 input[type=range]:focus-visible{outline:1px solid var(--brass);outline-offset:6px}
 /* amostra de cor "cheia": quadradinho chanfrado + código hex (lib/ui.js preenche data-hex) */
 .color-swatch.full{display:inline-flex;align-items:center;gap:10px;width:auto !important;max-width:100%;height:34px;padding:0 14px 0 3px;
-  background:var(--field) !important;border:0 !important;box-shadow:inset 0 0 0 1px var(--line2);transition:box-shadow .2s,transform .25s var(--ease)}
+  background:var(--field) !important;border:0 !important;box-shadow:inset 0 0 0 1px var(--line2);transition:box-shadow var(--t),transform var(--t) var(--ease)}
 .color-swatch.full::before{content:"";flex:0 0 auto;width:28px;height:28px;background:var(--sw);
   clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px)}
 .color-swatch.full::after{content:attr(data-hex);font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--ink)}
@@ -845,7 +845,7 @@ p[style*="font-family:var(--mono)"] b,.tab-note b,#content li b{font-weight:500;
 /* ---------- P1-3 · selo de habilidade: losango + rótulo, à direita ---------- */
 .skill-row{align-items:flex-start;gap:16px}
 .skill-type{flex:0 0 auto;margin-left:auto;padding-top:4px;display:inline-flex;align-items:center;gap:7px;
-  font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--carne)}
+  font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.14em;text-transform:uppercase;color:var(--carne)}
 .skill-type::before{content:"";width:6px;height:6px;transform:rotate(45deg);background:currentColor}
 .skill-type.core{color:var(--brass)}
 .skill-type.passive{color:var(--ink-dim)}
@@ -876,13 +876,13 @@ p[style*="font-family:var(--mono)"] b,.tab-note b,#content li b{font-weight:500;
 /* ---------- P1-6 · slots de equipamento: nome dentro do slot vazio, faixa de raridade no ocupado ---------- */
 .eq-slot{clip-path:none !important;border-radius:0 !important}
 .eq-slot:not(.filled) .eq-slot-label{position:static;transform:none;padding:4px;max-width:100%;overflow:hidden;white-space:normal;text-align:center;
-  font-size:9px;letter-spacing:.2em;text-transform:uppercase;line-height:1.3;color:var(--ink-faint)}
+  font-size:var(--fs-label);letter-spacing:.2em;text-transform:uppercase;line-height:1.3;color:var(--ink-faint)}
 .eq-slot.filled{box-shadow:inset 0 2px 0 var(--rc,var(--brass)),inset 0 0 0 1px var(--line2)}
 
 /* ---------- P1-7 · classes/raças: tipo como selo, ações em ícone, filhas penduradas na linha-guia ---------- */
 .cls-row{gap:12px}
-.cls-row .cls-type{flex:0 0 auto;font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint)}
-.cls-row .cls-actions{display:flex;gap:6px;flex:0 0 auto;opacity:0;transition:opacity .2s}
+.cls-row .cls-type{flex:0 0 auto;font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint)}
+.cls-row .cls-actions{display:flex;gap:6px;flex:0 0 auto;opacity:0;transition:opacity var(--t)}
 .cls-row:hover .cls-actions,.cls-row:focus-within .cls-actions{opacity:1}
 @media (hover:none){.cls-row .cls-actions{opacity:1}}
 .cls-row .btn.icon{width:32px;height:32px;padding:0 !important;display:inline-flex;align-items:center;justify-content:center}
@@ -912,9 +912,9 @@ body:has(#theme-menu-item) .theme-fab{display:none}
 
 /* ---------- P2-2 · contador zerado some; dica vira atalho da última mesa ---------- */
 .ffx-menu .count[data-n="0"]{visibility:hidden}
-.ffx-side-note .sn-k{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.3em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:6px}
+.ffx-side-note .sn-k{display:block;font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.18em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:6px}
 .ffx-side-note .sn-link{display:inline-block;font-family:var(--disp);font-size:15px;line-height:1.3;color:var(--bone);text-decoration:none;
-  transition:transform .25s var(--ease),color .2s}
+  transition:transform var(--t) var(--ease),color var(--t)}
 .ffx-side-note .sn-link:hover{color:var(--brass);transform:translateX(5px)}
 
 /* ---------- P2-3 · o botão de recolher é uma aba presa na borda do painel ---------- */
@@ -1021,7 +1021,7 @@ body:has(#theme-menu-item) .theme-fab{display:none}
 .sub-tabs{display:flex;gap:0;margin:0 0 20px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
 .sub-tabs button{flex:0 0 auto;white-space:nowrap;background:none;border:0;cursor:pointer;padding:10px 16px;
   font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-dim);
-  box-shadow:inset 0 -2px 0 transparent;transition:color .2s,box-shadow .2s,transform .25s var(--ease)}
+  box-shadow:inset 0 -2px 0 transparent;transition:color var(--t),box-shadow var(--t),transform var(--t) var(--ease)}
 .sub-tabs button:hover{color:var(--bone);transform:translateY(-2px)}
 .sub-tabs button.on,.sub-tabs button[aria-selected="true"]{color:var(--bone);box-shadow:inset 0 -2px 0 var(--brass)}
 
@@ -1033,7 +1033,7 @@ body:has(#theme-menu-item) .theme-fab{display:none}
 .cond-row .cond-pick:hover{color:var(--brass)}
 .cond-row .color-swatch.cond-color{width:24px;height:24px;border:0 !important;
   clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px)}
-.cond-row .cond-actions{display:flex;gap:6px;flex:0 0 auto;opacity:0;transition:opacity .2s}
+.cond-row .cond-actions{display:flex;gap:6px;flex:0 0 auto;opacity:0;transition:opacity var(--t)}
 .cond-row:hover .cond-actions,.cond-row:focus-within .cond-actions{opacity:1}
 @media (hover:none){.cond-row .cond-actions{opacity:1}}
 .cond-row .btn.danger{background:transparent !important;color:var(--ink-dim) !important;box-shadow:inset 0 0 0 1px var(--line2) !important}
@@ -1060,8 +1060,8 @@ body:has(#theme-menu-item) .theme-fab{display:none}
 .via-legend{border-radius:0 !important;border:0 !important;background:var(--panel-solid) !important;box-shadow:inset 0 0 0 1px var(--line2);
   clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);padding:0 !important;gap:0 !important;min-width:120px}
 .via-legend-head{pointer-events:auto;display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;
-  background:none;border:0;cursor:pointer;padding:9px 12px;font-family:var(--mono);font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-faint)}
-.via-legend-head::after{content:"";width:6px;height:6px;border-right:1px solid currentColor;border-bottom:1px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform .2s}
+  background:none;border:0;cursor:pointer;padding:9px 12px;font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.24em;text-transform:uppercase;color:var(--ink-faint)}
+.via-legend-head::after{content:"";width:6px;height:6px;border-right:1px solid currentColor;border-bottom:1px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform var(--t)}
 .via-legend.closed .via-legend-head::after{transform:rotate(-45deg)}
 .via-legend-head:hover{color:var(--bone)}
 .via-legend-rows{display:flex;flex-direction:column;gap:6px;padding:0 12px 10px}
@@ -1092,13 +1092,13 @@ body.arvore-page #fx{z-index:0}
 /* ---------- P2-4 · capa sem retrato: monograma na cor da classe, vira botão "+ Retrato" ---------- */
 .portrait-cta{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;border:0;
   background:color-mix(in srgb,var(--pc) 20%,var(--panel-2)) !important;color:color-mix(in srgb,var(--pc) 55%,var(--bone)) !important;
-  font-family:var(--disp);transition:transform .25s var(--ease),box-shadow .2s}
+  font-family:var(--disp);transition:transform var(--t) var(--ease),box-shadow var(--t)}
 .portrait-cta .pm{line-height:1}
-.portrait-cta .pc-lbl{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim);opacity:0;transition:opacity .2s}
+.portrait-cta .pc-lbl{font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim);opacity:0;transition:opacity var(--t)}
 .portrait-cta:hover,.portrait-cta:focus-visible{transform:translateY(-3px)}
 .portrait-cta:hover .pc-lbl,.portrait-cta:focus-visible .pc-lbl{opacity:1}
 
 /* ---------- P2-5 · assinatura legível; contadores só no hover/ativo ---------- */
 .brand small{font-size:11px !important;letter-spacing:.18em !important;color:var(--ink-dim) !important}
-.ffx-menu .count{opacity:0;transition:opacity .2s}
+.ffx-menu .count{opacity:0;transition:opacity var(--t)}
 .ffx-menu button:hover .count,.ffx-menu button:focus-visible .count,.ffx-menu .on .count,.ffx-menu [aria-selected="true"] .count{opacity:1}

@@ -999,7 +999,7 @@ function periciaRow(s) {
       <button class="btn sm danger auto" style="flex-shrink:0" title="Excluir perícia" aria-label="Excluir perícia ${esc(s.name)}" onclick="delStat('${s.id}')"><span class="ic">${ICONS.x}</span></button>
     </div>
     <div style="display:flex;align-items:center;gap:10px;width:100%">
-      <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.08em;flex-shrink:0">na fórmula</span>
+      <span style="font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint);text-transform:uppercase;letter-spacing:.08em;flex-shrink:0">na fórmula</span>
       <input value="${esc(s.formula_key)}" placeholder="apelido" onchange="onStatFieldChange('${s.id}','formula_key',this.value)"
         style="width:140px;flex-shrink:0;background:var(--field);border:1px solid var(--line2);border-radius:8px;color:var(--maq);font-family:var(--mono);font-size:12px;padding:8px 10px">
       <input value="${esc(s.formula)}" placeholder="fórmula (ex.: DES + PROF)"
@@ -1538,7 +1538,7 @@ window.openClassEditor = (classId) => {
   w.innerHTML = `<div class="box editor guide">
     <div class="ghead"><h3 id="class-editor-title">${isSub ? 'Editar subclasse' : 'Editar classe'} — ${esc(cl.name)}</h3><button class="x" aria-label="Fechar">×</button></div>
     <div id="class-editor-body">Carregando…</div>
-    <p style="font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);margin:14px 2px 0">
+    <p style="font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint);margin:14px 2px 0">
       Proficiências, resistências, traços e item inicial salvam na hora — só nome/descrição/cor/status base dependem do Salvar.</p>
     <div class="full actions" style="margin-top:10px">
       <button class="btn auto" id="class-editor-cancel">Fechar</button>
@@ -1897,7 +1897,7 @@ window.openOriginEditor = (originId) => {
   w.innerHTML = `<div class="box editor guide">
     <div class="ghead"><h3 id="origin-editor-title">${isVariant ? 'Editar variação' : 'Editar raça'} — ${esc(o.name)}</h3><button class="x" aria-label="Fechar">×</button></div>
     <div id="origin-editor-body">Carregando…</div>
-    <p style="font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);margin:14px 2px 0">
+    <p style="font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint);margin:14px 2px 0">
       Proficiências e resistências salvam na hora — só nome/descrição/cor/status base dependem do Salvar.</p>
     <div class="full actions" style="margin-top:10px">
       <button class="btn auto" id="origin-editor-cancel">Fechar</button>
@@ -2288,13 +2288,13 @@ async function renderNivel(c) {
 
     <div class="section-title" role="heading" aria-level="2" style="font-size:12px;margin-bottom:10px">Padrão por nível</div>
 
-    <div class="sub" style="margin:0 0 8px;color:var(--brass);text-transform:uppercase;letter-spacing:.1em;font-size:10px;font-family:var(--mono)">Pontos de status</div>
+    <div class="sub" style="margin:0 0 8px;color:var(--brass);text-transform:uppercase;letter-spacing:.1em;font-size:var(--fs-label);font-family:var(--mono)">Pontos de status</div>
     <div class="item-form" style="margin-bottom:20px">
       <div class="fld full"><label>Pontos de status concedidos por nível</label>
         <input type="number" min="0" value="${system.level_stat_points_default || 0}" onchange="updateLevelDefault(this.value)"></div>
     </div>
 
-    <div class="sub" style="margin:0 0 8px;color:var(--maq);text-transform:uppercase;letter-spacing:.1em;font-size:10px;font-family:var(--mono)">Pontos de árvore de habilidade</div>
+    <div class="sub" style="margin:0 0 8px;color:var(--maq);text-transform:uppercase;letter-spacing:.1em;font-size:var(--fs-label);font-family:var(--mono)">Pontos de árvore de habilidade</div>
     ${trees.length ? `
     <div class="item-form">
       ${trees.map((t) => `<div class="fld"><label>${esc(t.name)}</label>
@@ -2319,15 +2319,15 @@ function levelRow(level, statPoints, treeGrants, trees) {
     </div>
     <div style="display:flex;flex-wrap:wrap;gap:18px">
       <div style="flex:1 1 150px;min-width:150px">
-        <div class="sub" style="color:var(--brass);text-transform:uppercase;letter-spacing:.1em;font-size:9px;font-family:var(--mono);margin-bottom:6px">Pontos de status</div>
+        <div class="sub" style="color:var(--brass);text-transform:uppercase;letter-spacing:.1em;font-size:var(--fs-label);font-family:var(--mono);margin-bottom:6px">Pontos de status</div>
         <input type="number" min="0" value="${statPoints ?? ''}" placeholder="usa o padrão"
           style="width:100%;background:var(--field);border:1px solid var(--line2);border-radius:8px;color:var(--ink);font-family:var(--mono);padding:8px 10px"
           onchange="updateLevelPoints(${level}, this.value)">
       </div>
       ${trees.length ? `<div style="flex:2 1 240px;min-width:200px">
-        <div class="sub" style="color:var(--maq);text-transform:uppercase;letter-spacing:.1em;font-size:9px;font-family:var(--mono);margin-bottom:6px">Pontos de árvore de habilidade</div>
+        <div class="sub" style="color:var(--maq);text-transform:uppercase;letter-spacing:.1em;font-size:var(--fs-label);font-family:var(--mono);margin-bottom:6px">Pontos de árvore de habilidade</div>
         <div style="display:flex;flex-wrap:wrap;gap:8px">
-          ${trees.map((t) => `<label style="display:flex;flex-direction:column;gap:4px;font-family:var(--mono);font-size:10px;color:var(--ink-dim)">${esc(t.name)}
+          ${trees.map((t) => `<label style="display:flex;flex-direction:column;gap:4px;font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-dim)">${esc(t.name)}
             <input type="number" min="0" value="${treeGrants[t.id] ?? ''}" placeholder="padrão"
               style="width:90px;background:var(--field);border:1px solid var(--line2);border-radius:8px;color:var(--ink);font-family:var(--mono);padding:7px 9px"
               onchange="updateLevelTreePoints(${level}, '${t.id}', this.value)"></label>`).join('')}
@@ -2577,7 +2577,7 @@ async function renderItens(c) {
 
     <div id="itens-sub-itens" style="${_itensSubTab === 'itens' ? '' : 'display:none'}">
       <div class="section-title" role="heading" aria-level="2">Itens do sistema (${inSystem.length})</div>
-      <p style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);line-height:1.6;margin:0 0 12px">
+      <p style="font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint);line-height:1.6;margin:0 0 12px">
         Itens aqui são <b>cópias do sistema</b> — editá-los NÃO altera o item original da sua biblioteca.</p>
       <button class="btn go auto sm" onclick="openSysItem()">+ Criar item no sistema</button>
 
@@ -2943,12 +2943,12 @@ async function renderEquipamento(c) {
       <input type="file" id="eqbg-file" accept="image/*" style="display:none" onchange="onEqBgImg(this)">
       <button class="btn auto sm" onclick="document.getElementById('eqbg-file').click()">${bgUrl ? 'Trocar imagem de fundo' : '+ Imagem de fundo'}</button>
       ${bgUrl ? `<button class="btn auto sm" onclick="clearEqBg()">Remover fundo</button>` : ''}
-      <label style="display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.06em;margin-left:4px">
+      <label style="display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint);text-transform:uppercase;letter-spacing:.06em;margin-left:4px">
         Altura do quadro
         <input type="number" id="eq-board-h" min="200" max="1000" step="10" value="${boardH}" title="Ajusta a altura do quadro — útil pra não sobrar um bloco gigante quando são poucos slots"
           style="width:76px;background:var(--field);border:1px solid var(--line2);border-radius:7px;color:var(--ink);font-family:var(--mono);font-size:11px;padding:6px 8px" onchange="onEqBoardHeight(this.value)">px
       </label>
-      <label style="display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.06em">
+      <label style="display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint);text-transform:uppercase;letter-spacing:.06em">
         Largura do quadro
         <input type="number" id="eq-board-w" min="300" max="1500" step="10" value="${boardW || ''}" placeholder="auto" title="Ajusta a largura do quadro (vazio = preenche o espaço disponível)"
           style="width:76px;background:var(--field);border:1px solid var(--line2);border-radius:7px;color:var(--ink);font-family:var(--mono);font-size:11px;padding:6px 8px" onchange="onEqBoardWidth(this.value)">px

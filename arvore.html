@@ -107,7 +107,7 @@
     border-radius:18px;overflow:hidden;display:none;flex-direction:column;background:color-mix(in srgb,var(--panel) 98%,transparent);border:1px solid var(--line2);box-shadow:0 18px 50px rgba(0,0,0,.5)}
   .epanel.open{display:flex}
   .epanel .hd{display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--line)}
-  .epanel .hd .eye{font-family:var(--mono);font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--ink-faint)}
+  .epanel .hd .eye{font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.18em;text-transform:uppercase;color:var(--ink-faint)}
   .epanel .hd .x{margin-left:auto;background:transparent;border:0;color:var(--ink-faint);font-size:22px;cursor:pointer;line-height:1}
   .epanel .bd{padding:16px;overflow:auto}
   .rotgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
@@ -147,7 +147,7 @@
      todo mundo de uma vez, sem precisar abrir cada esfera pra descobrir a que via ela pertence */
   .via-legend{position:fixed;top:var(--toolbar-bottom,64px);left:12px;z-index:30;display:flex;flex-direction:column;gap:5px;
     background:color-mix(in srgb,var(--panel) 90%,transparent);border:1px solid var(--line2);border-radius:11px;padding:9px 11px;pointer-events:none;
-    font-family:var(--mono);font-size:10.5px;color:var(--ink-dim);max-width:180px}
+    font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-dim);max-width:180px}
   .via-legend-row{display:flex;align-items:center;gap:7px}
   .via-legend-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
   .via-legend-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -211,8 +211,8 @@
     .hud::-webkit-scrollbar{display:none}
     .hud > *{flex:0 0 auto}
     .zoom button{width:44px;height:42px}
-    .count{bottom:calc(64px + env(safe-area-inset-bottom));font-size:10px}
-    .via-legend{left:10px;max-width:130px;padding:7px 9px;font-size:10px;gap:3px}
+    .count{bottom:calc(64px + env(safe-area-inset-bottom));font-size:var(--fs-label)}
+    .via-legend{left:10px;max-width:130px;padding:7px 9px;font-size:var(--fs-label);gap:3px}
     /* ajuda continua no menu da conta ("Ajuda ou suporte") — o "?" flutuante disputava o rodapé
        com o HUD de zoom em cima do canvas */
     .help-fab{display:none}
@@ -311,7 +311,7 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
       <div class="chip" data-v="passive" onclick="patch('kind','passive')">Passiva</div>
       <div class="chip" data-v="active" onclick="patch('kind','active')">Ativa</div>
       <div class="chip" data-v="core" onclick="patch('kind','core')">Núcleo</div></div>
-      <p style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);line-height:1.6;margin:8px 0 0">O Núcleo é a habilidade inicial — só pode existir uma por árvore (escolher aqui troca de qual), já desbloqueada de graça pra todo jogador.</p>
+      <p style="font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint);line-height:1.6;margin:8px 0 0">O Núcleo é a habilidade inicial — só pode existir uma por árvore (escolher aqui troca de qual), já desbloqueada de graça pra todo jogador.</p>
     </div>
     <div class="fld"><label>Tamanho</label><div class="chips" id="e-size">
       <div class="chip" data-s="small" onclick="patch('size','small')">Pequena</div>
@@ -359,7 +359,7 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
     <div class="fld"><label>Descrição</label><div id="v-desc" style="line-height:1.55;color:var(--ink-dim);white-space:pre-wrap"></div></div>
     <div class="fld" id="v-unlock-fld" style="display:none">
       <button type="button" class="btn go" id="v-unlock-btn" style="width:100%" onclick="doUnlock()">Desbloquear</button>
-      <p id="v-unlock-msg" style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);line-height:1.6;margin:8px 0 0"></p>
+      <p id="v-unlock-msg" style="font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint);line-height:1.6;margin:8px 0 0"></p>
     </div>
   </div>
 </div>
@@ -396,10 +396,10 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
     </div>
     <div id="dup-color-row" style="display:none;align-items:center;gap:10px;margin-top:8px">
       <button type="button" class="color-swatch sm" id="dup-color-swatch" style="--sw:#e3c071" onclick="openColorPicker(this, this.style.getPropertyValue('--sw'), ()=>{})" title="Cor da cópia" aria-label="Cor da cópia"></button>
-      <span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint)">Cor aplicada às cópias criadas abaixo</span>
+      <span style="font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint)">Cor aplicada às cópias criadas abaixo</span>
     </div>
     <div class="rotgrid" id="rotgrid" style="margin-top:10px"></div>
-    <p id="dup-hint" style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);line-height:1.6;margin:12px 0 0"></p>
+    <p id="dup-hint" style="font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint);line-height:1.6;margin:12px 0 0"></p>
     <div class="actions" style="margin-top:16px"><button class="btn danger" onclick="deleteAreaSelection()">Excluir seleção</button><button class="btn" onclick="clearAreaSelection()">Cancelar</button></div>
   </div>
 </div>

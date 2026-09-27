@@ -17,6 +17,13 @@
    valores não são redondos nem múltiplos entre si. Ao adicionar um breakpoint novo, prefira
    reaproveitar um destes em vez de inventar mais um valor. */
 :root{
+  /* escala tipográfica fechada (docs/MELHORIAS-v1.4.md P2-1): 11 rótulo mono · 13 meta · 14.5 corpo · 18 subtítulo */
+  --fs-label:11px;--fs-meta:13px;--fs-body:14.5px;--fs-sub:18px;
+  /* três durações de transição e a escala de camadas (P2-2) */
+  --t-fast:120ms;--t:200ms;--t-slow:360ms;
+  --z-base:1;--z-sticky:10;--z-drawer:40;--z-overlay:80;--z-modal:100;--z-toast:120;
+}
+:root{
   color-scheme: dark;
   /* "Mesa de Jogo" — ink & brass. Nasceu de uma exploração de direção de design (ver Figma) pra
      sair do gradiente roxo/azul cósmico + acento ciano genérico, e ir pra uma identidade de fato
@@ -86,22 +93,22 @@ body{font-family:var(--serif);color:var(--ink);-webkit-font-smoothing:antialiase
 /* ---------- títulos ---------- */
 .title{font-family:var(--disp);font-weight:700;letter-spacing:.2em;font-size:18px;
   background:var(--title-grad);-webkit-background-clip:text;background-clip:text;color:transparent;white-space:nowrap}
-.title small{display:block;font-family:var(--mono);font-weight:400;font-size:9px;letter-spacing:.4em;color:var(--ink-faint);margin-top:5px}
+.title small{display:block;font-family:var(--mono);font-weight:400;font-size:var(--fs-label);letter-spacing:.4em;color:var(--ink-faint);margin-top:5px}
 
 /* ---------- campos ---------- */
 .fld{margin-bottom:14px}
-.fld label{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:6px}
+.fld label{display:block;font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:6px}
 .fld input{width:100%;background:var(--field);border:1px solid var(--line2);border-radius:10px;color:var(--ink);font-family:var(--serif);font-size:15px;padding:12px 13px}
 .fld input::placeholder{color:var(--ink-faint)}
 .fld input:focus{outline:none;border-color:var(--brass)}
 /* estado de erro inline (formulários com campo obrigatório condicional) */
-.fld-err{display:none;font-family:var(--mono);font-size:10px;color:var(--escarlate);margin-top:6px;line-height:1.4}
+.fld-err{display:none;font-family:var(--mono);font-size:var(--fs-label);color:var(--escarlate);margin-top:6px;line-height:1.4}
 .fld-err.show{display:block}
 .fld input.invalid,.fld select.invalid{border-color:var(--escarlate)}
 .fld input.invalid:focus,.fld select.invalid:focus{border-color:var(--escarlate)}
 
 /* ---------- botões ---------- */
-.btn{width:100%;font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;border-radius:11px;padding:13px;cursor:pointer;border:1px solid var(--line2);background:var(--field);color:var(--ink-dim);transition:.15s;display:flex;align-items:center;justify-content:center;gap:9px}
+.btn{width:100%;font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;border-radius:11px;padding:13px;cursor:pointer;border:1px solid var(--line2);background:var(--field);color:var(--ink-dim);transition:var(--t-fast);display:flex;align-items:center;justify-content:center;gap:9px}
 .btn:hover{color:var(--ink);border-color:var(--ink-faint)}
 .btn:active{transform:scale(.97)}
 .btn:disabled{opacity:.5;cursor:default;transform:none}
@@ -113,11 +120,11 @@ body{font-family:var(--serif);color:var(--ink);-webkit-font-smoothing:antialiase
 
 /* ---------- segmented (entrar / criar conta) ---------- */
 .seg{display:flex;border-radius:999px;overflow:hidden;padding:3px;margin-bottom:22px}
-.seg button{flex:1;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;background:transparent;color:var(--ink-dim);border:0;padding:10px 14px;cursor:pointer;border-radius:999px;transition:.18s}
+.seg button{flex:1;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;background:transparent;color:var(--ink-dim);border:0;padding:10px 14px;cursor:pointer;border-radius:999px;transition:var(--t)}
 .seg button.on{color:var(--on-primary);background:var(--brass)}
 
 /* ---------- divisor "ou" ---------- */
-.divider{display:flex;align-items:center;gap:12px;margin:18px 0;color:var(--ink-faint);font-family:var(--mono);font-size:10px;letter-spacing:.3em;text-transform:uppercase}
+.divider{display:flex;align-items:center;gap:12px;margin:18px 0;color:var(--ink-faint);font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.18em;text-transform:uppercase}
 .divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--line)}
 
 /* ---------- mensagens ---------- */
@@ -160,11 +167,11 @@ body{font-family:var(--serif);color:var(--ink);-webkit-font-smoothing:antialiase
 .iconbtn:hover{color:var(--ink)}
 
 .page{max-width:920px;margin:0 auto;padding:8px 18px 60px}
-.section-title{font-family:var(--mono);font-size:10px;letter-spacing:.26em;text-transform:uppercase;color:var(--ink-faint);margin:26px 2px 12px}
+.section-title{font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.26em;text-transform:uppercase;color:var(--ink-faint);margin:26px 2px 12px}
 
 /* botão auto (não estica 100%) */
 .btn.auto{width:auto;display:inline-flex;padding:11px 18px}
-.btn.sm{padding:8px 12px;font-size:10px}
+.btn.sm{padding:8px 12px;font-size:var(--fs-label)}
 
 /* linha de botões de ação (Cancelar/Salvar, Excluir/Salvar...) usada em vários formulários e
    painéis (arvore.html, sistema.html, app.html, mesa.html) — sem essa regra a div não tinha
@@ -180,10 +187,10 @@ body{font-family:var(--serif);color:var(--ink);-webkit-font-smoothing:antialiase
   display:flex;flex-direction:column;gap:10px;min-height:120px;text-decoration:none;color:inherit}
 .card-tile:hover{border-color:var(--brass);transform:translateY(-2px)}
 .card-tile h3{font-family:var(--disp);font-size:17px;font-weight:600;margin:0;color:var(--bone)}
-.card-tile .role{font-family:var(--mono);font-size:9px;letter-spacing:.16em;text-transform:uppercase;padding:3px 8px;border-radius:6px;width:fit-content}
+.card-tile .role{font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.16em;text-transform:uppercase;padding:3px 8px;border-radius:6px;width:fit-content}
 .role.gm{color:var(--on-primary);background:var(--brass)}
 .role.player{color:var(--maq);border:1px solid rgba(224,189,122,.4)}
-.card-tile .meta{font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:.04em;margin-top:auto}
+.card-tile .meta{font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint);letter-spacing:.04em;margin-top:auto}
 
 /* sistema em destaque (fixo no topo da loja, ver listFeaturedSystems) — mesmo cartão de sempre,
    só com um contorno dourado permanente (não só no hover) e uma fitinha "Destaque" no canto, pra
@@ -191,7 +198,7 @@ body{font-family:var(--serif);color:var(--ink);-webkit-font-smoothing:antialiase
 .card-tile.featured{border-color:var(--brass);background:linear-gradient(160deg,color-mix(in srgb,var(--brass) 10%,var(--surface)),var(--surface) 65%);box-shadow:0 0 0 1px color-mix(in srgb,var(--brass) 35%,transparent)}
 .card-tile.featured:hover{box-shadow:0 14px 34px rgba(0,0,0,.4),0 0 0 1px color-mix(in srgb,var(--brass) 55%,transparent)}
 .featured-badge{position:absolute;top:-1px;left:14px;transform:translateY(-50%);display:flex;align-items:center;gap:4px;
-  font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  font-family:var(--mono);font-size:var(--fs-label);font-weight:700;letter-spacing:.1em;text-transform:uppercase;
   color:var(--on-primary);background:var(--brass);padding:4px 9px;border-radius:6px}
 .featured-badge svg{width:10px;height:10px}
 
@@ -203,7 +210,7 @@ body{font-family:var(--serif);color:var(--ink);-webkit-font-smoothing:antialiase
 .card-tile.glass,.action-card.glass{background:var(--glass);-webkit-backdrop-filter:none;backdrop-filter:none;
   border:1px solid var(--line2);box-shadow:var(--glass-rim),var(--glass-lift)}
 .action-card h4{font-family:var(--disp);font-size:15px;font-weight:600;margin:0 0 4px;color:var(--bone)}
-.action-card p{font-family:var(--mono);font-size:10px;color:var(--ink-faint);line-height:1.5;margin:0 0 14px}
+.action-card p{font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint);line-height:1.5;margin:0 0 14px}
 
 /* cartões de escolha de Classe/Subclasse e Raça/Variação na Biografia (mesa.html) — mesmo visual
    de .card-tile, coloridos pela --pc que cada classe/raça já define no sistema */
@@ -220,7 +227,7 @@ body{font-family:var(--serif);color:var(--ink);-webkit-font-smoothing:antialiase
 .picker-card-name{font-family:var(--disp);font-size:15px;font-weight:600;color:var(--pc);display:flex;align-items:center;gap:6px}
 .picker-lock,.picker-check{width:13px;height:13px;opacity:.85}
 .picker-card-desc{font-family:var(--serif);font-size:12.5px;color:var(--ink-dim);line-height:1.5}
-.picker-card-bonus{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--ink);background:color-mix(in srgb,var(--pc) 14%,transparent);border-radius:8px;padding:5px 8px;width:fit-content}
+.picker-card-bonus{font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.02em;color:var(--ink);background:color-mix(in srgb,var(--pc) 14%,transparent);border-radius:8px;padding:5px 8px;width:fit-content}
 .picker-card-bonus.muted{color:var(--ink-faint);background:transparent;padding:0}
 
 .inline-form{display:flex;gap:8px}
@@ -231,24 +238,24 @@ body{font-family:var(--serif);color:var(--ink);-webkit-font-smoothing:antialiase
 /* chip de código de convite */
 .code-chip{display:inline-flex;align-items:center;gap:10px;font-family:var(--mono);border-radius:10px;padding:8px 12px;border:1px solid var(--line2)}
 .code-chip .code{font-size:18px;letter-spacing:.22em;color:var(--brass);font-weight:700}
-.code-chip button{background:transparent;border:0;color:var(--ink-faint);cursor:pointer;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase}
+.code-chip button{background:transparent;border:0;color:var(--ink-faint);cursor:pointer;font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.1em;text-transform:uppercase}
 .code-chip button:hover{color:var(--ink)}
 
 
 /* listas (membros, itens, atributos) */
 .list{display:flex;flex-direction:column;gap:8px}
-.list-row{display:flex;align-items:center;gap:12px;border-radius:12px;padding:12px 14px;border:1px solid var(--line);transition:border-color .15s}
+.list-row{display:flex;align-items:center;gap:12px;border-radius:12px;padding:12px 14px;border:1px solid var(--line);transition:border-color var(--t-fast)}
 .list-row:hover{border-color:var(--line2)}
 .list-row .grow{flex:1;min-width:0}
 .list-row .nm{font-family:var(--serif);font-size:15px;color:var(--ink)}
-.list-row .sub{font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:.04em;margin-top:2px}
+.list-row .sub{font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint);letter-spacing:.04em;margin-top:2px}
 .empty{font-family:var(--mono);font-size:11px;color:var(--ink-faint);text-align:center;padding:28px;border:1px dashed var(--line2);border-radius:14px;letter-spacing:.03em}
 
 /* alça de arrastar-para-reordenar (Status/Perícias/Proficiências/Classes/Itens em sistema.html) —
    só essa alcinha inicia o arraste (pointerdown), nunca a linha/card inteiro, pra não brigar com
    os outros cliques/inputs que já moram ali dentro */
 .drag-handle{flex:0 0 auto;display:flex;align-items:center;justify-content:center;width:22px;height:22px;
-  color:var(--ink-faint);cursor:grab;touch-action:none;border-radius:6px;transition:color .15s,background-color .15s}
+  color:var(--ink-faint);cursor:grab;touch-action:none;border-radius:6px;transition:color var(--t-fast),background-color var(--t-fast)}
 .drag-handle:hover{color:var(--ink-dim);background:var(--field)}
 .list-row.dragging,.class-block.dragging,.rar-frame.dragging{opacity:.5}
 /* na grade de itens (cards), a alça flutua no canto oposto ao "remover" (que já mora no canto
@@ -260,7 +267,7 @@ body{font-family:var(--serif);color:var(--ink);-webkit-font-smoothing:antialiase
 /* mochila: Mochila/Equipado empilhados (cada um ocupando a largura toda, pro grid de cards
    caber mais colunas por linha) com arrastar-e-soltar pra trocar o estado — o item só fica
    "draggable" se tiver algum efeito mecânico (senão não há o que "equipar" de verdade) */
-.inv-dropzone{min-height:70px;padding:2px;border-radius:12px;border:1px dashed transparent;transition:background-color .15s,border-color .15s}
+.inv-dropzone{min-height:70px;padding:2px;border-radius:12px;border:1px dashed transparent;transition:background-color var(--t-fast),border-color var(--t-fast)}
 .inv-dropzone.drag-over{background:color-mix(in srgb,var(--brass) 8%,transparent);border-color:var(--brass)}
 .list-row[draggable="true"]{cursor:grab}
 .list-row[draggable="true"]:active{cursor:grabbing}
@@ -294,14 +301,14 @@ body.home-page{overflow-y:auto}
 .brand{display:flex;align-items:center;gap:10px;font-family:var(--disp);font-weight:700;letter-spacing:.18em;font-size:15px;
   background:var(--title-grad);-webkit-background-clip:text;background-clip:text;color:transparent}
 .brand .mark{font-size:18px;-webkit-text-fill-color:var(--brass);color:var(--brass)}
-.brand small{display:block;font-family:var(--mono);font-weight:400;font-size:8px;letter-spacing:.42em;color:var(--ink-faint);-webkit-text-fill-color:var(--ink-faint);margin-top:3px}
+.brand small{display:block;font-family:var(--mono);font-weight:400;font-size:var(--fs-label);letter-spacing:.42em;color:var(--ink-faint);-webkit-text-fill-color:var(--ink-faint);margin-top:3px}
 .nav .spacer{flex:1}
 
 /* menu do usuário (nome) */
 .nav-user{position:relative}
 .nav-user .chip{display:flex;align-items:center;gap:9px;cursor:pointer;border-radius:10px;padding:5px 8px 5px 6px;
   border:0;background:transparent;font-family:var(--serif);font-size:13px;color:var(--ink);
-  appearance:none;-webkit-appearance:none;margin:0;text-align:left;transition:background .12s}
+  appearance:none;-webkit-appearance:none;margin:0;text-align:left;transition:background var(--t-fast)}
 .nav-user .chip:focus-visible{outline:2px solid var(--maq);outline-offset:2px}
 .nav-user .chip:hover{background:var(--field)}
 .nav-user .chip .av{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;
@@ -336,7 +343,7 @@ body.home-page{overflow-y:auto}
 /* abas de seção (Mesas / Itens) — sublinhado */
 .home-tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin-bottom:24px}
 .home-tabs button{position:relative;font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;
-  color:var(--ink-faint);background:transparent;border:0;padding:12px 16px;cursor:pointer;transition:.15s}
+  color:var(--ink-faint);background:transparent;border:0;padding:12px 16px;cursor:pointer;transition:var(--t-fast)}
 .home-tabs button:hover{color:var(--ink-dim)}
 .home-tabs button.on{color:var(--bone)}
 .home-tabs button.on::after{content:"";position:absolute;left:12px;right:12px;bottom:-1px;height:2px;border-radius:2px;
@@ -361,7 +368,7 @@ select option{background:var(--panel);color:var(--ink)}
 /* criador de item */
 .item-form{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .item-form .full{grid-column:1 / -1}
-.si-subhead{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);
+.si-subhead{font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);
   border-bottom:1px solid var(--line);padding-bottom:6px;margin:6px 0 -4px}
 .si-subhead:first-child{margin-top:0}
 .mod-row{display:flex;gap:8px;margin-bottom:8px}
@@ -407,9 +414,9 @@ select option{background:var(--panel);color:var(--ink)}
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .poster-desc{font-family:var(--serif);font-size:11.5px;line-height:1.45;color:var(--ink-dim);margin:0;
   display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-.poster-meta{font-family:var(--mono);font-size:9px;color:var(--ink-faint);margin-top:auto;padding-top:6px}
+.poster-meta{font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint);margin-top:auto;padding-top:6px}
 /* selo de publicação — só aparece nos seus próprios itens/sistemas */
-.poster-pub{position:absolute;top:8px;left:8px;z-index:3;font-family:var(--mono);font-size:8px;letter-spacing:.08em;text-transform:uppercase;
+.poster-pub{position:absolute;top:8px;left:8px;z-index:3;font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.08em;text-transform:uppercase;
   padding:3px 7px;border-radius:6px;color:rgba(255,255,255,.85);background:rgba(10,12,18,.6);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
 .poster-pub.on{color:var(--maq)}
 @media (prefers-reduced-motion:reduce){.rar-frame{animation:none !important;transform:none !important}}
@@ -422,13 +429,13 @@ select option{background:var(--panel);color:var(--ink)}
 /* modal de detalhe do item */
 .item-detail .idet-img{width:100%;max-height:220px;object-fit:cover;border-radius:12px;margin-bottom:12px;background:var(--field-2)}
 .item-detail .idet-badges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
-.item-detail .idet-creator{font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin:0 0 14px}
+.item-detail .idet-creator{font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint);margin:0 0 14px}
 .item-detail .idet-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
 .item-detail .idet-actions .btn.on{color:var(--escarlate);border-color:rgba(209,96,63,.4)}
 .item-detail .idet-actions .btn svg{width:13px;height:13px;fill:none;stroke:currentColor;vertical-align:-2px;margin-right:5px}
 .item-detail .idet-actions .btn.on svg{fill:var(--escarlate);stroke:var(--escarlate)}
 
-.badge{font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:6px;border:1px solid var(--line2);color:var(--ink-dim);white-space:nowrap}
+.badge{font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:6px;border:1px solid var(--line2);color:var(--ink-dim);white-space:nowrap}
 .badge.mod{color:var(--maq);border-color:rgba(224,189,122,.35);text-transform:none;letter-spacing:.02em}
 .badge.cat{color:var(--ink-dim)}
 .badge.r-comum{color:#b9c2c6;border-color:rgba(185,194,198,.4)}
@@ -449,7 +456,7 @@ select option{background:var(--panel);color:var(--ink)}
    números do mesmo efeito. Camadas internas vêm do JS posterRarityLayers().
    ============================================================ */
 .rar-frame{position:relative;border-radius:15px;box-sizing:border-box;--glow:1;
-  transition:transform .35s cubic-bezier(.2,.8,.2,1),filter .3s ease,box-shadow .3s ease}
+  transition:transform var(--t-slow) cubic-bezier(.2,.8,.2,1),filter var(--t-slow) ease,box-shadow var(--t-slow) ease}
 /* .rar-frame também é usado como moldura de linhas de lista (sistema.html, mochila vista pelo
    Mestre em mesa.html) — a .list-row por dentro perde a borda própria (o frame já é a borda) e
    preenche o frame por completo, senão sobra um respiro sem cobertura em linhas mais altas que
@@ -571,7 +578,7 @@ select option{background:var(--panel);color:var(--ink)}
 [data-rarity="Único"] .pc-glint{background:linear-gradient(#ff9aa4,#ff2d3f);filter:drop-shadow(0 0 6px rgba(255,60,80,.95))}
 
 /* selo de raridade nos cards — pílula preenchida, cor por tier */
-.rar-pill{font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+.rar-pill{font-family:var(--mono);font-size:var(--fs-label);font-weight:600;letter-spacing:.12em;text-transform:uppercase;
   padding:4px 8px;border-radius:999px;white-space:nowrap}
 .rar-pill[data-rarity="Comum"]{color:#c3c9d3;background:rgba(174,180,192,.14);border:1px solid rgba(174,180,192,.30)}
 .rar-pill[data-rarity="Incomum"]{color:#5fe0a0;background:rgba(95,224,160,.14);border:1px solid rgba(95,224,160,.30)}
@@ -630,7 +637,7 @@ select option{background:var(--panel);color:var(--ink)}
 
 /* halo de contato — box-shadow não é cortado mesmo com overflow:hidden no elemento (sombra é
    desenhada fora da caixa), sobe de "nenhum" no Comum até bem forte e pulsando rápido no Único */
-.rarity-fx.rarity-surface{border-color:var(--rc) !important;transition:box-shadow .3s,border-color .3s}
+.rarity-fx.rarity-surface{border-color:var(--rc) !important;transition:box-shadow var(--t-slow),border-color var(--t-slow)}
 .rarity-fx.rarity-surface[data-rarity="Comum"]{box-shadow:none}
 .rarity-fx.rarity-surface[data-rarity="Incomum"]{box-shadow:0 0 9px color-mix(in srgb, var(--rc) 40%, transparent)}
 .rarity-fx.rarity-surface[data-rarity="Raro"]{box-shadow:0 0 8px color-mix(in srgb, var(--rc) 55%, transparent),0 0 18px color-mix(in srgb, var(--rc) 30%, transparent);animation:rarPulse 3s ease-in-out infinite}
@@ -744,13 +751,13 @@ select option{background:var(--panel);color:var(--ink)}
 /* toast — o antigo #msg agora flutua no topo */
 .msg{position:fixed;top:74px;left:50%;transform:translate(-50%,-10px);z-index:90;display:block;margin:0!important;
   min-width:240px;max-width:min(92vw,460px);text-align:center;opacity:0;pointer-events:none;
-  transition:opacity .25s ease, transform .25s ease;box-shadow:0 10px 30px rgba(0,0,0,.45)}
+  transition:opacity var(--t) ease, transform var(--t) ease;box-shadow:0 10px 30px rgba(0,0,0,.45)}
 .msg.show{opacity:1;transform:translate(-50%,0)}
 
 /* botão flutuante de ajuda */
 .help-fab{position:fixed;right:16px;bottom:16px;z-index:70;width:42px;height:42px;border-radius:50%;border:0;cursor:pointer;
   background:var(--brass);color:var(--on-primary);font-family:var(--disp);font-size:19px;font-weight:700;
-  box-shadow:0 8px 24px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.12);transition:transform .15s}
+  box-shadow:0 8px 24px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.12);transition:transform var(--t-fast)}
 .help-fab:hover{transform:scale(1.08)}
 
 /* modal de guia */
@@ -771,7 +778,7 @@ select option{background:var(--panel);color:var(--ink)}
 .gstep b{font-family:var(--serif);font-size:14.5px;color:var(--bone)}
 .gstep p{font-family:var(--serif);font-size:13px;color:var(--ink-dim);line-height:1.55;margin:3px 0 0}
 .gtips{margin-top:14px;border:1px solid rgba(224,189,122,.25);background:rgba(224,189,122,.06);border-radius:12px;padding:12px 14px}
-.gtips b{font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--maq)}
+.gtips b{font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.2em;text-transform:uppercase;color:var(--maq)}
 .gtips ul{margin:8px 0 0;padding-left:18px}
 .gtips li{font-family:var(--serif);font-size:13px;color:var(--ink-dim);line-height:1.6}
 
@@ -787,7 +794,7 @@ select option{background:var(--panel);color:var(--ink)}
 .ostep .n{flex:0 0 24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;
   background:var(--brass);color:var(--on-primary);font-family:var(--mono);font-weight:700;font-size:12px}
 .ostep b{font-family:var(--serif);font-size:13.5px;color:var(--bone)}
-.ostep p{font-family:var(--mono);font-size:10px;color:var(--ink-faint);line-height:1.5;margin:3px 0 8px}
+.ostep p{font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint);line-height:1.5;margin:3px 0 8px}
 
 /* barra de busca / filtros */
 .toolbar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
@@ -806,7 +813,7 @@ select option{background:var(--panel);color:var(--ink)}
    ============================================================ */
 .dice-fab{position:fixed;right:16px;bottom:122px;z-index:70;height:42px;padding:0 16px;border-radius:999px;border:0;cursor:pointer;
   background:var(--maq);color:var(--on-primary);font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.06em;
-  box-shadow:0 8px 24px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.12);transition:transform .15s;display:flex;align-items:center;gap:7px}
+  box-shadow:0 8px 24px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.12);transition:transform var(--t-fast);display:flex;align-items:center;gap:7px}
 .dice-fab:hover{transform:translateY(-2px)}
 .dice-panel{position:fixed;left:50%;bottom:174px;transform:translateX(-50%);z-index:72;width:340px;max-width:calc(100vw - 32px);max-height:65vh;
   display:none;flex-direction:column;border-radius:16px;overflow:hidden;background:var(--panel);border:1px solid var(--line2);
@@ -820,8 +827,8 @@ select option{background:var(--panel);color:var(--ink)}
 .roll{border:1px solid var(--line);border-radius:10px;padding:8px 10px;animation:fadeUp .25s var(--ease)}
 .roll.mine{border-color:rgba(201,164,92,.4);background:rgba(201,164,92,.05)}
 .roll .rtop{display:flex;align-items:baseline;gap:8px}
-.roll .who{font-family:var(--mono);font-size:10px;letter-spacing:.05em;color:var(--brass);text-transform:uppercase}
-.roll .ftxt{font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-left:auto}
+.roll .who{font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.05em;color:var(--brass);text-transform:uppercase}
+.roll .ftxt{font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint);margin-left:auto}
 .roll .tot{font-family:var(--disp);font-size:22px;font-weight:700;color:var(--bone);line-height:1}
 .roll .det{font-family:var(--mono);font-size:11px;color:var(--ink-dim);margin-top:3px;word-break:break-word}
 .roll.secret{border-style:dashed}
@@ -833,7 +840,7 @@ select option{background:var(--panel);color:var(--ink)}
 .roll .tot.crit-min{color:var(--escarlate);text-shadow:0 0 10px rgba(209,96,63,.5)}
 .roll.landing .tot.crit-max,.roll.landing .tot.crit-min{animation:critPulse .55s var(--ease)}
 /* selo de texto ao lado do número quando a rolagem bate no máximo/mínimo do dado */
-.roll .crit-tag{font-family:var(--mono);font-weight:700;font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+.roll .crit-tag{font-family:var(--mono);font-weight:700;font-size:var(--fs-label);letter-spacing:.08em;text-transform:uppercase}
 .roll .crit-tag.max{color:var(--good)}
 .roll .crit-tag.min{color:var(--escarlate)}
 @keyframes rollLand{0%{transform:scale(.96)}45%{transform:scale(1.015)}100%{transform:scale(1)}}
@@ -852,7 +859,7 @@ select option{background:var(--panel);color:var(--ink)}
 .rail-tabs{display:flex;flex:0 0 auto;border-bottom:1px solid var(--line)}
 .rail-tabs button{flex:1;font-family:var(--mono);font-weight:600;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
   color:var(--ink-faint);background:transparent;border:0;padding:11px;cursor:pointer;
-  box-shadow:inset 0 -2px 0 transparent;transition:color .12s,box-shadow .12s}
+  box-shadow:inset 0 -2px 0 transparent;transition:color var(--t-fast),box-shadow var(--t-fast)}
 .rail-tabs button:hover{color:var(--ink-dim)}
 .rail-tabs button.on{color:var(--bone);box-shadow:inset 0 -2px 0 var(--brass)}
 .unread-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--maq);margin-left:5px;vertical-align:middle}
@@ -862,8 +869,8 @@ select option{background:var(--panel);color:var(--ink)}
 .chat-msg{border:1px solid var(--line);border-radius:10px;padding:8px 10px;animation:fadeUp .25s var(--ease)}
 .chat-msg.mine{border-color:rgba(201,164,92,.4);background:rgba(201,164,92,.05)}
 .chat-msg .ctop{display:flex;align-items:baseline;gap:8px}
-.chat-msg .who{font-family:var(--mono);font-size:10px;letter-spacing:.05em;color:var(--brass);text-transform:uppercase}
-.chat-msg .cwhen{font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-left:auto}
+.chat-msg .who{font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.05em;color:var(--brass);text-transform:uppercase}
+.chat-msg .cwhen{font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint);margin-left:auto}
 .chat-msg .cbody{font-family:var(--serif);font-size:13.5px;color:var(--ink);margin-top:4px;line-height:1.45;word-break:break-word;white-space:pre-wrap}
 .chat-msg.landing{animation:rollLand .5s var(--ease)}
 
@@ -874,7 +881,7 @@ select option{background:var(--panel);color:var(--ink)}
 .chat-input-row input::placeholder{color:var(--ink-faint)}
 .chat-input-row input:focus{outline:none;border-color:var(--brass)}
 .chat-input-row button{width:38px;height:38px;flex:0 0 auto;border-radius:10px;border:0;cursor:pointer;
-  background:var(--brass);color:var(--on-primary);display:flex;align-items:center;justify-content:center;transition:filter .15s,transform .15s}
+  background:var(--brass);color:var(--on-primary);display:flex;align-items:center;justify-content:center;transition:filter var(--t-fast),transform var(--t-fast)}
 .chat-input-row button:hover{filter:brightness(1.06)}
 .chat-input-row button:active{transform:scale(.94)}
 
@@ -884,7 +891,7 @@ select option{background:var(--panel);color:var(--ink)}
 .res-bar-row{display:flex;align-items:center;gap:10px}
 .res-step{display:flex;align-items:center;gap:6px;flex:0 0 auto}
 .res-btn{width:27px;height:27px;border-radius:7px;border:1px solid var(--line2);background:var(--field);
-  color:var(--ink);font-family:var(--mono);font-size:14px;cursor:pointer;line-height:1;transition:.12s}
+  color:var(--ink);font-family:var(--mono);font-size:14px;cursor:pointer;line-height:1;transition:var(--t-fast)}
 .res-btn:hover{color:var(--maq);border-color:var(--maq)}
 .res-btn.dmg:hover{color:var(--escarlate);border-color:rgba(209,96,63,.5)}
 
@@ -893,7 +900,7 @@ select option{background:var(--panel);color:var(--ink)}
    ============================================================ */
 .status-hud{border:1px solid var(--line2);border-radius:18px;padding:16px 16px 18px;background:var(--surface);
   box-shadow:var(--glass-rim), 0 10px 30px rgba(0,0,0,.22);margin-bottom:20px;container-type:inline-size}
-.hud-sec-label{font-family:var(--mono);font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-faint);
+.hud-sec-label{font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.24em;text-transform:uppercase;color:var(--ink-faint);
   display:flex;align-items:center;gap:10px;margin:0 2px 11px}
 .hud-sec-label .ln{flex:1;height:1px;background:linear-gradient(90deg,var(--line2),transparent)}
 
@@ -933,9 +940,9 @@ select option{background:var(--panel);color:var(--ink)}
 .stat-tile{position:relative;
   border:1px solid color-mix(in srgb,var(--stc,var(--maq)) 42%,transparent);
   background:color-mix(in srgb,var(--stc,var(--maq)) 7%,transparent);
-  border-radius:14px;padding:16px 12px 12px;display:flex;flex-direction:column;align-items:center;gap:2px;transition:border-color .15s}
+  border-radius:14px;padding:16px 12px 12px;display:flex;flex-direction:column;align-items:center;gap:2px;transition:border-color var(--t-fast)}
 .stat-tile:hover{border-color:var(--stc,var(--maq))}
-.stat-tile .mod-badge{position:absolute;top:9px;right:9px;font-family:var(--mono);font-weight:700;font-size:10px;
+.stat-tile .mod-badge{position:absolute;top:9px;right:9px;font-family:var(--mono);font-weight:700;font-size:var(--fs-label);
   padding:2px 6px;border-radius:6px;background:rgba(201,164,92,.16);color:var(--brass)}
 .stat-val{font-family:var(--mono);font-weight:700;font-size:26px;line-height:1;color:var(--bone);margin:6px 0 3px}
 .stat-val.calc{color:var(--stc,var(--maq))}
@@ -954,7 +961,7 @@ select option{background:var(--panel);color:var(--ink)}
    sem precisar de um componente novo nem duplicar o HTML dos dois tamanhos. */
 .stat-grid.compact{grid-template-columns:repeat(auto-fill,minmax(148px,1fr))}
 .stat-tile.compact{flex-direction:row;align-items:center;gap:7px;min-width:0;border-radius:10px;padding:7px 9px}
-.stat-tile.compact .mod-badge{position:static;order:2;font-size:9.5px;padding:1px 5px}
+.stat-tile.compact .mod-badge{position:static;order:2;font-size:var(--fs-label);padding:1px 5px}
 .stat-tile.compact .stat-val{order:3;font-size:14px;margin:0;flex:0 0 auto}
 .stat-tile.compact .stat-name{order:1;flex:1;min-width:0;text-align:left;max-width:none}
 .stat-tile.compact .stat-ctl{order:4;margin-top:0;gap:4px;flex:0 0 auto}
@@ -967,7 +974,7 @@ select option{background:var(--panel);color:var(--ink)}
   border:1px solid color-mix(in srgb,var(--skc,var(--maq)) 42%,transparent);
   background:color-mix(in srgb,var(--skc,var(--maq)) 7%,transparent);
   border-radius:10px;padding:8px 10px}
-.skill-chip .skc-name{flex:1;min-width:0;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;
+.skill-chip .skc-name{flex:1;min-width:0;font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.08em;text-transform:uppercase;
   color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .skill-chip .skc-val{flex:0 0 auto;font-family:var(--mono);font-weight:700;font-size:14px;color:var(--skc,var(--maq))}
 
@@ -977,14 +984,14 @@ select option{background:var(--panel);color:var(--ink)}
    que é ancestral comum do rótulo e dos chips, pra cascatear (custom property herda por DOM). */
 .prof-groups{display:flex;flex-direction:column;gap:14px}
 .prof-group{display:flex;flex-direction:column;gap:6px}
-.prof-cat{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;letter-spacing:.16em;
+.prof-cat{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.16em;
   text-transform:uppercase;color:var(--pcc,var(--ink-faint))}
 .prof-cat .ic{width:13px;height:13px}
 .prof-chips{display:flex;flex-wrap:wrap;gap:7px}
 .prof-chip{font-family:var(--mono);font-size:11px;letter-spacing:.03em;padding:6px 12px;border-radius:999px;
   border:1px solid var(--line2);background:var(--field-2);color:var(--ink-faint);}
 .prof-chip.on{border-color:var(--pcc,var(--brass));background:color-mix(in srgb,var(--pcc,var(--brass)) 18%,var(--surface));color:var(--pcc,var(--brass));font-weight:600}
-button.prof-chip{cursor:pointer;transition:border-color .12s,transform .12s;font:inherit}
+button.prof-chip{cursor:pointer;transition:border-color var(--t-fast),transform var(--t-fast);font:inherit}
 button.prof-chip:hover{border-color:var(--pcc,var(--brass));transform:translateY(-1px)}
 
 /* cabeçalho de categoria no construtor de sistema — catálogo de Proficiências e painel de
@@ -992,14 +999,14 @@ button.prof-chip:hover{border-color:var(--pcc,var(--brass));transform:translateY
 .prof-cat-head{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;letter-spacing:.14em;
   text-transform:uppercase;color:var(--pcc,var(--ink-dim));margin:16px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--line2)}
 .prof-cat-head .ic{color:var(--pcc,var(--ink-dim))}
-.prof-cat-head.sm{font-size:10px;margin:10px 0 6px}
+.prof-cat-head.sm{font-size:var(--fs-label);margin:10px 0 6px}
 
 /* seletor de cor próprio — um color picker de verdade (quadrado de saturação/brilho + barra de
    matiz arrastáveis + hex + paleta), substitui <input type="color"> nativo do navegador — ver
    openColorPicker() em sistema.html/arvore.html. O gatilho é este swatch; o popover flutuante é
    .color-pop, montado sob demanda em document.body (position:fixed, sempre por cima). */
 .color-swatch{--sw:#7ee6dc;width:34px;height:34px;padding:0;border-radius:8px;border:1px solid var(--line2);
-  background:var(--sw);cursor:pointer;transition:transform .12s,border-color .12s;flex:0 0 auto;appearance:none}
+  background:var(--sw);cursor:pointer;transition:transform var(--t-fast),border-color var(--t-fast);flex:0 0 auto;appearance:none}
 .color-swatch:hover{transform:scale(1.06);border-color:var(--brass)}
 .color-swatch.full{width:100%;height:38px;border-radius:8px}
 .color-swatch.sm{width:24px;height:24px;border-radius:6px}
@@ -1023,7 +1030,7 @@ button.prof-chip:hover{border-color:var(--pcc,var(--brass));transform:translateY
    swatch nunca tem px fixo, sempre 100% da própria coluna (com aspect-ratio pra ficar quadrado). */
 .cp-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}
 .cp-swatch{--sw:#000;width:100%;aspect-ratio:1;min-width:0;border-radius:6px;border:1px solid rgba(255,255,255,.14);
-  background:var(--sw);cursor:pointer;padding:0;transition:transform .1s;appearance:none}
+  background:var(--sw);cursor:pointer;padding:0;transition:transform var(--t-fast);appearance:none}
 .cp-swatch:hover{transform:scale(1.18)}
 
 /* seletor "ƒ(x)" de função/apelido pra campos de fórmula livre — mesmo padrão de popover ancorado
@@ -1031,9 +1038,9 @@ button.prof-chip:hover{border-color:var(--pcc,var(--brass));transform:translateY
    sistema.html. */
 .func-pop{position:fixed;z-index:120;background:var(--surface);border:1px solid var(--line2);border-radius:14px;
   padding:8px;box-shadow:0 18px 44px rgba(0,0,0,.5);width:280px;max-height:360px;overflow-y:auto;animation:popIn .16s var(--ease)}
-.func-pop-head{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);padding:6px 8px 8px}
+.func-pop-head{font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);padding:6px 8px 8px}
 .func-pop-item{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;
-  background:transparent;border:0;border-radius:8px;padding:8px;cursor:pointer;transition:background .12s}
+  background:transparent;border:0;border-radius:8px;padding:8px;cursor:pointer;transition:background var(--t-fast)}
 .func-pop-item:hover{background:var(--field)}
 .func-pop-name{font-family:var(--mono);font-size:13px;color:var(--maq)}
 .func-pop-desc{font-family:var(--serif);font-size:12.5px;color:var(--ink-dim)}
@@ -1046,7 +1053,7 @@ button.prof-chip:hover{border-color:var(--pcc,var(--brass));transform:translateY
    da grade de status, em vez de uma coluna estreita e desproporcional do lado direito */
 .points-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:16px;padding:14px 18px;
   border-radius:14px;border:1px solid rgba(201,164,92,.42);background:rgba(201,164,92,.07)}
-.points-bar .pb-label{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--brass);white-space:nowrap}
+.points-bar .pb-label{font-family:var(--mono);font-size:var(--fs-label);font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--brass);white-space:nowrap}
 .points-bar .pb-value{font-family:var(--disp);font-weight:700;font-size:26px;color:var(--brass);line-height:1}
 .points-bar .pb-hint{font-family:var(--serif);font-size:13px;color:var(--ink-dim)}
 .points-bar .btn{margin-left:auto;width:auto}
@@ -1059,7 +1066,7 @@ button.prof-chip:hover{border-color:var(--pcc,var(--brass));transform:translateY
   padding:11px 14px;margin-bottom:8px;background:var(--field-2)}
 .formula-row .fn{flex:1;min-width:0}
 .formula-row .fn b{font-family:var(--serif);font-size:14.5px;color:var(--ink)}
-.formula-row .fn .fbreak{display:block;font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-top:2px}
+.formula-row .fn .fbreak{display:block;font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint);margin-top:2px}
 .formula-row .fresult{font-family:var(--disp);font-weight:700;font-size:22px;color:var(--maq);flex:0 0 auto;min-width:44px;text-align:center}
 .fterm-row{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
 .fterm-row select,.fterm-row input{background:var(--field);border:1px solid var(--line2);border-radius:8px;
@@ -1083,7 +1090,7 @@ button.prof-chip:hover{border-color:var(--pcc,var(--brass));transform:translateY
 
 #yt-bar .yt-controls{display:flex;align-items:center;gap:3px;flex:0 0 auto}
 #yt-bar .yt-btn{width:30px;height:30px;border-radius:9px;border:1px solid var(--line2);background:var(--field);
-  color:var(--ink);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;transition:.12s;flex-shrink:0}
+  color:var(--ink);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;transition:var(--t-fast);flex-shrink:0}
 #yt-bar .yt-btn:hover{color:var(--brass);border-color:var(--brass)}
 #yt-bar .yt-btn.play{width:38px;height:38px;background:var(--brass);color:var(--on-primary);border:0;box-shadow:var(--cta-glow)}
 #yt-bar .yt-btn.play:hover{box-shadow:var(--cta-glow-h);border-color:transparent}
@@ -1095,7 +1102,7 @@ button.prof-chip:hover{border-color:var(--pcc,var(--brass));transform:translateY
 #yt-bar .yt-btn.tgl:hover{color:var(--ink);border-color:var(--line2)}
 #yt-bar .yt-btn.tgl.active{color:var(--maq);border-color:var(--maq)}
 #yt-bar .yt-btn.tgl .one{display:none;position:absolute;top:-2px;right:-2px;
-  font-family:var(--mono);font-size:7px;font-weight:700;color:var(--app-bg);background:var(--maq);
+  font-family:var(--mono);font-size:var(--fs-label);font-weight:700;color:var(--app-bg);background:var(--maq);
   line-height:1;padding:1px 2px;border-radius:3px}
 
 #yt-bar .yt-track{flex:0 1 130px;min-width:0;font-family:var(--serif);font-size:12.5px;color:var(--ink-dim);
@@ -1104,7 +1111,7 @@ button.prof-chip:hover{border-color:var(--pcc,var(--brass));transform:translateY
 #yt-bar .yt-track.idle{color:var(--ink-faint);font-style:italic}
 
 #yt-bar .yt-progress-wrap{flex:1;display:flex;align-items:center;gap:8px;min-width:0}
-#yt-bar .yt-time{font-family:var(--mono);font-size:10px;color:var(--ink-faint);flex:0 0 auto}
+#yt-bar .yt-time{font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint);flex:0 0 auto}
 #yt-bar .yt-vol{display:flex;align-items:center;gap:6px;flex:0 0 auto}
 
 #yt-bar #yt-seek,#yt-bar #yt-vol{-webkit-appearance:none;appearance:none;height:5px;border-radius:5px;
@@ -1119,7 +1126,7 @@ button.prof-chip:hover{border-color:var(--pcc,var(--brass));transform:translateY
 /* Jogador não controla — barra de progresso é só visual (sem thumb arrastável) */
 #yt-bar .yt-progress-bar{flex:1;min-width:0;height:5px;border-radius:5px;background:var(--field-2);overflow:hidden;position:relative}
 #yt-bar .yt-progress-bar .yt-fill{display:block;height:100%;width:100%;border-radius:5px;
-  background:var(--brass);transform:scaleX(0);transform-origin:left;transition:transform .2s linear}
+  background:var(--brass);transform:scaleX(0);transform-origin:left;transition:transform var(--t) linear}
 
 /* igual às janelas de confirmação/guia (.ui-modal): fundo inteiro escurecido, foco na janela —
    não é mais um popup pequeno no canto (que ficava minúsculo demais pra uma playlist inteira,
@@ -1153,7 +1160,7 @@ button.prof-chip:hover{border-color:var(--pcc,var(--brass));transform:translateY
 #yt-panel .url-row input::placeholder{color:var(--ink-faint)}
 #yt-panel .url-row input:focus{border-color:var(--brass)}
 #yt-panel #yt-search{padding:0 16px;border:1px solid var(--line2);border-radius:10px;background:var(--field);
-  color:var(--ink-dim);font-family:var(--mono);font-size:10px;letter-spacing:.16em;
+  color:var(--ink-dim);font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.16em;
   text-transform:uppercase;cursor:pointer;transition:all var(--dur-1) var(--ease)}
 #yt-panel #yt-search:hover{color:var(--ink);background:rgba(255,255,255,.10);transform:translateY(-1px)}
 #yt-panel #yt-search:active{transform:scale(.97)}
@@ -1168,12 +1175,12 @@ button.prof-chip:hover{border-color:var(--pcc,var(--brass));transform:translateY
 #yt-panel .card img{width:72px;height:54px;object-fit:cover;border-radius:8px;flex-shrink:0}
 #yt-panel .card .meta{min-width:0;display:flex;flex-direction:column;justify-content:center}
 #yt-panel .card .meta .t{font-family:var(--serif);font-size:14px;font-weight:600;color:var(--ink);line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-#yt-panel .card .meta .a{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-dim);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#yt-panel .card .meta .a{font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-dim);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 #yt-panel .pl-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
-#yt-panel .pl-head .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-dim)}
+#yt-panel .pl-head .lbl{font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-dim)}
 #yt-panel #pl-all{width:auto!important;height:auto!important;padding:6px 10px!important;
-  font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;
+  font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.14em;text-transform:uppercase;
   color:var(--ink-dim);background:var(--field);border:1px solid var(--line2)!important;border-radius:7px}
 #yt-panel #pl-all:hover{color:var(--ink)}
 
@@ -1186,7 +1193,7 @@ button.prof-chip:hover{border-color:var(--pcc,var(--brass));transform:translateY
 
 #yt-panel .acts{display:flex;gap:8px}
 #yt-panel .acts button{flex:1;padding:12px;border:1px solid var(--line2);border-radius:7px;cursor:pointer;
-  font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+  font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.16em;text-transform:uppercase;
   background:var(--field);color:var(--ink-dim);transition:all var(--dur-1) var(--ease)}
 #yt-panel .acts button:hover{color:var(--ink);background:rgba(255,255,255,.10);transform:translateY(-1px)}
 #yt-panel .acts button:active{transform:scale(.97)}
@@ -1205,27 +1212,27 @@ button.prof-chip:hover{border-color:var(--pcc,var(--brass));transform:translateY
    linha fina dividindo — fica claro visualmente onde termina uma coisa e começa a outra */
 #yt-panel .yt-section{background:var(--field-2);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:12px;min-width:0}
 #yt-panel .yt-section:last-of-type{margin-bottom:0}
-#yt-panel .yt-section-label{font-family:var(--mono);font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:10px}
+#yt-panel .yt-section-label{font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:10px}
 
 #yt-panel .queue-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-#yt-panel .queue-head .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-dim)}
+#yt-panel .queue-head .lbl{font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-dim)}
 #yt-panel #yt-clear{background:none;border:none;color:var(--escarlate);font-family:var(--mono);
-  font-size:9px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;
+  font-size:var(--fs-label);letter-spacing:.14em;text-transform:uppercase;cursor:pointer;
   padding:4px 8px;border-radius:6px;transition:all var(--dur-1) var(--ease)}
 #yt-panel #yt-clear:hover{background:var(--escarlate);color:#fff}
 #yt-panel #yt-queue-empty{font-family:var(--serif);font-style:italic;font-size:12.5px;color:var(--ink-faint);padding:6px 2px}
 #yt-panel .qrow{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--line);min-width:0}
 #yt-panel .qrow:last-child{border-bottom:none}
 #yt-panel .qrow.current{background:linear-gradient(90deg,rgba(201,164,92,.14),transparent);box-shadow:inset 2px 0 0 var(--brass)}
-#yt-panel .qrow .idx{font-family:var(--mono);font-size:10px;color:var(--ink-faint);min-width:18px;cursor:pointer}
+#yt-panel .qrow .idx{font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint);min-width:18px;cursor:pointer}
 #yt-panel .qrow.current .idx{color:var(--brass)}
-#yt-panel .src-tag{font-family:var(--mono);font-size:8px;letter-spacing:.06em;color:var(--ink-faint);
+#yt-panel .src-tag{font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.06em;color:var(--ink-faint);
   border:1px solid var(--line2);border-radius:4px;padding:1px 4px;flex:0 0 auto}
 #yt-panel .qrow .qt{flex:1;min-width:0;font-family:var(--serif);font-size:13px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
 #yt-panel .qrow .x{width:22px;height:22px;border:none;border-radius:6px;background:transparent;color:var(--ink-faint);cursor:pointer;font-size:12px}
 #yt-panel .qrow .x:hover{background:rgba(209,96,63,.15);color:var(--escarlate)}
 
-#yt-panel .hint{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);margin-top:12px;line-height:1.7;text-align:center}
+#yt-panel .hint{font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);margin-top:12px;line-height:1.7;text-align:center}
 
 #yt-player-host{position:fixed;left:-9999px;top:-9999px;width:320px;height:180px;overflow:hidden}
 #sc-player-host{position:fixed;left:-9999px;top:-9999px;width:300px;height:166px;overflow:hidden}
@@ -1252,7 +1259,7 @@ body.has-ytbar .page{padding-bottom:126px}
    ============================================================ */
 .theme-fab{position:fixed;left:16px;bottom:16px;z-index:70;width:42px;height:42px;border-radius:50%;cursor:pointer;
   border:1px solid var(--line2);background:var(--panel);color:var(--ink);font-size:18px;line-height:1;
-  display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,.28);transition:transform .15s, border-color .15s}
+  display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,.28);transition:transform var(--t-fast), border-color var(--t-fast)}
 .theme-fab:hover{transform:scale(1.08);border-color:var(--brass)}
 
 /* ============================================================
@@ -1261,7 +1268,7 @@ body.has-ytbar .page{padding-bottom:126px}
 @media (max-width:760px){
   .nav{padding:11px 14px;gap:10px}
   .brand{font-size:13px;letter-spacing:.12em}
-  .brand small{letter-spacing:.28em}
+  .brand small{letter-spacing:.18em}
   .home{padding:20px 14px 84px}
   .home-head h1{font-size:22px}
   .page{padding:8px 14px 84px}
@@ -1286,7 +1293,7 @@ body.has-ytbar .page{padding-bottom:126px}
   body.has-ytbar .page{padding-bottom:118px}
   #yt-bar{height:44px;padding:0 10px;gap:6px}
   #yt-bar .yt-controls{gap:2px}
-  #yt-bar .yt-btn{width:26px;height:26px;font-size:10px}
+  #yt-bar .yt-btn{width:26px;height:26px;font-size:var(--fs-label)}
   #yt-bar .yt-btn svg{width:12px;height:12px}
   #yt-bar .yt-btn.play{width:30px;height:30px}
   #yt-bar .yt-btn.play svg{width:14px;height:14px}
@@ -1358,11 +1365,11 @@ body.has-ytbar .page{padding-bottom:126px}
   font-family:var(--mono);font-size:12px;color:var(--ink-faint);text-align:center;padding:20px}
 .eq-slot{position:absolute;z-index:1;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;
   border-radius:12px;border:2px solid var(--line2);background:var(--field) center/60% no-repeat;
-  cursor:grab;touch-action:none;transition:border-color .15s,box-shadow .15s}
+  cursor:grab;touch-action:none;transition:border-color var(--t-fast),box-shadow var(--t-fast)}
 .eq-slot:hover{border-color:var(--brass);box-shadow:0 0 0 3px color-mix(in srgb, var(--brass) 18%, transparent)}
 .eq-slot:active{cursor:grabbing}
 .eq-slot-label{position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);white-space:nowrap;
-  font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--ink-dim);pointer-events:none}
+  font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.04em;color:var(--ink-dim);pointer-events:none}
 .eq-slot.filled{border-color:var(--maq);background-size:cover}
 .eq-slot.drag-over{border-color:var(--brass);box-shadow:0 0 0 3px color-mix(in srgb, var(--brass) 30%, transparent)}
 .eq-slot.drag-reject{border-color:var(--escarlate);box-shadow:0 0 0 3px color-mix(in srgb, var(--escarlate) 30%, transparent)}
@@ -1390,7 +1397,7 @@ body.has-ytbar .page{padding-bottom:126px}
 .gal-thumb:hover{transform:translateY(-2px)}
 .gal-thumb.main{border-color:var(--brass)}
 .gal-thumb img{width:100%;height:100%;object-fit:cover;display:block}
-.gal-badge{position:absolute;top:6px;left:6px;z-index:2;display:flex;align-items:center;gap:3px;font-family:var(--mono);font-size:8px;
+.gal-badge{position:absolute;top:6px;left:6px;z-index:2;display:flex;align-items:center;gap:3px;font-family:var(--mono);font-size:var(--fs-label);
   letter-spacing:.06em;text-transform:uppercase;color:var(--on-primary);background:var(--brass);padding:3px 7px 3px 5px;border-radius:999px}
 .gal-badge svg{width:10px;height:10px}
 /* ações (trocar principal / remover) só aparecem ao passar o mouse — a miniatura fica limpa por padrão */
@@ -1399,7 +1406,7 @@ body.has-ytbar .page{padding-bottom:126px}
 .gal-thumb:hover .gal-thumb-actions,.gal-thumb:focus-within .gal-thumb-actions{opacity:1;pointer-events:auto}
 .gal-act{width:24px;height:24px;border-radius:50%;padding:0;display:flex;align-items:center;justify-content:center;
   background:rgba(8,12,20,.6);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.25);
-  color:#f1e7d4;cursor:pointer;transition:border-color .15s,color .15s}
+  color:#f1e7d4;cursor:pointer;transition:border-color var(--t-fast),color var(--t-fast)}
 .gal-act svg{width:12px;height:12px}
 .gal-act:hover{border-color:var(--brass);color:var(--brass)}
 .gal-act.danger:hover{border-color:#e2685a;color:#e2685a}
@@ -1447,7 +1454,7 @@ body.has-ytbar .page{padding-bottom:126px}
 .portrait-edit-btn{position:absolute;right:-4px;bottom:-4px;width:26px;height:26px;border-radius:50%;padding:0;
   background:rgba(8,12,20,.75);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
   border:1px solid rgba(255,255,255,.25);color:#f1e7d4;display:flex;align-items:center;justify-content:center;
-  cursor:pointer;font-size:11px;transition:border-color .15s,color .15s,opacity var(--dur-2) var(--ease);
+  cursor:pointer;font-size:11px;transition:border-color var(--t-fast),color var(--t-fast),opacity var(--dur-2) var(--ease);
   opacity:0;pointer-events:none}
 .char-cover:hover .portrait-edit-btn,.char-cover:focus-within .portrait-edit-btn{opacity:1;pointer-events:auto}
 .portrait-edit-btn:hover{border-color:var(--brass);color:var(--brass)}
@@ -1463,13 +1470,13 @@ body.has-ytbar .page{padding-bottom:126px}
    sobre a foto de capa */
 .char-cover-info .class-tag{text-shadow:0 1px 3px rgba(0,0,0,.55)}
 /* seletor inline de classe/subclasse (antes de escolhidas) — parece uma etiqueta, mas é clicável */
-.class-pick-inline{font-family:var(--mono);font-size:10.5px;letter-spacing:.03em;background:var(--field-2);
+.class-pick-inline{font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.03em;background:var(--field-2);
   border:1px dashed var(--line2);border-radius:999px;padding:4px 11px;color:var(--ink-dim);cursor:pointer;max-width:160px}
 .class-pick-inline:hover{border-color:var(--brass);color:var(--brass)}
 .char-cover-info .class-pick-inline{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.32);color:#f1e7d4}
 .char-bio-row{display:flex;align-items:center;gap:16px}
 .char-tags{display:flex;flex-wrap:wrap;gap:6px}
-.char-tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;color:var(--ink-dim);
+.char-tag{font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.04em;color:var(--ink-dim);
   background:var(--field-2);border:1px solid var(--line2);border-radius:999px;padding:4px 11px}
 @media (max-width:600px){
   .char-cover-spacer{min-height:120px}
@@ -1491,7 +1498,7 @@ body.has-ytbar .page{padding-bottom:126px}
 .res-track{position:relative;flex:1;min-width:0;height:14px;border-radius:999px;background:var(--field-2);
   border:1px solid var(--line2);overflow:hidden;box-shadow:inset 0 1px 4px rgba(0,0,0,.3)}
 .res-fill{position:absolute;inset:0;width:0%;border-radius:999px;background:var(--res-color,var(--maq));
-  transition:width .35s var(--ease)}
+  transition:width var(--t-slow) var(--ease)}
 /* pillar III: um flash breve no preenchimento inteiro em vez do repaint instantâneo — dano/cura
    ainda avisa visualmente, só que na barra única em vez de varrer segmento por segmento */
 .res-fill.res-fill-heal{animation:resFillHeal .45s var(--ease)}
@@ -1502,10 +1509,10 @@ body.has-ytbar .page{padding-bottom:126px}
 /* barra de Proteção — mais fina, sempre acima da barra do recurso, soma a Proteção de todo item
    equipado (armadura/escudo). Cor fixa (--maq) em vez de --res-color: é um valor à parte da vida,
    não do recurso em si — fica claro que "isso aqui é escudo", igual em qualquer recurso da ficha. */
-.res-shield-badge{font-family:var(--mono);font-size:10px;color:var(--maq)}
+.res-shield-badge{font-family:var(--mono);font-size:var(--fs-label);color:var(--maq)}
 .res-shield-track{position:relative;height:5px;border-radius:999px;background:var(--field-2);
   border:1px solid var(--line2);overflow:hidden;margin-bottom:6px}
-.res-shield-fill{position:absolute;inset:0;width:0%;border-radius:999px;background:var(--maq);opacity:.85;transition:width .35s var(--ease)}
+.res-shield-fill{position:absolute;inset:0;width:0%;border-radius:999px;background:var(--maq);opacity:.85;transition:width var(--t-slow) var(--ease)}
 
 /* popover de "sofrer dano" — pergunta a quantidade, aplica com ou sem a Proteção equipada abatendo */
 .dmg-pop{position:fixed;z-index:120;background:var(--surface);border:1px solid var(--line2);border-radius:14px;
@@ -1534,7 +1541,7 @@ body:not(.arvore-page) #fx{display:none!important}
    escopado em .mesa-page; app/sistema/login não são afetados
    ============================================================ */
 .mesa-nav{display:flex;flex-direction:column;gap:3px}
-.mesa-nav button,.mesa-nav a{display:flex;align-items:center;gap:9px;width:100%;text-align:left;font-family:var(--mono);font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-dim);background:transparent;border:0;border-radius:9px;padding:11px 12px;cursor:pointer;text-decoration:none;transition:background .12s,color .12s}
+.mesa-nav button,.mesa-nav a{display:flex;align-items:center;gap:9px;width:100%;text-align:left;font-family:var(--mono);font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-dim);background:transparent;border:0;border-radius:9px;padding:11px 12px;cursor:pointer;text-decoration:none;transition:background var(--t-fast),color var(--t-fast)}
 .mesa-nav button:hover,.mesa-nav a:hover{background:var(--field);color:var(--ink)}
 .mesa-nav button.on{background:color-mix(in srgb,var(--brass) 15%,transparent);color:var(--brass)}
 .mesa-nav .divider{height:1px;background:var(--line);margin:7px 6px}
@@ -1561,7 +1568,7 @@ body:not(.arvore-page) #fx{display:none!important}
     background:transparent;border:0;border-bottom:1px solid var(--line);color:var(--ink-dim);
     font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;
     padding:10px 2px;margin-bottom:10px;cursor:pointer}
-  .rail-mobile-toggle svg{transition:transform .2s var(--ease)}
+  .rail-mobile-toggle svg{transition:transform var(--t) var(--ease)}
   body.mobile-rail-collapsed .rail-mobile-toggle svg{transform:rotate(-90deg)}
   body.mobile-rail-collapsed #rail-left-body{display:none}
 }
@@ -1585,19 +1592,19 @@ body:not(.arvore-page) #fx{display:none!important}
   /* esconder/mostrar os trilhos laterais (jogadores à esquerda, dados à direita) sem mudar o
      visual deles — só desliza pra fora e devolve o espaço pro conteúdo do meio. Visual dos
      trilhos em si (cor, borda, conteúdo) fica 100% igual; só a posição/visibilidade muda. */
-  .mesa-page .mesa-body{transition:right .25s var(--ease),grid-template-columns .25s var(--ease)}
+  .mesa-page .mesa-body{transition:right var(--t) var(--ease),grid-template-columns var(--t) var(--ease)}
   .mesa-page.rail-collapsed .mesa-body{grid-template-columns:0px 1fr}
-  .mesa-page .mesa-rail-left{transition:transform .25s var(--ease),opacity .2s var(--ease)}
+  .mesa-page .mesa-rail-left{transition:transform var(--t) var(--ease),opacity var(--t) var(--ease)}
   .mesa-page.rail-collapsed .mesa-rail-left{transform:translateX(-100%);opacity:0;pointer-events:none}
   .mesa-page.dice-collapsed .mesa-body{right:0}
-  .mesa-page .dice-panel{transition:transform .25s var(--ease)}
+  .mesa-page .dice-panel{transition:transform var(--t) var(--ease)}
   .mesa-page.dice-collapsed .dice-panel{transform:translateX(100%)}
 
   .rail-toggle{position:fixed;top:50%;transform:translateY(-50%);z-index:25;width:18px;height:56px;
     border:1px solid var(--line2);background:var(--panel);color:var(--ink-faint);cursor:pointer;padding:0;
-    display:flex;align-items:center;justify-content:center;transition:left .25s var(--ease),right .25s var(--ease)}
+    display:flex;align-items:center;justify-content:center;transition:left var(--t) var(--ease),right var(--t) var(--ease)}
   .rail-toggle:hover{color:var(--ink)}
-  .rail-toggle svg{width:11px;height:11px;transition:transform .25s var(--ease)}
+  .rail-toggle svg{width:11px;height:11px;transition:transform var(--t) var(--ease)}
   .rail-toggle.left{left:340px;border-radius:0 8px 8px 0;border-left:0}
   .mesa-page.rail-collapsed .rail-toggle.left{left:0}
   .mesa-page.rail-collapsed .rail-toggle.left svg{transform:rotate(180deg)}
@@ -1650,22 +1657,22 @@ body.home-page .action-card h4{font-family:var(--disp);font-size:16px;color:var(
    barra em vez de encostar na borda de baixo do header, que é onde ele precisa estar */
 .mesa-toptabs{display:flex;align-items:stretch;align-self:stretch;gap:2px;margin-left:6px;min-width:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .mesa-toptabs::-webkit-scrollbar{display:none}
-.mesa-toptabs button{display:flex;align-items:center;height:100%;font-family:var(--mono);font-weight:500;font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-faint);background:transparent;border:0;padding:0 13px;cursor:pointer;white-space:nowrap;box-shadow:inset 0 -2px 0 transparent;transition:color .12s,box-shadow .12s}
+.mesa-toptabs button{display:flex;align-items:center;height:100%;font-family:var(--mono);font-weight:500;font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-faint);background:transparent;border:0;padding:0 13px;cursor:pointer;white-space:nowrap;box-shadow:inset 0 -2px 0 transparent;transition:color var(--t-fast),box-shadow var(--t-fast)}
 .mesa-toptabs button:hover{color:var(--ink-dim)}
 .mesa-toptabs button.on{color:var(--bone);box-shadow:inset 0 -2px 0 var(--brass)}
-.party-label{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-faint);margin:0 2px 12px}
+.party-label{font-family:var(--mono);font-size:var(--fs-label);font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-faint);margin:0 2px 12px}
 .party-row{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:11px;border:1px solid var(--line);margin-bottom:7px;background:var(--field-2)}
 .party-row.me{border-color:color-mix(in srgb,var(--brass) 45%,transparent);background:color-mix(in srgb,var(--brass) 10%,transparent)}
 .party-av{position:relative;width:32px;height:32px;flex:none;border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:700;font-size:14px;background:var(--field);border:1px solid var(--line2);color:var(--ink-dim)}
 .party-row.me .party-av{background:var(--brass);color:var(--on-primary);border:0}
 /* ponto de presença (online agora) — canal efêmero via Realtime Presence, não é persistido */
 .presence-dot{position:absolute;right:-2px;bottom:-2px;width:9px;height:9px;border-radius:50%;
-  background:var(--ink-faint);border:2px solid var(--panel);transition:background .2s}
+  background:var(--ink-faint);border:2px solid var(--panel);transition:background var(--t)}
 .presence-dot.on{background:#5fbf6f}
-.autosave-hint{font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink-faint);font-size:10px;margin-left:6px}
+.autosave-hint{font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink-faint);font-size:var(--fs-label);margin-left:6px}
 .party-info{min-width:0}
 .party-name{font-family:var(--serif);font-weight:600;font-size:13px;color:var(--bone);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.party-role{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);margin-top:2px}
+.party-role{font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);margin-top:2px}
 /* lista de pedidos de item (só Mestre) — antes um botão+painel flutuantes, agora fixa aqui no
    trilho, entre o grupo e as ações de baixo. :empty some de vez pro jogador (o bloco nunca recebe
    conteúdo nesse caso — ver mountItemRequests), sem deixar um espaço vazio com borda sobrando. */
@@ -1786,7 +1793,7 @@ body.home-page .action-card h4{font-family:var(--disp);font-size:16px;color:var(
   .stat-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
   .stat-tile{padding:14px 6px 10px}
   .stat-val{font-size:22px}
-  .stat-name{font-size:10px;letter-spacing:.06em}
+  .stat-name{font-size:var(--fs-label);letter-spacing:.06em}
   .stat-ctl{gap:6px}
   .hud-cell .plus,.stat-ctl .plus{width:34px;height:34px}
   .res-btn{width:36px;height:36px;font-size:16px}
@@ -1819,7 +1826,7 @@ body.home-page .card-tile.featured{overflow:visible}
   .eq-text{max-width:none}
   .eq-layout{gap:14px}
   .eq-side-editor{position:static;flex:1 1 auto}
-  .eq-slot-label{font-size:9px}
+  .eq-slot-label{font-size:var(--fs-label)}
   /* sub-abas em pílula (Itens/Moedas/Tipos de dano/...): uma linha só, rolando se não couber */
   .seg{overflow-x:auto;scrollbar-width:none}
   .seg::-webkit-scrollbar{display:none}

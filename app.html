@@ -75,7 +75,7 @@
         <form onsubmit="return doCreate(event)">
           <div class="fld"><label for="new-system">Sistema da campanha</label><select id="new-system" class="fld-input" required onchange="onNewSystemChange()"></select>
             <div class="fld-err" id="new-system-err">Escolha um sistema para a mesa.</div>
-            <div id="new-system-preview" style="font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);margin-top:6px"></div></div>
+            <div id="new-system-preview" style="font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint);margin-top:6px"></div></div>
           <div class="inline-form">
             <input id="new-name" placeholder="Nome da mesa" required maxlength="60">
             <button class="btn go auto" type="submit"><span class="spin"></span>Criar</button>
@@ -231,7 +231,7 @@
         <div class="section-title" role="heading" aria-level="2" style="margin:0">Meus pacotes de itens</div>
         <button class="btn go auto sm" onclick="openPackageForm()">+ Criar pacote</button>
       </div>
-      <p style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);line-height:1.6;margin:0 0 14px">
+      <p style="font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint);line-height:1.6;margin:0 0 14px">
         Agrupe vários itens da sua biblioteca num pacote — depois, dentro de qualquer sistema, importe o pacote inteiro de uma vez em vez de copiar item por item.</p>
 
       <div id="package-editor" class="surface" style="display:none;margin-bottom:20px"></div>
@@ -1096,12 +1096,12 @@ window.openPackageForm = (id = null) => {
   box.innerHTML = `
     <h4 style="font-family:var(--disp);font-size:17px;color:var(--bone);margin:0 0 16px">${pkg ? 'Editar pacote' : 'Novo pacote'}</h4>
     <div class="fld" style="margin-bottom:14px"><label>Nome do pacote</label><input id="pkg-name" maxlength="60" value="${esc(pkg?.name || '')}" placeholder="Ex.: Kit inicial de aventureiro"></div>
-    <label style="display:block;font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:8px">Itens do pacote</label>
+    <label style="display:block;font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:8px">Itens do pacote</label>
     <div id="pkg-item-list" class="list" style="max-height:360px;overflow:auto;margin-bottom:14px">
       ${items.length ? items.map((it) => `
         <label class="list-row" style="cursor:pointer">
           <input type="checkbox" value="${it.id}" ${selected.has(it.id) ? 'checked' : ''} style="width:16px;height:16px;accent-color:var(--brass);flex:0 0 auto">
-          <div class="grow"><div class="nm">${esc(it.name)} <span style="font-family:var(--mono);font-size:9px;color:var(--ink-faint)">#${esc(it.item_code || '')}</span></div></div>
+          <div class="grow"><div class="nm">${esc(it.name)} <span style="font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint)">#${esc(it.item_code || '')}</span></div></div>
         </label>`).join('') : '<div class="empty">Crie itens na aba "Criar" primeiro.</div>'}
     </div>
     <div class="full actions">

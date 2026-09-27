@@ -41,19 +41,13 @@ body.arvore-page #fallback::before,body.arvore-page #fallback::after{content:non
     linear-gradient(color-mix(in srgb,var(--line) 35%,transparent) 1px,transparent 1px) 0 0/100% 96px}
 
 /* ---------- painel de vidro ---------- */
-.ffx-panel,.glass,.surface,.action-card,.card-tile{
-  position:relative;background:var(--panel) !important;border:0 !important;
-  -webkit-backdrop-filter:blur(12px) !important;backdrop-filter:blur(12px) !important;
-  box-shadow:inset 0 0 0 1px var(--line2) !important}
-.glass{border-radius:0 !important}
+/* superfície (fundo, borda, chanfro) é do lib/components.css */
+.ffx-panel,.glass,.surface,.action-card,.card-tile{position:relative}
 .action-card{padding:22px}
 .ffx-corners::before,.ffx-corners::after,
 .action-row > .action-card:first-child::before,.action-row > .action-card:first-child::after{content:"";position:absolute;width:10px;height:10px;pointer-events:none}
 .ffx-corners::before,.action-row > .action-card:first-child::before{top:7px;right:7px;border-top:1px solid var(--brass);border-right:1px solid var(--brass)}
 .ffx-corners::after,.action-row > .action-card:first-child::after{bottom:7px;left:7px;border-bottom:1px solid var(--brass);border-left:1px solid var(--brass)}
-.card-tile{transition:transform var(--t) var(--ease),box-shadow var(--t)}
-.card-tile:hover{transform:translateY(-4px);box-shadow:inset 0 0 0 1px var(--brass),0 18px 40px -20px var(--brass) !important}
-.card-tile.featured{box-shadow:inset 0 0 0 1px var(--brass) !important}
 /* selo "Destaque": no theme.css ele fica metade pra fora do cartão (translateY(-50%)); com o chanfro
    (clip-path) essa metade era cortada. Entra no cartão, logo depois do corte do canto. */
 .card-tile.featured .featured-badge{top:0;left:calc(var(--cut) + 4px);transform:none}
@@ -183,45 +177,15 @@ body.embedded .ffx-layout.sis-layout{padding-top:60px}
 .ffx-seg button[aria-pressed="true"]{background:var(--brass);color:var(--on-primary);box-shadow:none}
 
 /* ---------- rótulo de seção ---------- */
-.ffx-label,.section-title,.hud-sec-label{display:flex;align-items:center;gap:14px;font-family:var(--mono);font-size:var(--fs-label);
-  letter-spacing:.18em;text-transform:uppercase;color:var(--ink-faint)}
-/* a home do theme.css reescreve o rótulo com mais especificidade (11px/.24em) */
-body.home-page .section-title{font-size:var(--fs-label);letter-spacing:.18em}
-.ffx-label::after,.section-title::after{content:"";flex:1;height:1px;background:var(--line)}
-.ffx-eyebrow{font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.18em;text-transform:uppercase;color:var(--brass)}
+/* rótulo de seção, eyebrow: lib/components.css */
 .home-head h1,.ffx-h1{font-family:var(--disp);font-weight:400;font-size:40px;letter-spacing:.01em}
 body.home-page .home-head h1{letter-spacing:.01em}
 
-/* ---------- campos ---------- */
-.fld input,.fld select,.fld textarea,.inline-form input,select.fld-input,.toolbar input,.ffx-field{
-  background:var(--field) !important;border:0 !important;border-bottom:1px solid var(--line2) !important;border-radius:0 !important;
-  transition:border-color var(--t),box-shadow var(--t)}
-.fld input:focus,.fld select:focus,.fld textarea:focus,.inline-form input:focus,select.fld-input:focus,.toolbar input:focus,.ffx-field:focus{
-  outline:none;border-bottom-color:var(--brass) !important;box-shadow:0 8px 16px -12px var(--brass)}
-/* estado de erro do theme.css pintava a borda inteira — sem borda inteira, vai pra linha de baixo */
-.fld input.invalid,.fld select.invalid,select.fld-input.invalid{border-bottom-color:var(--escarlate) !important;box-shadow:0 8px 16px -12px var(--escarlate)}
-.fld label{letter-spacing:.18em;margin-bottom:7px}
-
-/* ---------- botões ---------- */
-.btn{border-radius:0;border:0;box-shadow:inset 0 0 0 1px var(--line2);background:transparent}
-.btn:hover{box-shadow:inset 0 0 0 1px var(--brass);color:var(--bone)}
-.btn:disabled,.btn:disabled:hover{background:var(--field);color:var(--ink-faint);box-shadow:none}
-.btn.go{position:relative;overflow:hidden;box-shadow:none;letter-spacing:.16em;
-  transition:filter var(--t),letter-spacing var(--t),transform var(--dur-1) var(--ease)}
-.btn.go:hover{filter:brightness(1.08);letter-spacing:.22em;color:var(--on-primary)}
-.btn.go::after{content:"";position:absolute;top:0;left:0;width:30%;height:100%;pointer-events:none;
-  background:linear-gradient(100deg,transparent,rgba(255,255,255,.35),transparent);animation:vtSweep 3.8s ease-in-out infinite}
-.btn.go:disabled{background:var(--field);color:var(--ink-faint);filter:none} .btn.go:disabled::after{display:none}
-.btn.danger{box-shadow:inset 0 0 0 1px rgba(209,96,63,.4)}
-.btn.danger:hover{background:var(--escarlate);color:#fff;box-shadow:inset 0 0 0 1px var(--escarlate)}
 /* segmentado (Entrar/Criar, Loja/Favoritos…) é .glass no HTML: sem pílula, reto como o resto */
 .seg,.seg button{border-radius:0}
 
-/* ---------- linhas de lista ---------- */
-.list-row{padding:16px 22px;background:var(--panel);border:0 !important;box-shadow:inset 0 0 0 1px var(--line);
-  transition:transform var(--t) var(--ease),box-shadow var(--t),background var(--t)}
-.list-row:hover{transform:translateX(6px);background:var(--panel-2);box-shadow:inset 0 0 0 1px var(--brass),inset 3px 0 0 var(--brass)}
-.list-row.on,.list-row[aria-selected="true"]{background:linear-gradient(90deg,var(--sel-a),var(--panel) 70%);box-shadow:inset 2px 0 0 var(--brass),inset 0 0 0 1px var(--line2)}
+/* ---------- linhas de lista (o resto é do lib/components.css) ---------- */
+.list-row.on,.list-row[aria-selected="true"]{background:var(--surface-2) !important;box-shadow:inset 2px 0 0 var(--primary),inset 0 0 0 1px var(--border) !important}
 
 /* ---------- barras de recurso ---------- */
 /* grade da §4.7 ([rótulo][trilho][valor][−][+]) sem mexer no HTML: .res-head/.res-bar-row somem da
@@ -265,7 +229,6 @@ body.home-page .home-head h1{letter-spacing:.01em}
 .points-bar .pb-value{font-family:var(--disp);font-weight:400;font-size:24px;color:var(--brass)}
 
 /* ---------- chips / selos ---------- */
-.badge,.char-tag,.role,.rar-pill,.featured-badge{border-radius:0 !important}
 .badge{font-size:var(--fs-label);letter-spacing:.12em;padding:4px 10px}
 .badge.mod{letter-spacing:.04em}
 .char-tag{font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.12em;text-transform:uppercase;padding:4px 10px}
@@ -298,7 +261,7 @@ body.home-page .home-head h1{letter-spacing:.01em}
 /* o selo "Publicado/Equipado" tem fundo escuro fixo nos dois temas (theme.css); o --maq do tema claro
    é marrom-escuro e ficava invisível sobre ele */
 .poster-pub{border-radius:0}
-:root[data-theme="light"] .poster-pub.on{color:#e0bd7a}
+:root[data-theme="light"] .poster-pub.on{color:var(--primary-hover)}
 
 /* ============================================================
    Mesa (mesa.html, §3.4) — menu do personagem + Grupo | conteúdo | rolagem
@@ -526,7 +489,7 @@ body.home-page .card-tile .mesa-av,.mesa-av{border-radius:0 !important;
 .inv-dropzone,.img-thumb,.gal-thumb,.char-card,.char-portrait,.eq-board,.eq-slot,.eq-slot .eq-slot-item,
 .item-detail .idet-img,.nav-user .chip,.mesa-menu .chip,.pw-toggle,.color-pop,.func-pop,.dmg-pop,.cp-sv,
 .msg,.dice-fab,.yt-unlock-fab,#yt-panel .card,#yt-panel .list,#yt-panel .yt-section,#yt-panel input,#yt-panel button,
-.ui-modal .box,.ui-modal .box.editor,.rar-frame{border-radius:0 !important}
+.rar-frame{border-radius:0}
 .ui-modal .box{--cut:18px;clip-path:polygon(var(--cut) 0,100% 0,100% calc(100% - var(--cut)),calc(100% - var(--cut)) 100%,0 100%,0 var(--cut));
   border:0 !important;box-shadow:inset 0 0 0 1px var(--line2),var(--shadow) !important}
 .color-pop,.func-pop,.dmg-pop{border:0 !important;box-shadow:inset 0 0 0 1px var(--line2),var(--shadow) !important;
@@ -547,7 +510,7 @@ body.home-page .card-tile .mesa-av,.mesa-av{border-radius:0 !important;
 .rar-frame > .poster-card::after{display:none}
 
 /* botões sobre a capa do personagem precisam de fundo */
-.btn.overlay{background:rgba(12,9,6,.62) !important;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);color:#f3ead9;
+.btn.overlay{background:rgba(12,9,6,.62) !important;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);color:var(--text);
   box-shadow:inset 0 0 0 1px rgba(243,234,217,.22)}
 .btn.overlay:hover{box-shadow:inset 0 0 0 1px var(--brass)}
 
@@ -561,8 +524,6 @@ body.home-page .card-tile .mesa-av,.mesa-av{border-radius:0 !important;
 .res-btn:focus-visible,.stat-ctl .plus:focus-visible,.btn:focus-visible{outline:1px solid var(--brass);outline-offset:-1px}
 
 /* desempenho: blur só em superfícies únicas; cards repetidos ficam sem backdrop */
-.card-tile,.list-row,.poster-card,.stat-tile{-webkit-backdrop-filter:none !important;backdrop-filter:none !important}
-.card-tile{background:var(--panel-2) !important}
 
 /* ---------- ficha: cabeçalho do personagem ---------- */
 .char-bio-row{flex-wrap:wrap}
@@ -868,10 +829,10 @@ p[style*="font-family:var(--mono)"] b,.tab-note b,#content li b{font-weight:500;
 .cls-row .cls-actions{display:flex;gap:6px;flex:0 0 auto;opacity:0;transition:opacity var(--t)}
 .cls-row:hover .cls-actions,.cls-row:focus-within .cls-actions{opacity:1}
 @media (hover:none){.cls-row .cls-actions{opacity:1}}
-.cls-row .btn.icon{width:32px;height:32px;padding:0 !important;display:inline-flex;align-items:center;justify-content:center}
+.cls-row .btn.icon{width:32px;height:32px;padding:0;display:inline-flex;align-items:center;justify-content:center}
 .cls-row .btn.icon .ic{margin:0}
-.cls-row .btn.danger{background:transparent !important;color:var(--ink-dim) !important;box-shadow:inset 0 0 0 1px var(--line2) !important}
-.cls-row .btn.danger:hover{color:var(--carne) !important;box-shadow:inset 0 0 0 1px var(--carne) !important}
+.cls-row .btn.danger{background:transparent;color:var(--ink-dim);box-shadow:inset 0 0 0 1px var(--line2)}
+.cls-row .btn.danger:hover{color:var(--carne);box-shadow:inset 0 0 0 1px var(--carne)}
 .sub-list{display:flex;flex-direction:column;gap:8px;margin:8px 0 12px 22px;padding-left:16px;
   border-left:1px solid color-mix(in srgb,var(--brass) 40%,transparent)}
 .cls-row.is-sub{padding-top:10px;padding-bottom:10px}
@@ -928,7 +889,7 @@ body:has(#theme-menu-item) .theme-fab{display:none}
 
 /* ---------- P0-3 · árvore no tema claro: o palco continua escuro ("sala escura") ---------- */
 :root[data-theme="light"] body.arvore-page #fallback{opacity:1}
-:root[data-theme="light"] body.arvore-page{background:#0c0906}
+:root[data-theme="light"] body.arvore-page{background:var(--bg)}
 
 /* ---------- P0-4 · −/+ dos status só quando há pontos; − só no que foi mexido ---------- */
 .stat-grid:not(.has-points) .stat-tile .stat-ctl{display:none}
@@ -1019,8 +980,8 @@ body:has(#theme-menu-item) .theme-fab{display:none}
 .cond-row .cond-actions{display:flex;gap:6px;flex:0 0 auto;opacity:0;transition:opacity var(--t)}
 .cond-row:hover .cond-actions,.cond-row:focus-within .cond-actions{opacity:1}
 @media (hover:none){.cond-row .cond-actions{opacity:1}}
-.cond-row .btn.danger{background:transparent !important;color:var(--ink-dim) !important;box-shadow:inset 0 0 0 1px var(--line2) !important}
-.cond-row .btn.danger:hover{color:var(--carne) !important;box-shadow:inset 0 0 0 1px var(--carne) !important}
+.cond-row .btn.danger{background:transparent;color:var(--ink-dim);box-shadow:inset 0 0 0 1px var(--line2)}
+.cond-row .btn.danger:hover{color:var(--carne);box-shadow:inset 0 0 0 1px var(--carne)}
 
 /* ---------- P1-11 · Entrar em mesa com rótulo, campo alinhado ao do Criar ---------- */
 .action-card > .join-form{flex:1;display:flex;flex-direction:column}

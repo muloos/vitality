@@ -12,7 +12,95 @@
 <link rel="stylesheet" href="lib/tokens.css?v=1">
 <link rel="stylesheet" href="lib/theme.css?v=50">
 <link rel="stylesheet" href="lib/theme-ffx.css?v=11">
-<link rel="stylesheet" href="lib/components.css?v=2">
+<link rel="stylesheet" href="lib/components.css?v=4">
+<style>
+  /* Lobby — "Latão calmo" (docs/DESIGN-v2-LATAO-CALMO.md §3.2) */
+  .home-head{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--space-4);flex-wrap:wrap;margin:0 0 var(--space-5)}
+  .home-head h1{margin:var(--space-1) 0 0;font-family:var(--disp);font-weight:400;font-size:var(--fs-h1);line-height:40px;color:var(--text)}
+  .home-head p{margin:var(--space-2) 0 0;font-family:var(--serif);font-size:var(--fs-body);letter-spacing:0;color:var(--text-2)}
+  .head-actions{display:flex;gap:var(--space-2);flex-wrap:wrap}
+  .head-actions[hidden]{display:none}
+  .head-actions .btn,.ec-actions .btn,.box.dlg .actions .btn,#mesas .btn{width:auto}
+  .list-toolbar{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--space-4);flex-wrap:wrap;margin-bottom:var(--space-4)}
+  .list-toolbar .sub-tabs{flex:1 1 auto;border-bottom:1px solid var(--border)}
+  .sub-tabs .tc{font-family:var(--mono);font-size:var(--fs-label);color:var(--text-3);margin-left:6px}
+  .list-search{flex:0 1 240px;height:40px;padding:0 var(--space-3);font:inherit;font-size:var(--fs-body);color:var(--text);
+    background:var(--surface-2);border:0;box-shadow:inset 0 0 0 1px var(--border-strong);outline:none}
+  .list-search:focus{box-shadow:inset 0 0 0 1px var(--primary),0 0 0 3px color-mix(in srgb,var(--primary) 25%,transparent)}
+  /* linha de mesa: avatar · nome · meta · quando · selo · › */
+  .mesa-rows{display:flex;flex-direction:column;gap:var(--space-2)}
+  .mesa-row{min-height:72px}
+  .mesa-row .mesa-row-name{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mesa-row .mesa-row-meta{display:flex;gap:0 var(--space-2);flex-wrap:wrap}
+  .mesa-row .mesa-row-meta > span:empty{display:none}
+  .mesa-row .mesa-row-meta > span + span::before{content:"·";margin-right:var(--space-2);color:var(--text-3)}
+  .mesa-when{flex:0 0 auto;font-size:var(--fs-small);color:var(--text-3);white-space:nowrap}
+  .row-chev{flex:0 0 auto;width:16px;height:16px;fill:none;stroke:var(--text-3);stroke-width:1.6}
+  .mesa-row:hover .row-chev{stroke:var(--primary)}
+  /* skeleton no formato da linha */
+  .skel-row{display:flex;align-items:center;gap:var(--space-4);height:72px;padding:0 var(--space-4);margin-bottom:var(--space-2);box-shadow:inset 0 0 0 1px var(--border)}
+  .skel-row i,.skel-row b{display:block;background:linear-gradient(100deg,var(--surface-2) 30%,var(--surface-3) 50%,var(--surface-2) 70%) 0 0/220% 100%;animation:ffxShimmer 1.4s ease-in-out infinite}
+  .skel-row i{width:44px;height:44px}
+  .skel-row b{width:min(320px,60%);height:14px}
+  @media (prefers-reduced-motion:reduce){.skel-row i,.skel-row b{animation:none}}
+  html[data-motion="off"] .skel-row i,html[data-motion="off"] .skel-row b{animation:none}
+  #mesas .msg{align-items:center}
+  #mesas .msg-body{flex:1}
+  .ec-actions{display:flex;gap:var(--space-2);flex-wrap:wrap;justify-content:center;margin-top:var(--space-2)}
+  /* diálogos */
+  .ui-modal[hidden]{display:none !important}
+  .box.dlg{max-width:480px;display:flex;flex-direction:column;gap:var(--space-4)}
+  .box.dlg .ghead{display:flex;align-items:center;gap:var(--space-3)}
+  .box.dlg .ghead h3{flex:1;margin:0}
+  .box.dlg .x{width:40px;height:40px;border:0;background:none;color:var(--text-2);font-size:22px;cursor:pointer}
+  .box.dlg .x:hover{color:var(--text)}
+  .box.dlg form,.dlg-done{display:flex;flex-direction:column;gap:var(--space-4)}
+  .box.dlg [hidden]{display:none !important}
+  .dlg-lead{margin:0;color:var(--text-2)}
+  .box.dlg .actions{display:flex;justify-content:flex-end;gap:var(--space-2);flex-wrap:wrap;margin-top:var(--space-2)}
+  .code-input{font-family:var(--mono) !important;font-size:20px !important;letter-spacing:.3em;text-transform:uppercase}
+  .code-big{font-family:var(--mono);font-size:22px;letter-spacing:.3em;color:var(--text);padding:var(--space-4);text-align:center;box-shadow:inset 0 0 0 1px var(--border-strong)}
+  /* "Meus itens" (Itens → Criar) em linhas, como mesas e sistemas; a Loja continua em cards */
+  #items.item-grid{display:flex !important;flex-direction:column;gap:var(--space-2)}
+  #items .rar-frame{width:100%}
+  #items .poster-card{display:flex !important;flex-direction:row;align-items:center;gap:var(--space-4);min-height:72px;height:auto;
+    padding:var(--space-3) var(--space-4) !important;text-align:left;clip-path:none}
+  #items .poster-icon{width:40px !important;height:40px !important;flex:0 0 auto;margin:0 4px !important}
+  #items .poster-body{flex:1;min-width:0;display:flex;flex-direction:row !important;flex-wrap:wrap;align-items:baseline !important;gap:2px var(--space-3);padding:0}
+  #items .poster-name{margin:0;font-size:18px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #items .poster-desc{flex-basis:100%;margin:0;-webkit-line-clamp:1;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;text-align:left}
+  #items .poster-meta{display:none}
+  #items .poster-pub,#items .poster-fav{position:static;flex:0 0 auto}
+  #items .poster-card{text-align:left !important;justify-content:flex-start !important}
+  #items .poster-icon{order:0} #items .poster-body{order:1;justify-content:flex-start !important;text-align:left !important}
+  #items .poster-pub{order:2} #items .poster-fav{order:3}
+  #items .poster-name,#items .poster-desc{text-align:left !important}
+  /* celular: barra inferior com os 4 destinos; o menu lateral vira só as sub-abas da seção */
+  .bottom-nav{display:none}
+  @media (max-width:760px){
+    .bottom-nav{position:fixed;left:0;right:0;bottom:0;z-index:var(--z-drawer);display:grid;grid-template-columns:repeat(4,1fr);
+      height:calc(72px + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:var(--surface-1);border-top:1px solid var(--border)}
+    .bottom-nav button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:0;background:none;cursor:pointer;
+      font-family:var(--serif);font-size:12px;font-weight:500;color:var(--text-2)}
+    .bottom-nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.6}
+    .bottom-nav [aria-current="page"]{color:var(--primary);box-shadow:inset 0 2px 0 var(--primary)}
+    body.home-page{padding-bottom:calc(72px + env(safe-area-inset-bottom))}
+    .help-fab{bottom:calc(84px + env(safe-area-inset-bottom)) !important}
+    .ffx-layout.lobby > .ffx-side .ffx-menu-eyebrow,.ffx-layout.lobby > .ffx-side .ffx-side-note,
+    #home-menu > [data-sec]{display:none !important}
+    #home-menu{flex-direction:row;overflow-x:auto;border-bottom:1px solid var(--border)}
+    #home-menu .sub{flex:0 0 auto;padding:0 var(--space-4);height:44px;box-shadow:none}
+    #home-menu .sub.on,#home-menu .sub[aria-selected="true"]{box-shadow:inset 0 -2px 0 var(--primary)}
+    #home-menu .ffx-cursor{display:none}
+    .ffx-layout.lobby[data-sec="mesas"] > .ffx-side{display:none}
+    .head-actions{width:100%}
+    .head-actions .btn{flex:1;min-height:44px}
+    .list-search{flex:1 1 100%}
+    .mesa-when,.row-chev{display:none}
+    .mesa-row .mesa-row-meta{flex-wrap:nowrap;overflow:hidden;white-space:nowrap}
+    .mesa-row{min-height:64px}
+  }
+</style>
 </head>
 <body class="home-page"> 
 <div id="fallback" class="solid"></div>
@@ -59,9 +147,17 @@
 
   <main class="ffx-main">
   <div class="home-head">
-    <div class="ffx-eyebrow" id="sec-eyebrow">Lobby · Mesas</div>
-    <h1 id="greet">Bem-vindo</h1>
-    <p id="sec-intro">Crie uma mesa, entre na de um Mestre pelo código, ou continue uma campanha.</p>
+    <div class="hh-text">
+      <div class="ffx-eyebrow" id="sec-eyebrow">Lobby</div>
+      <h1 id="greet">Minhas mesas</h1>
+      <p id="sec-intro"></p>
+    </div>
+    <!-- ações da seção Mesas (docs/DESIGN-v2-LATAO-CALMO.md §3.2): a lista é o conteúdo principal;
+         criar e entrar viram diálogos curtos -->
+    <div class="head-actions" id="mesas-actions">
+      <button type="button" class="btn" onclick="openJoinDialog()">Entrar com código</button>
+      <button type="button" class="btn go" onclick="openCreateDialog()"><span aria-hidden="true">+</span> Nova mesa</button>
+    </div>
   </div>
 
   <div id="onboard"></div>
@@ -70,34 +166,15 @@
 
   <!-- ===================== MESAS ===================== -->
   <section id="sec-mesas" role="tabpanel" aria-labelledby="tab-mesas">
-    <div class="action-row">
-      <div class="action-card">
-        <h4>Criar mesa</h4>
-        <p>Escolha o sistema que a mesa vai usar — ela puxa os status, classes, árvores e itens dele. Você vira o Mestre e recebe um código de convite.</p>
-        <form onsubmit="return doCreate(event)">
-          <div class="fld"><label for="new-system">Sistema da campanha</label><select id="new-system" class="fld-input" required onchange="onNewSystemChange()"></select>
-            <div class="fld-err" id="new-system-err">Escolha um sistema para a mesa.</div>
-            <div id="new-system-preview" style="font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint);margin-top:6px"></div></div>
-          <div class="inline-form">
-            <input id="new-name" placeholder="Nome da mesa" required maxlength="60">
-            <button class="btn go auto" type="submit"><span class="spin"></span>Criar</button>
-          </div>
-        </form>
+    <div class="list-toolbar">
+      <div class="sub-tabs" id="mesa-filter" role="tablist" aria-label="Filtrar mesas">
+        <button type="button" role="tab" data-f="all" class="on" aria-selected="true" onclick="setMesaFilter('all')">Todas <span class="tc" id="mf-all"></span></button>
+        <button type="button" role="tab" data-f="gm" aria-selected="false" tabindex="-1" onclick="setMesaFilter('gm')">Como Mestre <span class="tc" id="mf-gm"></span></button>
+        <button type="button" role="tab" data-f="player" aria-selected="false" tabindex="-1" onclick="setMesaFilter('player')">Como Jogador <span class="tc" id="mf-player"></span></button>
       </div>
-      <div class="action-card">
-        <h4>Entrar em mesa</h4>
-        <p>Recebeu um código de um Mestre? Entre como Jogador.</p>
-        <form class="join-form" onsubmit="return doJoin(event)">
-          <div class="fld"><label for="join-code">Código de convite</label></div>
-          <div class="inline-form">
-          <input id="join-code" placeholder="A1B2C3" required maxlength="12" autocomplete="off" style="text-transform:uppercase">
-          <button class="btn auto" type="submit"><span class="spin"></span>Entrar</button>
-          </div>
-        </form>
-      </div>
+      <input type="search" class="list-search" id="mesa-search" placeholder="Buscar mesa" aria-label="Buscar mesa pelo nome" oninput="paintMesas()">
     </div>
-    <div class="section-title" role="heading" aria-level="2">Minhas mesas</div>
-    <div id="mesas"><div class="empty loading" role="status"><span>Carregando…</span></div></div>
+    <div id="mesas" aria-live="polite"><div class="skel-row" aria-hidden="true"><i></i><b></b></div><div class="skel-row" aria-hidden="true"><i></i><b></b></div><div class="skel-row" aria-hidden="true"><i></i><b></b></div><div class="skel-row" aria-hidden="true"><i></i><b></b></div><div class="skel-row" aria-hidden="true"><i></i><b></b></div><span class="sr-only" role="status">Carregando mesas…</span></div>
   </section>
 
   <!-- ===================== SISTEMAS ===================== -->
@@ -432,7 +509,7 @@ window.doLogout = async () => {
    ficam visíveis — os outros ficam [hidden], fora das setas ↑/↓. */
 let _sec = 'mesas', _sysSub = 'loja', _itemSub = 'loja';
 const SEC_COPY = {
-  mesas: ['Lobby · Mesas', 'Crie uma mesa, entre na de um Mestre pelo código, ou continue uma campanha.'],
+  mesas: ['Lobby', ''],
   sistemas: ['Lobby · Sistemas', 'Explore os sistemas publicados, guarde os favoritos ou monte o seu.'],
   itens: ['Lobby · Itens', 'Itens da loja, seus favoritos e a sua biblioteca — prontos para copiar para os seus sistemas.'],
 };
@@ -454,10 +531,13 @@ function paintMenu() {
     }
   });
   const [eyebrow, intro] = SEC_COPY[_sec];
-  const titles = { mesas: 'Bem-vindo, ' + (profileName || 'Aventureiro'), sistemas: 'Sistemas', itens: 'Itens' };
-  $('sec-eyebrow').textContent = _sec === 'mesas' ? eyebrow : eyebrow + ' · ' + (profileName || '');
+  const titles = { mesas: 'Minhas mesas', sistemas: 'Sistemas', itens: 'Itens' };
+  $('sec-eyebrow').textContent = eyebrow + ' · Olá, ' + (profileName || 'Aventureiro');
   $('greet').textContent = titles[_sec];
-  $('sec-intro').textContent = intro;
+  $('sec-intro').textContent = intro; $('sec-intro').hidden = !intro;
+  $('mesas-actions').hidden = _sec !== 'mesas';
+  $('home').dataset.sec = _sec;
+  document.querySelectorAll('.bottom-nav [data-sec]').forEach((b) => b.setAttribute('aria-current', b.dataset.sec === _sec ? 'page' : 'false'));
   syncMenuTabindex();
 }
 window.showSec = (sec) => {
@@ -639,51 +719,120 @@ function renderOnboard() {
       ${step(1, _sysCount > 0, 'Crie seu sistema', 'Status, fórmulas, classes, árvores e itens do seu RPG.',
         `<button class="btn sm auto" onclick="showSec('sistemas')">Ir para Sistemas</button>`)}
       ${step(2, _mesaCount > 0, 'Crie uma mesa', 'Escolha o sistema, dê um nome e ganhe um código de convite.',
-        `<button class="btn sm auto" onclick="showSec('mesas');document.getElementById('new-name').focus()">Criar mesa</button>`)}
+        `<button class="btn sm auto" onclick="showSec('mesas');openCreateDialog()">Criar mesa</button>`)}
       ${step(3, false, 'Convide os jogadores', 'Compartilhe o código da mesa — cada um entra como Jogador e monta a ficha.', '')}
     </div></div>`;
 }
 window.hideOnboard = () => { localStorage.setItem('vt_onboard_hide', '1'); $('onboard').innerHTML = ''; };
 
-async function renderMesas() {
-  const box = $('mesas');
-  try {
-    const mesas = await db.listMyCampaigns();
-    _mesaCount = mesas.length; renderOnboard(); setMenuCount('mesas', mesas.length);
-    if (!mesas.length) { box.className = ''; box.innerHTML = emptyState(ICON.dice, 'Nenhuma mesa ainda',
-      'Crie a sua no card acima escolhendo um sistema, ou entre na mesa de um Mestre com o código de convite.'); return; }
-    // lista em linhas (docs/DESIGN-FFXIII.md §3.3): losango à esquerda (cheio = Mestre), selo de papel à direita
-    box.className = 'mesa-rows';
-    box.innerHTML = mesas.map((m) => `
-      <a class="list-row mesa-row${m.role === 'gm' ? ' gm' : ''}" href="mesa.html?id=${m.id}">
+// ---------- mesas: a lista é o conteúdo principal (§3.2) ----------
+let _mesas = null, _mesaFilter = 'all';
+window.setMesaFilter = (f) => {
+  _mesaFilter = f;
+  document.querySelectorAll('#mesa-filter [role="tab"]').forEach((b) => { const on = b.dataset.f === f; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); b.tabIndex = on ? 0 : -1; });
+  paintMesas();
+};
+$('mesa-filter').addEventListener('keydown', (e) => {
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  const order = ['all', 'gm', 'player']; const k = order.indexOf(_mesaFilter);
+  const next = order[(k + (e.key === 'ArrowRight' ? 1 : 2)) % 3];
+  e.preventDefault(); setMesaFilter(next); document.querySelector(`#mesa-filter [data-f="${next}"]`).focus();
+});
+const CHEVRON = '<svg class="row-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+function mesaRowHtml(m) {
+  return `<a class="list-row mesa-row${m.role === 'gm' ? ' gm' : ''}" href="mesa.html?id=${m.id}" title="${esc(m.name)}">
         ${m.image_url
           ? `<img class="mesa-av" src="${esc(m.image_url)}" alt="">`
           : `<span class="mesa-av" aria-hidden="true">${esc((m.name || '?').trim().charAt(0).toUpperCase() || '?')}</span>`}
         <span class="grow">
           <span class="mesa-row-name">${esc(m.name)}</span>
-          <span class="mesa-row-meta"><span class="mr-sys" data-sys="${esc(m.system_id || '')}">${esc(_systemById.get(m.system_id)?.name || '')}</span>${
-            [relTime(m.last_active_at || m.created_at), m.role === 'gm' && m.join_code ? 'Código ' + esc(m.join_code) : ''].filter(Boolean).map((t) => `<span>${t}</span>`).join('')}</span>
+          <span class="mesa-row-meta"><span class="mr-sys" data-sys="${esc(m.system_id || '')}">${esc(_systemById.get(m.system_id)?.name || '')}</span>${m.role === 'gm' && m.join_code ? `<span>Código ${esc(m.join_code)}</span>` : ''}</span>
         </span>
+        <span class="mesa-when">${esc(relTime(m.last_active_at || m.created_at))}</span>
         <span class="role ${m.role}">${m.role === 'gm' ? 'Mestre' : 'Jogador'}</span>
-      </a>`).join('');
-    // nome do sistema de cada mesa: do cache (Meus sistemas/Loja/Favoritos) ou buscado uma vez
-    box.querySelectorAll('.mr-sys').forEach((el) => {
-      const id = el.dataset.sys; if (!id || el.textContent) return;
-      const known = _systemById.get(id); if (known) { el.textContent = known.name; return; }
-      db.getSystem(id).then((sy) => { if (sy) { cacheSystems([sy]); el.textContent = sy.name; } }).catch(() => {});
-    });
-  } catch (e) { box.className = ''; box.innerHTML = '<div class="empty">Erro: ' + esc(friendlyError(e)) + '</div>'; }
+        ${CHEVRON}
+      </a>`;
 }
+function paintMesas() {
+  const box = $('mesas'); if (!_mesas) return;
+  const count = (f) => _mesas.filter((m) => f === 'all' || m.role === f).length;
+  ['all', 'gm', 'player'].forEach((f) => { $('mf-' + f).textContent = count(f); });
+  if (!_mesas.length) {
+    box.innerHTML = emptyState(ICON.dice, 'Nenhuma mesa ainda',
+      'Uma mesa é onde o grupo joga: fichas, dados e conversa. Crie a sua escolhendo um sistema, ou entre na de um Mestre com o código de convite.',
+      `<div class="ec-actions"><button type="button" class="btn go" onclick="openCreateDialog()">+ Nova mesa</button><button type="button" class="btn" onclick="openJoinDialog()">Entrar com código</button></div>
+       <button type="button" class="btn tertiary" onclick="showSec('sistemas');showSysSub('loja')">Ver sistemas na loja →</button>`);
+    return;
+  }
+  const q = ($('mesa-search').value || '').trim().toLowerCase();
+  const list = _mesas.filter((m) => (_mesaFilter === 'all' || m.role === _mesaFilter) && (!q || (m.name || '').toLowerCase().includes(q)));
+  box.innerHTML = list.length ? `<div class="mesa-rows">${list.map(mesaRowHtml).join('')}</div>`
+    : `<div class="empty">Nenhuma mesa ${q ? `com “${esc(q)}”` : 'neste filtro'}. <button type="button" class="btn tertiary" onclick="document.getElementById('mesa-search').value='';setMesaFilter('all')">Limpar filtros</button></div>`;
+  // nome do sistema de cada mesa: do cache (Meus sistemas/Loja/Favoritos) ou buscado uma vez
+  box.querySelectorAll('.mr-sys').forEach((el) => {
+    const id = el.dataset.sys; if (!id || el.textContent) return;
+    const known = _systemById.get(id); if (known) { el.textContent = known.name; return; }
+    db.getSystem(id).then((sy) => { if (sy) { cacheSystems([sy]); el.textContent = sy.name; } }).catch(() => {});
+  });
+}
+async function renderMesas() {
+  const box = $('mesas');
+  if (!_mesas) box.innerHTML = Array.from({ length: 5 }, () => '<div class="skel-row" aria-hidden="true"><i></i><b></b></div>').join('') + '<span class="sr-only" role="status">Carregando mesas…</span>';
+  try {
+    _mesas = await db.listMyCampaigns();
+    _mesaCount = _mesas.length; renderOnboard(); setMenuCount('mesas', _mesas.length);
+    paintMesas();
+  } catch (e) {
+    // erro ≠ vazio: deixa claro que as mesas continuam existindo
+    box.innerHTML = `<div class="msg show err inline" role="alert"><div class="msg-body"><b>Não foi possível carregar as mesas.</b> Suas mesas não foram perdidas — ${esc(friendlyError(e))}</div>
+      <button type="button" class="btn sm" onclick="renderMesas()">Tentar de novo</button></div>`;
+  }
+}
+// ---------- diálogos de criar/entrar ----------
+let _dlgUntrap = null, _dlgTrigger = null;
+window.openDialog = (id) => {
+  const d = $(id); _dlgTrigger = document.activeElement; d.hidden = false;
+  _dlgUntrap = trapFocus(d);
+  (d.querySelector('input:not([type=hidden]),select') || d.querySelector('button')).focus();
+};
+window.closeDialog = (id) => {
+  const d = $(id); if (d.hidden) return; d.hidden = true;
+  if (_dlgUntrap) { _dlgUntrap(); _dlgUntrap = null; }
+  if (_dlgTrigger && _dlgTrigger.focus) _dlgTrigger.focus();
+};
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') ['dlg-create', 'dlg-join'].forEach(closeDialog); });
+['dlg-create', 'dlg-join'].forEach((id) => $(id).addEventListener('click', (e) => { if (e.target.id === id) closeDialog(id); }));
+window.openCreateDialog = () => {
+  $('create-form').hidden = false; $('create-done').hidden = true;
+  $('new-name').value = ''; $('new-name').classList.remove('invalid'); $('new-name-err').classList.remove('show');
+  openDialog('dlg-create');
+};
+window.openJoinDialog = () => {
+  $('join-code').value = ''; $('join-code').classList.remove('invalid'); $('join-err').textContent = ''; $('join-err').classList.remove('show');
+  openDialog('dlg-join');
+};
+window.copyNewCode = () => {
+  const code = $('create-code').textContent;
+  navigator.clipboard?.writeText(code).then(() => { $('copy-code').textContent = 'Copiado'; setTimeout(() => { $('copy-code').textContent = 'Copiar código'; }, 1800); }).catch(() => {});
+};
 window.doCreate = (ev) => { ev.preventDefault(); const name = $('new-name').value.trim(); const systemId = $('new-system').value;
-  if (!name) return false;
+  $('new-name').classList.toggle('invalid', !name); $('new-name-err').classList.toggle('show', !name);
+  if (!name) { $('new-name').focus(); return false; }
   const sysSel = $('new-system'); sysSel.classList.remove('invalid'); sysSel.removeAttribute('aria-invalid'); $('new-system-err').classList.remove('show');
   if (!systemId) {
-    if (sysSel.disabled) { showMsg('Crie um sistema primeiro (aba Sistemas) para usar na mesa.'); showSec('sistemas'); return false; }
+    if (sysSel.disabled) { closeDialog('dlg-create'); showMsg('Crie um sistema primeiro (aba Sistemas) para usar na mesa.'); showSec('sistemas'); return false; }
     sysSel.classList.add('invalid'); sysSel.setAttribute('aria-invalid', 'true'); $('new-system-err').classList.add('show'); sysSel.focus();
     return false;
   }
   busy(ev.target, true);
-  db.createCampaign(name, systemId).then((c) => { location.href = 'mesa.html?id=' + c.id; }).catch((e) => { showMsg('Não deu pra criar a mesa: ' + friendlyError(e)); busy(ev.target, false); }); return false; };
+  db.createCampaign(name, systemId).then((c) => {
+    busy(ev.target, false);
+    $('create-form').hidden = true; $('create-done').hidden = false;
+    $('create-code').textContent = c.join_code || '—';
+    $('open-new-mesa').href = 'mesa.html?id=' + c.id;
+    _mesas = null; renderMesas();
+    $('open-new-mesa').focus();
+  }).catch((e) => { $('new-name-err').textContent = 'Não deu pra criar a mesa: ' + friendlyError(e); $('new-name-err').classList.add('show'); busy(ev.target, false); }); return false; };
 function fillSystemPicker(mine, favorites, store) {
   const sel = $('new-system'); if (!sel) return;
   const mineIds = new Set(mine.map((s) => s.id));
@@ -715,8 +864,14 @@ window.onNewSystemChange = async () => {
     box.textContent = `${pl(b.stats.length, 'status', 'status')} · ${pl(b.classes.length, 'classe', 'classes')} · ${pl(b.trees.length, 'árvore', 'árvores')} · ${pl(b.items.length, 'item', 'itens')}`;
   } catch (_) { box.textContent = ''; }
 };
-window.doJoin = (ev) => { ev.preventDefault(); const code = $('join-code').value.trim().toUpperCase(); if (!code) return false; busy(ev.target, true);
-  db.joinCampaignByCode(code).then((c) => { location.href = 'mesa.html?id=' + c.id; }).catch((e) => { showMsg('Não deu pra entrar na mesa: ' + friendlyError(e)); busy(ev.target, false); }); return false; };
+const joinError = (msg) => { $('join-code').classList.add('invalid'); $('join-code').setAttribute('aria-invalid', 'true'); $('join-err').textContent = msg; $('join-err').classList.add('show'); $('join-code').focus(); };
+window.doJoin = (ev) => { ev.preventDefault(); const code = $('join-code').value.trim().toUpperCase();
+  if (code.length !== 6) { joinError('O código tem 6 caracteres (letras e números).'); return false; }
+  busy(ev.target, true);
+  db.joinCampaignByCode(code).then((c) => { location.href = 'mesa.html?id=' + c.id; }).catch((e) => {
+    busy(ev.target, false);
+    joinError(/not found|não encontrad|invalid|inválid/i.test(String(e && e.message)) || !e ? 'Código não encontrado. Confira com o Mestre.' : 'Não deu pra entrar na mesa: ' + friendlyError(e));
+  }); return false; };
 
 /* ---------- itens ---------- */
 function addModRow(name = '', value = '') {
@@ -896,7 +1051,7 @@ function itemCardHtml(it) {
           <h4 class="poster-name">${esc(it.name)}</h4>
           ${it.rarity ? `<span class="rar-pill" data-rarity="${esc(it.rarity)}">${esc(it.rarity)}</span>` : ''}
           ${it.description ? `<p class="poster-desc">${esc(it.description)}</p>` : ''}
-          <div class="poster-meta">${esc(it.creator_name || '—')}${it.item_code ? ` · #${esc(it.item_code)}` : ''}</div>
+          <div class="poster-meta">por ${esc(it.creator_name || '—')}</div>
         </div>
       </div>
     </div>`;
@@ -1140,5 +1295,50 @@ window.deletePackage = async (id) => {
   db.deleteItemPackage(id).then(() => { renderPackages(); showMsg('Pacote excluído.', 'ok'); }).catch((e) => showMsg('Não foi possível excluir: ' + friendlyError(e)));
 };
 </script>
+
+<!-- diálogo: nova mesa -->
+<div class="ui-modal" id="dlg-create" role="dialog" aria-modal="true" aria-labelledby="dlg-create-title" hidden>
+  <div class="box dlg">
+    <div class="ghead"><h3 id="dlg-create-title">Nova mesa</h3><button type="button" class="x" aria-label="Fechar" onclick="closeDialog('dlg-create')">×</button></div>
+    <form id="create-form" onsubmit="return doCreate(event)" novalidate>
+      <div class="fld"><label for="new-system">Sistema da campanha</label><select id="new-system" class="fld-input" required onchange="onNewSystemChange()"></select>
+        <div class="fld-help" id="new-system-preview"></div>
+        <div class="fld-err" id="new-system-err">Escolha um sistema para a mesa.</div></div>
+      <div class="fld"><label for="new-name">Nome da mesa</label><input id="new-name" placeholder="Ex.: Crônicas do Rio Partido" required maxlength="60" aria-describedby="new-name-err">
+        <div class="fld-err" id="new-name-err">Dê um nome para a mesa.</div></div>
+      <div class="actions"><button type="button" class="btn" onclick="closeDialog('dlg-create')">Cancelar</button>
+        <button class="btn go" type="submit"><span class="spin"></span><span class="bl">Criar mesa</span></button></div>
+    </form>
+    <div class="dlg-done" id="create-done" hidden>
+      <div class="msg show ok inline" role="status">Mesa criada. Mande o código para os jogadores entrarem.</div>
+      <div class="code-big" id="create-code">—</div>
+      <div class="actions"><button type="button" class="btn" id="copy-code" onclick="copyNewCode()">Copiar código</button>
+        <button type="button" class="btn" onclick="closeDialog('dlg-create');renderMesas()">Depois</button>
+        <a class="btn go" id="open-new-mesa" href="#">Abrir mesa</a></div>
+    </div>
+  </div>
+</div>
+<!-- diálogo: entrar com código -->
+<div class="ui-modal" id="dlg-join" role="dialog" aria-modal="true" aria-labelledby="dlg-join-title" hidden>
+  <div class="box dlg">
+    <div class="ghead"><h3 id="dlg-join-title">Entrar com código</h3><button type="button" class="x" aria-label="Fechar" onclick="closeDialog('dlg-join')">×</button></div>
+    <p class="dlg-lead">Peça o código de convite ao Mestre da mesa. Você entra como Jogador.</p>
+    <form class="join-form" onsubmit="return doJoin(event)" novalidate>
+      <div class="fld"><label for="join-code">Código de convite</label>
+        <input id="join-code" class="code-input" placeholder="K7Q2MX" required maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false"
+          aria-describedby="join-err" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'');this.classList.remove('invalid')">
+        <div class="fld-err" id="join-err" role="alert"></div></div>
+      <div class="actions"><button type="button" class="btn" onclick="closeDialog('dlg-join')">Cancelar</button>
+        <button class="btn go" type="submit"><span class="spin"></span>Entrar na mesa</button></div>
+    </form>
+  </div>
+</div>
+<!-- celular: barra inferior com os 4 destinos -->
+<nav class="bottom-nav" aria-label="Navegação principal">
+  <button type="button" data-sec="mesas" onclick="showSec('mesas')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg><span>Mesas</span></button>
+  <button type="button" data-sec="sistemas" onclick="showSec('sistemas')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 21 12 12 21 3 12Z"/></svg><span>Sistemas</span></button>
+  <button type="button" data-sec="itens" onclick="showSec('itens')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8h12l-1 12H7L6 8Z"/><path d="M9 8a3 3 0 0 1 6 0"/></svg><span>Itens</span></button>
+  <button type="button" onclick="toggleUserMenu()"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-4 3.4-6 7-6s6.2 2 7 6"/></svg><span>Conta</span></button>
+</nav>
 </body>
 </html>

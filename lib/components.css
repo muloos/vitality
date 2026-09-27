@@ -21,7 +21,7 @@ p{max-width:68ch}
 .section-title > span[style]{font-family:var(--serif);font-size:var(--fs-small);font-weight:400;color:var(--text-3) !important}
 
 /* ---------- botões ---------- */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-2);height:40px;padding:0 var(--space-4);
+.btn{text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:var(--space-2);height:40px;padding:0 var(--space-4);
   font-family:var(--serif);font-size:var(--fs-btn);line-height:20px;font-weight:600;letter-spacing:0;text-transform:none;white-space:nowrap;
   color:var(--text);background:transparent;border:0;border-radius:0;box-shadow:inset 0 0 0 1px var(--border-strong);cursor:pointer;
   transition:background var(--t) var(--ease),box-shadow var(--t) var(--ease),color var(--t) var(--ease),transform var(--t-fast) var(--ease);filter:none}
@@ -57,7 +57,7 @@ p{max-width:68ch}
 .fld{display:flex;flex-direction:column;gap:6px}
 .fld > label,.fld label{font-family:var(--mono);font-size:var(--fs-label);line-height:16px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-2);margin:0}
 .fld-help,.fld .hint{font-size:var(--fs-small);color:var(--text-3)}
-.fld-err{font-size:var(--fs-small);color:var(--danger)}
+.fld-err{font-family:var(--serif);font-size:var(--fs-small);letter-spacing:0;color:var(--danger)}
 .fld input:where(:not([type=checkbox],[type=radio],[type=range],[type=color])),.fld select,.fld textarea,
 .inline-form input,select.fld-input,.toolbar input,.ffx-field,.dice-builder input,.dice-builder select,.dice-more select,.chat-input-row input{
   height:40px;padding:0 var(--space-3);font-family:var(--serif);font-size:var(--fs-body);color:var(--text);
@@ -157,12 +157,16 @@ input[type=checkbox]::after{width:8px;height:8px;background:var(--primary)}
 .msg.ok,.msg.success{--st:var(--success)}
 .msg.warn,.msg.warning{--st:var(--warning)}
 .msg::before{content:"";flex:0 0 auto;width:8px;height:8px;margin-top:6px;background:var(--st);transform:rotate(45deg)}
+/* aviso dentro do conteúdo (não é o toast flutuante do showMsg) */
+.msg.inline{position:static !important;transform:none !important;inset:auto !important;opacity:1 !important;width:auto;max-width:none;margin:0;z-index:auto;text-align:left;pointer-events:auto}
 /* vazio: losango + título em Fraunces + frase + ação */
 .empty-cta{gap:var(--space-2);padding:var(--space-6) var(--space-5);border:0 !important;border-radius:0 !important;background:transparent !important;
   box-shadow:inset 0 0 0 1px var(--border) !important}
 .empty-cta .ec-icon::before{width:24px;height:24px;box-shadow:inset 0 0 0 1px var(--primary)}
 .empty-cta .ec-title,.empty-cta h3,.empty-cta b{font-family:var(--disp);font-size:20px;font-weight:400;color:var(--text)}
 .empty:not(.loading){padding:var(--space-5);border:0 !important;border-radius:0 !important;box-shadow:inset 0 0 0 1px var(--border);color:var(--text-2) !important}
+.empty-cta .ec-desc,.onboard p,.ostep p{font-family:var(--serif) !important;font-size:14px !important;letter-spacing:0 !important;text-transform:none !important;line-height:1.6;color:var(--text-2) !important;max-width:46ch;margin-inline:auto}
+.ostep p{margin-inline:0}
 /* skeleton no formato do conteúdo */
 .empty.loading::before,.empty.loading::after{background:linear-gradient(100deg,var(--surface-2) 30%,var(--surface-3) 50%,var(--surface-2) 70%) 0 0/220% 100%;
   box-shadow:none;animation:ffxShimmer 1.4s ease-in-out infinite;clip-path:none;height:64px}

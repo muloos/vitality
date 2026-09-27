@@ -9,10 +9,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="lib/tokens.css?v=2">
-<link rel="stylesheet" href="lib/theme.css?v=51">
-<link rel="stylesheet" href="lib/theme-ffx.css?v=12">
-<link rel="stylesheet" href="lib/components.css?v=7">
+<link rel="stylesheet" href="lib/tokens.css?v=3">
+<link rel="stylesheet" href="lib/theme.css?v=52">
+<link rel="stylesheet" href="lib/theme-ffx.css?v=13">
+<link rel="stylesheet" href="lib/components.css?v=8">
 <style>
   /* fundo cósmico original (sobrescreve o solido do tema, SÓ nesta tela) */
   /* body PRECISA ficar transparente aqui: #fallback e #fx (o canvas de partículas) usam z-index
@@ -61,18 +61,17 @@
      abaixo); pro jogador, que não tem essa barra (é gm-only), flutua sobre o canvas mesmo. */
   .toolbar-back{display:none}
   body.embedded .toolbar-back{display:inline-flex;align-items:center;gap:6px;height:32px;
-    padding:0 12px 0 10px;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid var(--line2);
-    color:var(--ink-dim);font-family:var(--mono);font-size:11px;letter-spacing:.06em;
+    padding:0 12px 0 10px;color:var(--ink-dim);font-family:var(--mono);font-size:11px;letter-spacing:.06em;
     text-transform:uppercase;cursor:pointer}
-  body.embedded .toolbar-back:hover{color:var(--ink);background:rgba(255,255,255,.1)}
+  body.embedded .toolbar-back:hover{color:var(--ink)}
   body.embedded .toolbar-back svg{width:13px;height:13px}
   .embed-back{display:none}
   body.embedded .embed-back{display:flex;position:fixed;left:12px;top:12px;z-index:30;
-    align-items:center;gap:7px;height:38px;padding:0 14px 0 12px;border-radius:11px;
-    background:color-mix(in srgb,var(--panel) 90%,transparent);border:1px solid var(--line2);color:var(--ink-dim);
+    align-items:center;gap:7px;height:38px;padding:0 14px 0 12px;
+    color:var(--ink-dim);
     font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
   body.embedded.is-gm .embed-back{display:none}
-  .embed-back:hover{color:var(--ink);background:rgba(255,255,255,.08)}
+  .embed-back:hover{color:var(--ink)}
   .embed-back svg{width:13px;height:13px}
   /* esferas/conexões, halo, textura giratória, rótulos, pulso de seleção/conexão e flash de
      desbloqueio agora são tudo desenhado no #worldCanvas (ver arvore.js: drawWorld/drawNode/
@@ -106,41 +105,41 @@
      .arvore-toolbar, que pode quebrar em 2-3 linhas — um valor fixo aqui deixava o painel
      cobrindo a barra de ferramentas sempre que ela quebrava linha */
   .epanel{position:fixed;top:var(--toolbar-bottom,64px);right:12px;width:340px;max-width:calc(100vw - 24px);max-height:calc(100vh - var(--toolbar-bottom,64px) - 20px);z-index:35;
-    border-radius:18px;overflow:hidden;display:none;flex-direction:column;background:color-mix(in srgb,var(--panel) 98%,transparent);border:1px solid var(--line2);box-shadow:0 18px 50px rgba(0,0,0,.5)}
+    overflow:hidden;display:none;flex-direction:column;--fill:var(--surface-1);--frame:var(--border-strong)}
   .epanel.open{display:flex}
   .epanel .hd{display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--line)}
   .epanel .hd .eye{font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.18em;text-transform:uppercase;color:var(--ink-faint)}
   .epanel .hd .x{margin-left:auto;background:transparent;border:0;color:var(--ink-faint);font-size:22px;cursor:pointer;line-height:1}
   .epanel .bd{padding:16px;overflow:auto}
   .rotgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-  .rotgrid .tool{border-color:var(--line2);text-align:center}
-  .rotgrid .tool:hover{border-color:var(--brass);color:var(--bone)}
+  .rotgrid .tool{--frame:var(--border);text-align:center}
+  .rotgrid .tool:hover{--frame:var(--brass);color:var(--bone)}
   /* flex-wrap: sem isso, uma linha com mais chips do que cabe (Forma tem 5, Via/afinidade pode ter
      ainda mais) estourava a largura do painel em vez de quebrar — os chips do fim ficavam fora da
      área clicável, sem como selecioná-los. min-width no chip evita que o texto quebre dentro do
      próprio chip antes da linha inteira quebrar. */
   .chips{display:flex;flex-wrap:wrap;gap:6px}
-  .chip{flex:1 1 auto;min-width:70px;text-align:center;font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;border:1px solid var(--line2);border-radius:9px;padding:9px 4px;cursor:pointer;color:var(--ink-dim);background:rgba(255,255,255,.04)}
+  .chip{flex:1 1 auto;min-width:70px;text-align:center;font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;padding:9px 4px;cursor:pointer;color:var(--ink-dim);--fill:var(--surface-2);--frame:var(--border)}
   .chip.on{color:#08161a;font-weight:700}
-  .chip[data-v="passive"].on{background:var(--bone)}.chip[data-v="active"].on{background:var(--brass)}.chip[data-v="core"].on{background:#ecd9a4}
-  .chip[data-s]{color:var(--ink-dim)}.chip[data-s].on{background:var(--maq);color:#08161a}
-  .chip[data-sh]{color:var(--ink-dim)}.chip[data-sh].on{background:var(--maq);color:#08161a}
-  .chip[data-dcm]{color:var(--ink-dim)}.chip[data-dcm].on{background:var(--maq);color:#08161a}
+  .chip[data-v="passive"].on{--fill:var(--bone);--frame:var(--bone)}.chip[data-v="active"].on{--fill:var(--brass);--frame:var(--brass)}.chip[data-v="core"].on{--fill:#ecd9a4;--frame:#ecd9a4}
+  .chip[data-s]{color:var(--ink-dim)}.chip[data-s].on{--fill:var(--maq);--frame:var(--maq);color:#08161a}
+  .chip[data-sh]{color:var(--ink-dim)}.chip[data-sh].on{--fill:var(--maq);--frame:var(--maq);color:#08161a}
+  .chip[data-dcm]{color:var(--ink-dim)}.chip[data-dcm].on{--fill:var(--maq);--frame:var(--maq);color:#08161a}
   /* Estado (Ativada/Desativada) não tinha fundo próprio pro estado .on — herdava o texto escuro
      genérico (.chip.on) sobre o fundo quase transparente padrão, ficando ilegível. Forma (data-sh)
      tinha o mesmo problema: só o texto escuro genérico, sem fundo próprio pro estado selecionado. */
-  .chip[data-e="1"].on{background:var(--brass);color:#08161a}
-  .chip[data-e="0"].on{background:var(--escarlate);color:#08161a}
+  .chip[data-e="1"].on{--fill:var(--brass);--frame:var(--brass);color:#08161a}
+  .chip[data-e="0"].on{--fill:var(--escarlate);--frame:var(--escarlate);color:#08161a}
   /* Vias — cor livre por via, então o chip lê a cor via custom property em vez de classes fixas */
-  .chip[data-f]{color:var(--vc,var(--ink-dim));border-color:var(--vc,var(--line2))}
-  .chip[data-f].on{background:var(--vc,var(--ink-dim));color:#08161a}
+  .chip[data-f]{color:var(--vc,var(--ink-dim));--frame:var(--vc,var(--border))}
+  .chip[data-f].on{--fill:var(--vc,var(--ink-dim));color:#08161a}
   /* left:70px (não 12px): o botão de tema (.theme-fab, lib/theme.css) é fixo em left:16px;bottom:16px
      em TODO o app, círculo de 42px — com left:12px aqui os dois ficavam exatamente empilhados no
      mesmo canto. 70px deixa o HUD do zoom começar depois do fab (16+42px de diâmetro + folga). */
   .hud{position:fixed;left:70px;bottom:12px;z-index:30;display:flex;gap:8px;align-items:center}
-  .zoom{display:flex;border-radius:11px;overflow:hidden;background:color-mix(in srgb,var(--panel) 90%,transparent);border:1px solid var(--line2)}
+  .zoom{display:flex;overflow:hidden;--fill:var(--surface-1);--frame:var(--border-strong)}
   .zoom button{background:transparent;border:0;color:var(--ink-dim);font-family:var(--mono);font-size:16px;width:40px;height:38px;cursor:pointer}
-  .zoom button:hover{color:var(--ink);background:rgba(255,255,255,.08)}
+  .zoom button:hover{color:var(--primary)}
   .count{position:fixed;right:12px;bottom:14px;left:12px;z-index:30;font-family:var(--mono);font-size:11px;color:var(--ink-faint);
     text-align:right;white-space:pre-wrap;overflow-wrap:break-word;pointer-events:none}
   .count.ok{color:#7fd48a}
@@ -148,21 +147,21 @@
   /* legenda fixa de Via/afinidade — mesmo nome+cor que já aparecia por esfera ao clicar, só que
      todo mundo de uma vez, sem precisar abrir cada esfera pra descobrir a que via ela pertence */
   .via-legend{position:fixed;top:var(--toolbar-bottom,64px);left:12px;z-index:30;display:flex;flex-direction:column;gap:5px;
-    background:color-mix(in srgb,var(--panel) 90%,transparent);border:1px solid var(--line2);border-radius:11px;padding:9px 11px;pointer-events:none;
+    --fill:var(--surface-1);--frame:var(--border);padding:9px 11px;pointer-events:none;
     font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-dim);max-width:180px}
   .via-legend-row{display:flex;align-items:center;gap:7px}
-  .via-legend-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+  .via-legend-dot{width:9px;height:9px;flex-shrink:0}
   .via-legend-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   /* aparece por cima de tudo (inclusive dentro do iframe embutido na mesa) quando o boot falha —
      ver showBootError() no script */
   .boot-error-banner{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:50;
     display:flex;flex-direction:column;align-items:center;gap:14px;max-width:min(420px,calc(100vw - 32px));
-    text-align:center;background:color-mix(in srgb,var(--panel) 97%,transparent);border:1px solid var(--escarlate,#e2645a);border-radius:16px;
-    padding:24px 26px;color:var(--ink);font-family:var(--serif);font-size:14px;line-height:1.5;
-    box-shadow:0 18px 50px rgba(0,0,0,.5)}
-  .tools{display:flex;gap:5px;align-items:center;padding:5px;border-radius:12px;background:color-mix(in srgb,var(--panel) 90%,transparent);border:1px solid var(--line2)}
-  .tool{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-dim);background:transparent;border:1px solid transparent;border-radius:9px;padding:8px 11px;cursor:pointer}
-  .tool.on{color:var(--bone);border-color:var(--brass);background:rgba(227,192,113,.12)}
+    text-align:center;--fill:var(--surface-1);--frame:var(--danger);
+    padding:24px 26px;color:var(--ink);font-family:var(--serif);font-size:14px;line-height:1.5}
+  .tools{display:flex;gap:5px;align-items:center;padding:5px;--fill:var(--surface-1);--frame:var(--border)}
+  .tool{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-dim);--fill:transparent;--frame:transparent;padding:8px 11px;cursor:pointer}
+  .tool.on{color:var(--bone);--frame:var(--brass);--fill:color-mix(in srgb,var(--primary) 12%,transparent)}
+  .tool:hover{--fill:var(--surface-2);color:var(--bone)}
 
   /* grade de encaixe — só aparece durante colocar/mover esferas (edição do GM). Cor dourada de
      propósito, BEM diferente do lilás dos anéis decorativos (#rings) — os dois usavam tons quase
@@ -184,12 +183,13 @@
   .via-edit-btn:hover{color:var(--brass)}
   .via-edit{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line2);display:flex;flex-direction:column;gap:7px}
   .via-row{display:flex;align-items:center;gap:7px}
-  .via-row input[type=color]{width:28px;height:28px;flex:0 0 auto;border:1px solid var(--line2);border-radius:7px;background:none;padding:0;cursor:pointer}
-  .via-row input[type=text]{flex:1;min-width:0;background:rgba(255,255,255,.06);border:1px solid var(--line2);border-radius:8px;color:var(--ink);font-family:var(--serif);font-size:13px;padding:7px 9px;box-sizing:border-box}
-  .via-del,.via-add-btn{flex:0 0 auto;width:28px;height:28px;border-radius:7px;border:1px solid var(--line2);background:rgba(255,255,255,.04);color:var(--ink-faint);cursor:pointer;font-size:13px;line-height:1}
-  .via-del:hover{color:var(--escarlate);border-color:rgba(255,92,138,.4)}
-  .via-add-btn{color:var(--brass);border-color:rgba(227,192,113,.4)}
-  .via-add-btn:hover{background:rgba(227,192,113,.12)}
+  .via-row input[type=color]{width:28px;height:28px;flex:0 0 auto;border:0;background:none;padding:0;cursor:pointer;
+    clip-path:polygon(var(--cut-xs) 0,100% 0,100% calc(100% - var(--cut-xs)),calc(100% - var(--cut-xs)) 100%,0 100%,0 var(--cut-xs))}
+  .via-row input[type=text]{flex:1;min-width:0;color:var(--ink);font-family:var(--serif);font-size:13px;padding:7px 9px;box-sizing:border-box}
+  .via-del,.via-add-btn{flex:0 0 auto;width:28px;height:28px;--fill:var(--surface-2);--frame:var(--border);color:var(--ink-faint);cursor:pointer;font-size:13px;line-height:1}
+  .via-del:hover{color:var(--danger);--frame:var(--danger)}
+  .via-add-btn{color:var(--brass);--frame:color-mix(in srgb,var(--primary) 40%,transparent)}
+  .via-add-btn:hover{--fill:color-mix(in srgb,var(--primary) 12%,transparent)}
 
   /* ---------- celular ----------
      A árvore é tela cheia de canvas: no celular tudo que flutua por cima dela precisa ocupar o
@@ -205,7 +205,9 @@
     .arvore-toolbar .tool{padding:9px 10px;white-space:nowrap}
     .arvore-toolbar .tools > span{white-space:nowrap}
     .epanel{top:auto;left:0;right:0;bottom:0;width:auto;max-width:none;max-height:min(72dvh,620px);
-      border-radius:18px 18px 0 0;border-bottom:0;padding-bottom:env(safe-area-inset-bottom)}
+      padding-bottom:env(safe-area-inset-bottom);
+      /* folha inferior: chanfro L só no canto superior esquerdo */
+      clip-path:polygon(var(--cut) 0,100% 0,100% 100%,0 100%,0 var(--cut));background-size:auto,calc(var(--cut) + 4px) calc(var(--cut) + 4px),0 0}
     .epanel .hd .x{width:40px;height:40px;margin:-8px -8px -8px auto}
     .epanel .bd{padding:14px 16px 18px}
     .hud{left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));overflow-x:auto;scrollbar-width:none;
@@ -285,7 +287,7 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
   <div class="tools" title="Como as habilidades se encaixam (não muda cor nenhuma)" style="gap:8px">
     <span style="font-family:var(--mono);font-size:11px;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em;display:inline-flex;align-items:center;gap:6px"><img class="mark logo sm" src="lib/logo.png" alt="" aria-hidden="true">Formato</span>
     <select id="shape-select" onchange="changeGridShape(this.value)"
-      style="background:rgba(255,255,255,.06);border:1px solid var(--line2);border-radius:7px;color:var(--ink);font-family:var(--mono);font-size:11px;padding:6px 8px;cursor:pointer">
+      style="color:var(--ink);font-family:var(--mono);font-size:11px;padding:6px 8px;cursor:pointer">
       <option value="octagon">Octógono</option>
       <option value="hexagon">Hexágono</option>
       <option value="linear">Linear (quadrado)</option>
@@ -340,7 +342,7 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
     </div>
     <div class="fld"><label>Custo em pontos</label><input id="e-cost" type="number" min="0" inputmode="numeric" placeholder="0" oninput="patch('cost',Math.max(0,parseInt(this.value)||0))"></div>
     <div class="fld"><label>Descrição</label><textarea id="e-desc" placeholder="O que essa habilidade faz..." oninput="patch('descr',this.value)"
-      style="width:100%;min-height:80px;resize:vertical;line-height:1.55;background:rgba(255,255,255,.06);border:1px solid var(--line2);border-radius:10px;color:var(--ink);font-family:var(--serif);font-size:14px;padding:10px 12px"></textarea></div>
+      style="width:100%;min-height:80px;resize:vertical;line-height:1.55;color:var(--ink);font-family:var(--serif);font-size:14px;padding:10px 12px"></textarea></div>
     <div class="fld"><label>Modificadores de status <span style="font-weight:400;color:var(--ink-faint);text-transform:none">(aplicado na ficha ao desbloquear)</span></label>
       <div id="e-mods" style="display:flex;flex-direction:column;gap:7px"></div>
     </div>
@@ -425,6 +427,6 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
 <div class="count" id="count"></div>
 <div class="via-legend" id="via-legend" style="display:none"></div>
 
-<script src="arvore.js?v=26"></script>
+<script src="arvore.js?v=27"></script>
 </body>
 </html>

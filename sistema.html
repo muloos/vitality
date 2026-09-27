@@ -9,10 +9,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="lib/tokens.css?v=2">
-<link rel="stylesheet" href="lib/theme.css?v=51">
-<link rel="stylesheet" href="lib/theme-ffx.css?v=12">
-<link rel="stylesheet" href="lib/components.css?v=7">
+<link rel="stylesheet" href="lib/tokens.css?v=3">
+<link rel="stylesheet" href="lib/theme.css?v=52">
+<link rel="stylesheet" href="lib/theme-ffx.css?v=13">
+<link rel="stylesheet" href="lib/components.css?v=8">
 <style>
   /* Construtor — "Latão calmo" (docs/DESIGN-v2-LATAO-CALMO.md §3.4) */
   .sis-layout > .ffx-side{flex-basis:240px}
@@ -24,7 +24,7 @@
   .save-state .ss-err{color:var(--danger)}
   .save-state .btn.tertiary{font-size:var(--fs-small)}
   #publish-btn{margin-right:var(--space-3);width:auto}
-  #publish-btn:disabled{color:var(--success);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--success) 45%,transparent);background:transparent;opacity:1}
+  #publish-btn:disabled{color:var(--success);--frame:color-mix(in srgb,var(--success) 45%,transparent);--fill:transparent;opacity:1}
   /* progresso + ◆/◇ por item */
   .build-progress{display:flex;flex-direction:column;gap:6px;padding:0 var(--space-4) var(--space-4) var(--space-5)}
   .bp-t{font-size:var(--fs-small);color:var(--text-3)} .bp-t b{color:var(--text);font-weight:600}
@@ -40,7 +40,7 @@
   .stat-row .sr-key{flex:0 0 auto;min-width:48px;font-family:var(--mono);font-size:12px;color:var(--primary)}
   .stat-row .stat-row-f{flex:0 1 240px;min-width:0;font-family:var(--mono);font-size:12px;color:var(--text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
   .stat-row .stat-dot{width:8px;height:8px;flex:0 0 auto;background:var(--sw);transform:rotate(45deg)}
-  .stat-row.on{box-shadow:inset 2px 0 0 var(--primary),inset 0 0 0 1px var(--border-strong);background:var(--surface-2)}
+  .stat-row.on{--cf-accent:inset 2px 0 0 var(--primary);--frame:var(--border-strong);--fill:var(--surface-2)}
   /* editor */
   .stat-editor{display:flex;flex-direction:column;gap:var(--space-4);padding:var(--space-5)}
   .se-head{display:flex;align-items:center;gap:var(--space-3)}
@@ -49,9 +49,8 @@
   .se-types{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
   .se-types button{height:36px;font-family:var(--serif);font-size:var(--fs-small);font-weight:500;letter-spacing:0;text-transform:none}
   .se-swatches{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-  .se-sw{width:28px;height:28px;border:0;cursor:pointer;background:var(--sw);--c:var(--cut-sm);clip-path:var(--chamfer);box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
-  .se-sw[aria-pressed="true"]{outline:2px solid var(--primary);outline-offset:2px;clip-path:none}
-  .se-other{width:auto;margin-left:var(--space-1)}
+  .se-sw{width:28px;height:28px;cursor:pointer}
+    .se-other{width:auto;margin-left:var(--space-1)}
   .se-inline{display:flex;gap:var(--space-2)} .se-inline input{flex:1;min-width:0}
   .stat-editor .btn.tertiary{width:auto;align-self:flex-start}
   .fld-help code{font-family:var(--mono);font-size:12px;color:var(--primary)}
@@ -63,8 +62,10 @@
     .save-state{display:none}
     .sis-layout > .ffx-aside:not(.sheet-open){display:none}
     .sis-layout > .ffx-aside.sheet-open{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:var(--z-drawer);max-height:85vh;overflow:auto;
-      margin:0;background:var(--surface-2);box-shadow:var(--shadow-float);order:0}
-    .sheet-open .stat-editor{clip-path:none}
+      margin:0;order:0}
+    /* folha inferior: chanfro L só no canto superior esquerdo (§1.1) */
+    .sheet-open .stat-editor{clip-path:polygon(var(--cut) 0,100% 0,100% 100%,0 100%,0 var(--cut));
+      background-size:var(--cf-img-size,auto),calc(var(--cut) + 4px) calc(var(--cut) + 4px),0 0}
     .se-grip{display:block;position:absolute;left:50%;top:8px;width:40px;height:4px;margin-left:-20px;background:var(--border-strong)}
     .se-head{position:relative;padding-top:var(--space-2)}
     .se-done{display:inline-flex}
@@ -88,7 +89,7 @@
   .embed-back{display:none}
   body.embedded .topbar{display:none}
   body.embedded .embed-back{display:flex;position:fixed;left:12px;top:12px;z-index:30;
-    align-items:center;gap:7px;height:38px;padding:0 14px 0 12px;border-radius:11px;
+    align-items:center;gap:7px;height:38px;padding:0 14px 0 12px;
     background:color-mix(in srgb,var(--panel) 90%,transparent);border:1px solid var(--line2);color:var(--ink-dim);
     font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
   .embed-back:hover{color:var(--ink);background:rgba(255,255,255,.08)}
@@ -1073,7 +1074,7 @@ window.formulaTutorial = (stats) => {
         <li><code>nivel</code> — o nível atual do personagem, e o apelido que você der ao bônus de proficiência (aba Proficiências), se houver</li>
       </ul>
       <p style="margin:0 0 6px"><b>Exemplo:</b></p>
-      <div style="font-family:var(--mono);font-size:12px;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--bone)">
+      <div class="cf-s" style="font-family:var(--mono);font-size:12px;--fill:var(--surface-2);--frame:var(--border);padding:10px 12px;color:var(--text)">
         Ataque (calculado) = <span style="color:var(--maq)">${esc(ex)}</span></div>
       <p style="margin:10px 0 0;font-size:12px;color:var(--ink-faint)">Dica: use apelidos curtos, sem espaços nem acentos (ex.: <code>HP</code>, <code>MANA</code>, <code>FORCA</code>, <code>DES</code>). Assim fica fácil escrever as fórmulas.</p>
     </div></div>`;
@@ -1186,9 +1187,9 @@ function periciaRow(s) {
     <div style="display:flex;align-items:center;gap:10px;width:100%">
       <span style="font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint);text-transform:uppercase;letter-spacing:.08em;flex-shrink:0">na fórmula</span>
       <input value="${esc(s.formula_key)}" placeholder="apelido" onchange="onStatFieldChange('${s.id}','formula_key',this.value)"
-        style="width:140px;flex-shrink:0;background:var(--field);border:1px solid var(--line2);border-radius:8px;color:var(--maq);font-family:var(--mono);font-size:12px;padding:8px 10px">
+        style="width:140px;flex-shrink:0;color:var(--maq);font-family:var(--mono);font-size:12px;padding:8px 10px">
       <input value="${esc(s.formula)}" placeholder="fórmula (ex.: DES + PROF)"
-        style="flex:1;min-width:140px;background:var(--field);border:1px solid var(--line2);border-radius:8px;color:var(--maq);font-family:var(--mono);font-size:12px;padding:8px 10px"
+        style="flex:1;min-width:140px;color:var(--maq);font-family:var(--mono);font-size:12px;padding:8px 10px"
         onchange="onStatFieldChange('${s.id}','formula',this.value)">
       <button type="button" class="btn sm auto" style="flex-shrink:0" title="Inserir função ou apelido" onclick="openFuncPicker(this, this.previousElementSibling)">ƒ(x)</button>
     </div>
@@ -1324,9 +1325,9 @@ function profRow(p) {
     <div class="grow"><input class="nm" style="background:transparent;border:0;color:var(--ink);font-family:var(--serif);font-size:15px;width:100%" value="${esc(p.name)}" onchange="onProfFieldChange('${p.id}','name',this.value)">
       <div class="sub" style="display:flex;align-items:center;gap:6px;margin-top:3px">na fórmula:
         <input value="${esc(p.formula_key || '')}" placeholder="opcional" onchange="onProfFieldChange('${p.id}','formula_key',this.value)"
-          style="width:120px;background:var(--field);border:1px solid var(--line2);border-radius:6px;color:var(--maq);font-family:var(--mono);font-size:11px;padding:3px 7px"></div></div>
+          style="width:120px;color:var(--maq);font-family:var(--mono);font-size:11px;padding:3px 7px"></div></div>
     <input value="${esc(p.category || '')}" placeholder="categoria"
-      style="width:130px;background:var(--field);border:1px solid var(--line2);border-radius:8px;color:var(--ink-dim);font-family:var(--mono);font-size:12px;padding:8px 10px"
+      style="width:130px;color:var(--ink-dim);font-family:var(--mono);font-size:12px;padding:8px 10px"
       onchange="onProfFieldChange('${p.id}','category',this.value)">
     <button class="btn sm danger auto" title="Excluir proficiência" aria-label="Excluir proficiência ${esc(p.name)}" onclick="delProficiencia('${p.id}')"><span class="ic">${ICONS.x}</span></button>
   </div>`;
@@ -1614,12 +1615,12 @@ window.toggleTest = (statId) => {
   box.innerHTML = `
     <div class="sub" style="margin-bottom:8px">Nível de teste <span style="color:var(--ink-faint)">(só importa se a fórmula usar "nivel")</span>:</div>
     <input id="test-level-${statId}" value="1" inputmode="numeric" oninput="runTest('${statId}')"
-      style="width:74px;background:var(--field);border:1px solid var(--line2);border-radius:6px;color:var(--ink);font-family:var(--mono);font-size:12px;padding:5px 8px;margin-bottom:12px">
+      style="width:74px;color:var(--ink);font-family:var(--mono);font-size:12px;padding:5px 8px;margin-bottom:12px">
     <div class="sub" style="margin-bottom:8px">Valores de teste (status base):</div>
     ${base.length ? `<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px">${base.map((b) => `
       <label style="font-family:var(--mono);font-size:11px;color:var(--ink-dim);display:flex;align-items:center;gap:6px">${esc(b.formula_key)}
         <input class="tv" data-key="${esc((b.formula_key || '').trim())}" value="${esc(b.default_value || '0')}" inputmode="decimal"
-          style="width:74px;background:var(--field);border:1px solid var(--line2);border-radius:6px;color:var(--ink);font-family:var(--mono);font-size:12px;padding:5px 8px" oninput="runTest('${statId}')"></label>`).join('')}</div>`
+          style="width:74px;color:var(--ink);font-family:var(--mono);font-size:12px;padding:5px 8px" oninput="runTest('${statId}')"></label>`).join('')}</div>`
       : '<div class="sub" style="color:var(--escarlate);margin-bottom:10px">Crie ao menos um status base (com nome na fórmula) para testar.</div>'}
     ${profs.length ? `<div class="sub" style="margin-bottom:8px">Proficiências de teste (tem ou não tem):</div>
     <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px">${profs.map((p) => `
@@ -1914,7 +1915,7 @@ function classFeatureRow(classId, f) {
       <input class="nm" value="${esc(f.name)}" oninput="updateClassFeatureField('${classId}','${f.id}','name',this.value)"
         style="flex:1;background:transparent;border:0;color:var(--ink);font-family:var(--serif);font-size:14px">
       <input type="number" min="1" placeholder="Nível (opcional)" value="${f.level ?? ''}" title="Vazio = sempre ativo desde o início"
-        style="max-width:150px;background:var(--field);border:1px solid var(--line2);border-radius:8px;color:var(--ink);font-family:var(--mono);font-size:12px;padding:8px 10px"
+        style="max-width:150px;color:var(--ink);font-family:var(--mono);font-size:12px;padding:8px 10px"
         onchange="updateClassFeatureField('${classId}','${f.id}','level',this.value)">
       <button class="btn sm auto" onclick="toggleFeatureMods('${classId}','${f.id}')">Modificadores ▾</button>
       <button class="btn sm danger auto" title="Excluir traço" aria-label="Excluir traço ${esc(f.name)}" onclick="delClassFeature('${classId}','${f.id}')"><span class="ic">${ICONS.x}</span></button>
@@ -1997,7 +1998,7 @@ async function renderStartItemsPanel(classId) {
 function startItemRow(classId, r) {
   return `<div class="list-row" data-id="${r.id}">
     <div class="grow"><div class="nm">${esc(r.system_items?.name || '(item removido)')}</div></div>
-    <input type="number" min="1" value="${r.qty}" style="max-width:80px;background:var(--field);border:1px solid var(--line2);border-radius:8px;color:var(--ink);font-family:var(--mono);padding:8px 10px"
+    <input type="number" min="1" value="${r.qty}" style="max-width:80px;color:var(--ink);font-family:var(--mono);padding:8px 10px"
       onchange="updateStartItemQty('${classId}','${r.id}',this.value)">
     <button class="btn sm danger auto" title="Remover item inicial" aria-label="Remover item inicial ${esc(r.system_items?.name || '')}" onclick="delStartItem('${classId}','${r.id}')"><span class="ic">${ICONS.x}</span></button>
   </div>`;
@@ -2247,7 +2248,7 @@ function originFeatureRow(originId, f) {
       <input class="nm" value="${esc(f.name)}" oninput="updateOriginFeatureField('${originId}','${f.id}','name',this.value)"
         style="flex:1;background:transparent;border:0;color:var(--ink);font-family:var(--serif);font-size:14px">
       <input type="number" min="1" placeholder="Nível (opcional)" value="${f.level ?? ''}" title="Vazio = sempre ativo desde o início"
-        style="max-width:150px;background:var(--field);border:1px solid var(--line2);border-radius:8px;color:var(--ink);font-family:var(--mono);font-size:12px;padding:8px 10px"
+        style="max-width:150px;color:var(--ink);font-family:var(--mono);font-size:12px;padding:8px 10px"
         onchange="updateOriginFeatureField('${originId}','${f.id}','level',this.value)">
       <button class="btn sm auto" onclick="toggleOriginFeatureMods('${originId}','${f.id}')">Modificadores ▾</button>
       <button class="btn sm danger auto" title="Excluir traço" aria-label="Excluir traço ${esc(f.name)}" onclick="delOriginFeature('${originId}','${f.id}')"><span class="ic">${ICONS.x}</span></button>
@@ -2338,7 +2339,7 @@ function conditionRow(cond) {
     <div class="cond-line" style="display:flex;gap:8px;align-items:center">
       ${DRAG_HANDLE_SVG}
       <input value="${esc(cond.icon || '')}" placeholder="ícone" maxlength="4" onchange="onCondFieldChange('${cond.id}','icon',this.value)" id="cond-icon-${cond.id}" class="cond-icon" aria-label="Ícone da condição"
-        style="width:44px;text-align:center;background:var(--field);border:1px solid var(--line2);border-radius:8px;color:var(--ink);font-size:15px;padding:8px 4px">
+        style="width:44px;text-align:center;color:var(--ink);font-size:15px;padding:8px 4px">
       <button type="button" class="btn sm auto cond-pick" style="flex-shrink:0" title="Escolher ícone" aria-label="Escolher ícone da condição" onclick="openIconPicker(this, document.getElementById('cond-icon-${cond.id}'))">▾</button>
       <input class="nm" value="${esc(cond.name)}" aria-label="Nome da condição" onchange="onCondFieldChange('${cond.id}','name',this.value)"
         style="flex:1;background:transparent;border:0;color:var(--bone);font-family:var(--disp);font-size:16px">
@@ -2506,7 +2507,7 @@ function levelRow(level, statPoints, treeGrants, trees) {
       <div style="flex:1 1 150px;min-width:150px">
         <div class="sub" style="color:var(--brass);text-transform:uppercase;letter-spacing:.1em;font-size:var(--fs-label);font-family:var(--mono);margin-bottom:6px">Pontos de status</div>
         <input type="number" min="0" value="${statPoints ?? ''}" placeholder="usa o padrão"
-          style="width:100%;background:var(--field);border:1px solid var(--line2);border-radius:8px;color:var(--ink);font-family:var(--mono);padding:8px 10px"
+          style="width:100%;color:var(--ink);font-family:var(--mono);padding:8px 10px"
           onchange="updateLevelPoints(${level}, this.value)">
       </div>
       ${trees.length ? `<div style="flex:2 1 240px;min-width:200px">
@@ -2514,7 +2515,7 @@ function levelRow(level, statPoints, treeGrants, trees) {
         <div style="display:flex;flex-wrap:wrap;gap:8px">
           ${trees.map((t) => `<label style="display:flex;flex-direction:column;gap:4px;font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-dim)">${esc(t.name)}
             <input type="number" min="0" value="${treeGrants[t.id] ?? ''}" placeholder="padrão"
-              style="width:90px;background:var(--field);border:1px solid var(--line2);border-radius:8px;color:var(--ink);font-family:var(--mono);padding:7px 9px"
+              style="width:90px;color:var(--ink);font-family:var(--mono);padding:7px 9px"
               onchange="updateLevelTreePoints(${level}, '${t.id}', this.value)"></label>`).join('')}
         </div>
       </div>` : ''}
@@ -2836,7 +2837,7 @@ function currencyRow(cu) {
     ${DRAG_HANDLE_SVG}
     <div class="grow"><input class="nm" style="background:transparent;border:0;color:var(--ink);font-family:var(--serif);font-size:15px;width:100%" value="${esc(cu.name)}" onchange="updateCurrencyField('${cu.id}','name',this.value)"></div>
     <input value="${esc(cu.symbol || '')}" placeholder="símbolo (ex.: G, $)"
-      style="width:100px;background:var(--field);border:1px solid var(--line2);border-radius:8px;color:var(--ink-dim);font-family:var(--mono);font-size:12px;padding:8px 10px"
+      style="width:100px;color:var(--ink-dim);font-family:var(--mono);font-size:12px;padding:8px 10px"
       onchange="updateCurrencyField('${cu.id}','symbol',this.value)">
     <button type="button" class="color-swatch" style="--sw:${esc(cu.color || '#e3c071')}" title="Cor" aria-label="Cor da moeda ${esc(cu.name)}" onclick="openColorPicker(this, '${esc(cu.color || '#e3c071')}', (v)=>updateCurrencyField('${cu.id}','color',v))"></button>
     <button class="btn sm danger auto" title="Excluir moeda" aria-label="Excluir moeda ${esc(cu.name)}" onclick="delCurrency('${cu.id}')"><span class="ic">${ICONS.x}</span></button>
@@ -3131,12 +3132,12 @@ async function renderEquipamento(c) {
       <label style="display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint);text-transform:uppercase;letter-spacing:.06em;margin-left:4px">
         Altura do quadro
         <input type="number" id="eq-board-h" min="200" max="1000" step="10" value="${boardH}" title="Ajusta a altura do quadro — útil pra não sobrar um bloco gigante quando são poucos slots"
-          style="width:76px;background:var(--field);border:1px solid var(--line2);border-radius:7px;color:var(--ink);font-family:var(--mono);font-size:11px;padding:6px 8px" onchange="onEqBoardHeight(this.value)">px
+          style="width:76px;color:var(--ink);font-family:var(--mono);font-size:11px;padding:6px 8px" onchange="onEqBoardHeight(this.value)">px
       </label>
       <label style="display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint);text-transform:uppercase;letter-spacing:.06em">
         Largura do quadro
         <input type="number" id="eq-board-w" min="300" max="1500" step="10" value="${boardW || ''}" placeholder="auto" title="Ajusta a largura do quadro (vazio = preenche o espaço disponível)"
-          style="width:76px;background:var(--field);border:1px solid var(--line2);border-radius:7px;color:var(--ink);font-family:var(--mono);font-size:11px;padding:6px 8px" onchange="onEqBoardWidth(this.value)">px
+          style="width:76px;color:var(--ink);font-family:var(--mono);font-size:11px;padding:6px 8px" onchange="onEqBoardWidth(this.value)">px
       </label>
     </div>
 
@@ -3188,7 +3189,7 @@ window.clearEqBg = async () => {
   db.updateSystem(systemId, { equipment_bg_url: null }).then(() => openTab('equipamento')).catch((e) => showMsg(e.message));
 };
 function eqSlotHtml(s) {
-  return `<div class="eq-slot${_eqSelected.has(s.id) ? ' selected' : ''}" data-id="${s.id}" style="left:${s.pos_x}%;top:${s.pos_y}%;width:${s.width}px;height:${s.height}px;${s.silhouette_url ? `background-image:url('${esc(s.silhouette_url)}')` : ''}"
+  return `<div class="eq-slot${_eqSelected.has(s.id) ? ' selected' : ''}" data-id="${s.id}" style="left:${s.pos_x}%;top:${s.pos_y}%;width:${s.width}px;height:${s.height}px;${s.silhouette_url ? `--cf-img:url('${esc(s.silhouette_url)}');--cf-img-size:60%` : ''}"
     onpointerdown="onEqSlotPointerDown(event,'${s.id}')" onclick="onEqSlotClick(event,'${s.id}')">
     <span class="eq-slot-label">${esc(s.name)}</span>
   </div>`;

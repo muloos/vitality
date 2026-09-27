@@ -9,32 +9,31 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="lib/tokens.css?v=2">
-<link rel="stylesheet" href="lib/theme.css?v=51">
-<link rel="stylesheet" href="lib/theme-ffx.css?v=12">
-<link rel="stylesheet" href="lib/components.css?v=7">
+<link rel="stylesheet" href="lib/tokens.css?v=3">
+<link rel="stylesheet" href="lib/theme.css?v=52">
+<link rel="stylesheet" href="lib/theme-ffx.css?v=13">
+<link rel="stylesheet" href="lib/components.css?v=8">
 <style>
   /* Mesa — "Latão calmo" (docs/DESIGN-v2-LATAO-CALMO.md §3.3) */
   /* topbar: o grupo em avatares, traço verde = online */
   .party-strip{display:flex;align-items:center;gap:4px;margin-right:var(--space-4)}
   .ps-av{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;font-family:var(--disp);font-size:13px;
-    color:var(--text-2);background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--border)}
-  .ps-av.on{color:var(--text);box-shadow:inset 0 0 0 1px var(--border),inset 0 -2px 0 var(--success)}
+    color:var(--text-2);--fill:var(--surface-2);--frame:var(--border)}
+  .ps-av.on{color:var(--text);--cf-accent:inset 0 -2px 0 var(--success)}
   .ps-av.more{font-family:var(--mono);font-size:var(--fs-label)}
   .ps-count{margin-left:var(--space-2);font-size:var(--fs-small);color:var(--text-3);white-space:nowrap}
   /* trilho: mini-cabeçalho do personagem acima do menu; o grupo mora na topbar */
   .rail-char{display:flex;align-items:center;gap:var(--space-3);padding:0 var(--space-4) var(--space-4) var(--space-5);margin-bottom:var(--space-2);border-bottom:1px solid var(--border)}
   .rail-char[hidden]{display:none}
-  .rc-av{width:40px;height:40px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;object-fit:cover;background:var(--surface-2);
-    color:var(--primary);font-family:var(--disp);font-size:18px;--c:var(--cut-sm);clip-path:var(--chamfer)}
+  .rc-av{width:40px;height:40px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;object-fit:cover;--fill:var(--surface-2);
+    color:var(--primary);font-family:var(--disp);font-size:18px}
   .rc-txt{min-width:0;display:flex;flex-direction:column}
   .rc-txt b{font-family:var(--disp);font-weight:400;font-size:16px;line-height:22px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .rc-txt small{font-size:var(--fs-small);color:var(--text-3)}
   @media (min-width:821px){#party{display:none}}
   /* capa: retrato 96 chanfro 12, nome Fraunces 32, tags neutras */
-  .char-bio-row{min-height:0;padding:var(--space-5);align-items:center;background:var(--surface-1);
-    box-shadow:inset 0 0 0 1px var(--border);--c:var(--cut-md);clip-path:var(--chamfer)}
-  .char-bio-row .char-portrait{width:96px;height:96px;--c:var(--cut-md);clip-path:var(--chamfer);font-size:40px}
+  .char-bio-row{min-height:0;padding:var(--space-5);align-items:center;--fill:var(--surface-1);--frame:var(--border)}
+  .char-bio-row .char-portrait{width:96px;height:96px;font-size:40px}
   .char-bio-row .char-info h2{font-size:32px;line-height:40px}
   /* o "Editar" fica no canto (absoluto): o nome não corre por baixo dele */
   @media (min-width:761px){.char-bio-row .char-info h2{padding-right:112px}}
@@ -43,7 +42,7 @@
   @media (min-width:1280px){.mesa-main .stat-grid:not(.compact){grid-template-columns:repeat(6,minmax(0,1fr))}}
   [data-roll]{cursor:pointer}
   .stat-tile[data-roll]:not(.compact){position:relative}
-  .stat-tile[data-roll]:not(.compact):hover,.stat-tile[data-roll]:not(.compact):focus-visible{box-shadow:inset 0 0 0 1px var(--primary)}
+  .stat-tile[data-roll]:not(.compact):hover{--frame:var(--primary)}
   .stat-tile[data-roll]:not(.compact):hover::before{content:attr(data-hint);position:absolute;right:10px;top:10px;font-family:var(--mono);font-size:var(--fs-label);color:var(--primary)}
   .stat-grid.has-points .stat-tile[data-roll]:hover::before{content:none}
   .stat-pend{color:var(--success)}
@@ -66,15 +65,13 @@
   @media (max-width:1100px){.mesa-main .stat-grid.compact{grid-template-columns:repeat(2,minmax(0,1fr))}}
   /* painel de dados: histórico + rodapé com dados rápidos e fórmula livre */
   @media (min-width:821px){.mesa-page .dice-panel .dice-last,.mesa-page .dice-panel .dh{display:none}}
-  .dice-foot{flex:0 0 auto;display:flex;flex-direction:column;gap:var(--space-2);padding:var(--space-3) var(--space-4);border-top:1px solid var(--border);background:var(--surface-1)}
+  .dice-foot{flex:0 0 auto;display:flex;flex-direction:column;gap:var(--space-2);padding:var(--space-3) var(--space-4);border-top:1px solid var(--border)}
   .dice-foot .dice-quick{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;padding:0}
   .dice-foot .dice-quick button{height:40px}
   .dice-formula{display:flex;gap:var(--space-2)}
-  .dice-formula input{flex:1;min-width:0;height:40px;padding:0 var(--space-3);font-family:var(--mono);font-size:14px;color:var(--text);
-    background:var(--surface-2);border:0;box-shadow:inset 0 0 0 1px var(--border-strong);outline:none}
-  .dice-formula input:focus{box-shadow:inset 0 0 0 1px var(--primary),0 0 0 3px color-mix(in srgb,var(--primary) 25%,transparent)}
+  .dice-formula input{flex:1;min-width:0;height:40px;padding:0 var(--space-3);font-family:var(--mono);font-size:14px;color:var(--text)}
   .dice-formula .btn{width:auto}
-  .roll{background:none;box-shadow:none;border:0;border-bottom:1px solid var(--border);padding:var(--space-3) 0}
+  .roll{padding:var(--space-3);margin-bottom:var(--space-2)}
   .roll .rtop .who{font-family:var(--serif);font-size:var(--fs-small);letter-spacing:0;text-transform:none;color:var(--text-2)}
   .roll .ftxt{font-size:12px}
   .roll .tot{font-family:var(--disp);font-size:26px;font-variant-numeric:tabular-nums;color:var(--text)}
@@ -562,7 +559,7 @@ function paintMesaAvatar() {
   const el = $('mesa-av'); if (!el || !mesa) return;
   el.style.display = '';
   if (mesa.image_url) {
-    el.innerHTML = `<img src="${esc(mesa.image_url)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit">`;
+    el.innerHTML = `<img src="${esc(mesa.image_url)}" alt="" style="width:100%;height:100%;object-fit:cover;">`;
   } else {
     el.textContent = (mesa.name || '?').trim().charAt(0).toUpperCase() || '?';
   }
@@ -745,9 +742,9 @@ function renderNpcFicha(c) {
         <input value="${esc(n.name)}" oninput="onNpcFieldChange('name',this.value)" style="background:transparent;border:0;color:var(--bone);font-family:var(--disp);font-size:22px;padding:0;width:100%">
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
           <input placeholder="Classe/tipo (ex.: Guerreiro)" value="${esc(n.char_class || '')}" oninput="onNpcFieldChange('char_class',this.value)"
-            style="flex:1;min-width:140px;background:var(--field);border:1px solid var(--line2);border-radius:8px;color:var(--ink);font-family:var(--mono);font-size:12px;padding:7px 10px">
+            style="flex:1;min-width:140px;color:var(--ink);font-family:var(--mono);font-size:12px;padding:7px 10px">
           <input placeholder="Origem (ex.: Goblin)" value="${esc(n.origin_name || '')}" oninput="onNpcFieldChange('origin_name',this.value)"
-            style="flex:1;min-width:140px;background:var(--field);border:1px solid var(--line2);border-radius:8px;color:var(--ink);font-family:var(--mono);font-size:12px;padding:7px 10px">
+            style="flex:1;min-width:140px;color:var(--ink);font-family:var(--mono);font-size:12px;padding:7px 10px">
         </div>
         <div style="display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap">
           <span class="badge" style="border-color:var(--brass);color:var(--brass)">Nível ${n.level || 1}</span>
@@ -773,7 +770,7 @@ function renderNpcFicha(c) {
 
     <div class="section-title" role="heading" aria-level="2" style="margin-top:18px">Anotações do Mestre</div>
     <textarea id="npc-notes" placeholder="Táticas, saque, gatilhos de comportamento..." oninput="onNpcFieldChange('notes',this.value)"
-      style="width:100%;min-height:100px;background:var(--field);border:1px solid var(--line2);border-radius:10px;color:var(--ink);font-family:var(--serif);font-size:13px;padding:10px;resize:vertical">${esc(n.notes || '')}</textarea>`;
+      style="width:100%;min-height:100px;color:var(--ink);font-family:var(--serif);font-size:13px;padding:10px;resize:vertical">${esc(n.notes || '')}</textarea>`;
 }
 window.onNpcFieldChange = (key, val) => {
   if (!_npcViewId) return;
@@ -851,7 +848,7 @@ function renderCombatBar() {
   if (!bar) {
     bar = document.createElement('div');
     bar.id = 'combat-bar';
-    bar.style.cssText = 'position:fixed;top:58px;left:50%;transform:translateX(-50%);z-index:80;display:flex;align-items:center;gap:12px;padding:8px 18px;border-radius:999px;background:var(--panel);border:1px solid var(--brass);box-shadow:0 8px 24px rgba(0,0,0,.4);font-family:var(--mono);font-size:12px;color:var(--ink);cursor:pointer';
+    bar.style.cssText = 'position:fixed;top:58px;left:50%;transform:translateX(-50%);z-index:80;display:flex;align-items:center;gap:12px;padding:8px 18px;background:var(--panel);border:1px solid var(--brass);box-shadow:0 8px 24px rgba(0,0,0,.4);font-family:var(--mono);font-size:12px;color:var(--ink);cursor:pointer';
     bar.title = 'Abrir aba Combate';
     bar.onclick = () => selectTab('combate');
     document.body.appendChild(bar);
@@ -982,7 +979,7 @@ async function renderCombateGm(c, myToken) {
       return `<div class="list-row">
         <div class="grow"><div class="nm">${esc(p.name)}${p.type === 'npc' ? ' <span class="badge">NPC</span>' : ''}</div></div>
         <input type="number" id="combat-val-${p.type}-${p.ref}" value="${cur ? esc(String(cur.initiative_value)) : ''}" placeholder="valor"
-          style="max-width:80px;background:var(--field);border:1px solid var(--line2);border-radius:8px;color:var(--ink);font-family:var(--mono);padding:7px">
+          style="max-width:80px;color:var(--ink);font-family:var(--mono);padding:7px">
         ${p.type === 'npc' ? `<button type="button" class="btn sm auto" title="Rolar 1d20" aria-label="Rolar 1d20 pra iniciativa de ${esc(p.name)}" onclick="rollNpcInitiative('${p.ref}')"><span class="ic">${ICONS.dice}</span></button>` : ''}
         <button class="btn sm auto" onclick="gmSetInitiative('${p.type}','${p.ref}')">Definir</button>
       </div>`;
@@ -1308,7 +1305,7 @@ function renderGmArvores(c) {
     <div class="section-title" role="heading" aria-level="2">Pontos de árvore de habilidade</div>
     <div class="list">${_gmViewTreeRows.map(({ tree, pts }) => `
       <div class="list-row"><div class="grow"><div class="nm">${esc(tree.name)}</div></div>
-        <input type="number" min="0" id="gm-treepts-${tree.id}" value="${pts}" style="max-width:70px;background:var(--field);border:1px solid var(--line2);border-radius:9px;color:var(--ink);font-family:var(--mono);padding:7px">
+        <input type="number" min="0" id="gm-treepts-${tree.id}" value="${pts}" style="max-width:70px;color:var(--ink);font-family:var(--mono);padding:7px">
         <button class="btn sm auto" onclick="gmSetTreePoints('${tree.id}','${userId}')">Definir</button>
       </div>`).join('')}</div>` : '<div class="empty">Este sistema não tem árvores de habilidade.</div>';
 }
@@ -1550,7 +1547,7 @@ async function renderSistema(c) {
 
     ${st('Perícias (' + b.stats.filter((s) => s.is_skill).length + ')', 'pericias')}
     <div class="list">${b.stats.filter((s) => s.is_skill).length ? b.stats.filter((s) => s.is_skill).map((s) => `
-      <div class="list-row"><div class="grow"><div class="nm"><i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${esc(s.color || '#7ee6dc')};margin-right:7px;vertical-align:middle"></i>${esc(s.name)}${s.formula_key ? ` <span style="color:var(--maq);font-family:var(--mono);font-size:11px">(${esc(s.formula_key)})</span>` : ''}</div>
+      <div class="list-row"><div class="grow"><div class="nm"><i style="display:inline-block;width:8px;height:8px;background:${esc(s.color || '#7ee6dc')};margin-right:8px;vertical-align:middle;transform:rotate(45deg)"></i>${esc(s.name)}${s.formula_key ? ` <span style="color:var(--maq);font-family:var(--mono);font-size:11px">(${esc(s.formula_key)})</span>` : ''}</div>
         <div class="sub">calculado: ${esc(s.formula || '')}</div></div></div>`).join('') : '<div class="empty">Sem perícias.</div>'}</div>
 
     ${st('Proficiências (' + (b.proficiencies || []).length + ')', 'proficiencias')}
@@ -3322,7 +3319,7 @@ function eqBoardHtml(slots, boardedItems, readOnly = false) {
     ${slots.map((s) => {
       const it = byId.get(s.id);
       const bg = it ? (it.image_url || '') : (s.silhouette_url || '');
-      const style = `left:${s.pos_x}%;top:${s.pos_y}%;width:${s.width}px;height:${s.height}px${bg ? `;background-image:url('${esc(bg)}')` : ''}`;
+      const style = `left:${s.pos_x}%;top:${s.pos_y}%;width:${s.width}px;height:${s.height}px${bg ? `;--cf-img:url('${esc(bg)}');--cf-img-size:60%` : ''}`;
       const rarity = it ? (it.rarity || 'Comum') : null;
       return `<div class="eq-slot${it ? ' filled rarity-fx rarity-surface' : ''}" style="${style}" ${it ? `data-rarity="${esc(rarity)}"` : ''}
         ${readOnly ? '' : `ondragover="onEqSlotDragOver(event,'${s.id}')" ondragleave="onEqSlotDragLeave(event)" ondrop="onEqSlotDrop(event,'${s.id}')"`}
@@ -3388,7 +3385,7 @@ function invRow(it) {
         <input class="poster-desc" style="background:transparent;border:0;border-bottom:1px dashed var(--line2);text-align:center;width:100%;padding:0 0 2px;font-family:var(--serif);font-size:11.5px;color:var(--ink-dim)"
           title="Clique para editar a descrição" placeholder="descrição..." value="${esc(it.description)}" oninput="onInvFieldChange('${it.id}','description',this.value)">
         <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px;width:100%;margin-top:2px">
-          <input type="number" min="0" value="${it.qty}" style="width:56px;background:var(--field);border:1px solid var(--line2);border-radius:8px;color:var(--ink);font-family:var(--mono);padding:6px;text-align:center"
+          <input type="number" min="0" value="${it.qty}" style="width:56px;color:var(--ink);font-family:var(--mono);padding:6px;text-align:center"
             oninput="onInvFieldChange('${it.id}','qty',this.value)">
           <button class="btn sm auto" onclick="openInvItemDetail('${it.id}')" title="Ver o item por completo">Detalhes</button>
           ${(it.consume_effects && it.consume_effects.length) ? `<button class="btn sm go auto" onclick="consumeInv('${it.id}')" title="Aplica o efeito e gasta 1 unidade">Consumir</button>` : ''}
@@ -3547,7 +3544,7 @@ function noteRow(n) {
       <button class="btn sm go auto" id="note-save-${n.id}" style="display:none" onclick="saveNoteRow('${n.id}')"><span class="spin"></span>Salvar</button>
       <button class="btn sm danger auto" onclick="delNote('${n.id}')">Excluir</button>
     </div>
-    <textarea style="width:100%;min-height:70px;background:var(--field-2);border:1px solid var(--line);border-radius:10px;color:var(--ink-dim);font-family:var(--serif);font-size:14px;padding:10px 12px;line-height:1.55"
+    <textarea style="width:100%;min-height:70px;color:var(--ink-dim);font-family:var(--serif);font-size:14px;padding:10px 12px;line-height:1.55"
       placeholder="Escreva..." oninput="onNoteFieldChange('${n.id}','body',this.value)">${esc(n.body)}</textarea>
   </div>`;
 }

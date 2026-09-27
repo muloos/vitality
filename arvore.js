@@ -1438,7 +1438,7 @@ function renderModRows(n) {
     return;
   }
   const mods = n.modifiers || [];
-  const rowStyle = 'flex:1;background:rgba(255,255,255,.06);border:1px solid var(--line2);border-radius:8px;color:var(--ink);font-family:var(--mono);font-size:12px;padding:7px 9px';
+  const rowStyle = 'flex:1;color:var(--ink);font-family:var(--mono);font-size:12px;padding:7px 9px';
   let html = mods.map((m, i) => `
     <div class="via-row">
       <select onchange="setNodeModStat(${i},this.value)" style="${rowStyle}">
@@ -1447,7 +1447,7 @@ function renderModRows(n) {
       <input type="number" step="1" value="${m.amount ?? 0}" oninput="setNodeModAmount(${i},this.value)" style="width:64px;${rowStyle}flex:0 0 auto">
       <button type="button" class="via-del" onclick="removeNodeMod(${i})" title="Remover"><span class="ic">${ICONS.x}</span></button>
     </div>`).join('');
-  html += `<button type="button" class="via-add-btn" style="width:100%;height:32px;border-radius:8px" onclick="addNodeMod()">+ Adicionar modificador</button>`;
+  html += `<button type="button" class="via-add-btn" style="width:100%;height:32px;" onclick="addNodeMod()">+ Adicionar modificador</button>`;
   $('e-mods').innerHTML = html;
 }
 window.addNodeMod = () => { if (!isGM || !selected || !stats.length) return;

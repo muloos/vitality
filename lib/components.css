@@ -380,6 +380,8 @@ html[data-motion="off"] .rar-frame[data-rarity="Lendário"]:hover > .poster-card
 .list-row.on,.list-row[aria-selected="true"]{--fill:var(--surface-2);--frame:var(--border);--cf-accent:inset 2px 0 0 var(--primary)}
 /* busca com lupa */
 .search-field input,.toolbar .search-field input{padding-left:34px}
+/* celular: a barra vira coluna, e o flex-basis de 280px do legado virava ALTURA do campo de busca */
+@media (max-width:760px){.toolbar .search-field{flex:none;width:100%}}
 /* selos de raridade: no card da loja é só o rótulo na cor da raridade; fora dele, selo com fundo a 14% */
 .rar-pill[data-rarity="Comum"]{color:#c3c9d3;--fill:rgba(174,180,192,.14)}
 .rar-pill[data-rarity="Incomum"]{color:#5fe0a0;--fill:rgba(95,224,160,.14)}
@@ -407,3 +409,95 @@ html[data-motion="off"] .rar-frame[data-rarity="Lendário"]:hover > .poster-card
 .nav-user .chip b,.nav-user .chip > span{text-transform:none;letter-spacing:0}
 /* árvore: o canvas de partículas fica no plano 0 */
 body.arvore-page #fx{z-index:0}
+
+/* ---------- card de item (VITALITY-FORMA-COR-ITENS §3.2; marcação em lib/item-card.js) ----------
+   A raridade é conteúdo de jogo: é a ÚNICA exceção à regra "nenhuma animação em loop". Os brilhos
+   usam filter:drop-shadow no .item-glow (sem corte), porque o card é chanfrado e cortaria box-shadow.
+   Com movimento reduzido sobram a moldura, o halo e um brilho estático no Raro ou acima. */
+.item-glow{--rc:var(--rar-comum);--ibw:1px;--iframe:var(--border);--halo:0%;--g1:transparent;--g2:transparent;
+  position:relative;display:flex;min-width:0;transition:transform var(--t) var(--ease)}
+.item-glow:hover{transform:translateY(-4px)}
+.item-glow[data-rarity="Incomum"]{--rc:var(--rar-incomum);--iframe:color-mix(in srgb,var(--rc) 28%,transparent);--halo:16%}
+.item-glow[data-rarity="Raro"]{--rc:var(--rar-raro);--iframe:color-mix(in srgb,var(--rc) 60%,transparent);--halo:22%;
+  --g1:color-mix(in srgb,var(--rc) 55%,transparent);filter:drop-shadow(0 0 8px var(--g1));animation:glowPulse 3.6s ease-in-out infinite}
+.item-glow[data-rarity="Épico"]{--rc:var(--rar-epico);--iframe:color-mix(in srgb,var(--rc) 70%,transparent);--halo:24%;
+  --g1:color-mix(in srgb,var(--rc) 55%,transparent);--g2:rgba(214,60,220,.3);--sweep-d:6s;
+  filter:drop-shadow(0 0 8px var(--g1));animation:glowDouble 3.2s ease-in-out infinite}
+.item-glow[data-rarity="Lendário"]{--rc:var(--rar-lendario);--ibw:2px;--halo:28%;--sweep-d:4s;
+  --iframe:linear-gradient(90deg,var(--rc),#fff3c4,var(--rc),#b8741a,var(--rc));
+  --g1:color-mix(in srgb,var(--rc) 60%,transparent);--g2:rgba(255,140,40,.35);
+  filter:drop-shadow(0 0 8px var(--g1));animation:glowDouble 3s ease-in-out infinite}
+.item-glow[data-rarity="Único"]{--rc:var(--rar-unico);--ibw:2px;--iframe:var(--rc);--halo:28%;--sweep-d:5s;
+  --g1:color-mix(in srgb,var(--rc) 55%,transparent);--g2:rgba(230,0,40,.35);
+  filter:drop-shadow(0 0 8px var(--g1));animation:glowDouble 2.6s ease-in-out infinite}
+/* moldura = o fundo do próprio card (cor ou degradê), com a espessura no padding */
+.item-card{--cut:var(--cut-m);position:relative;flex:1;min-width:0;display:flex;padding:var(--ibw);overflow:hidden;cursor:pointer;
+  background:var(--iframe);background-size:200% 100%;
+  clip-path:polygon(var(--cut) 0,100% 0,100% calc(100% - var(--cut)),calc(100% - var(--cut)) 100%,0 100%,0 var(--cut));
+  transition:background-color var(--t) var(--ease)}
+.item-glow[data-rarity="Comum"] .item-card:hover{--iframe:var(--border-strong)}
+.item-glow[data-rarity="Lendário"] .item-card{animation:borderFlow 3s linear infinite,bob 4s ease-in-out infinite}
+.item-glow[data-rarity="Único"] .item-card{animation:bob 4s ease-in-out infinite}
+.item-aura{position:absolute;left:50%;top:50%;width:200%;height:200%;transform:translate(-50%,-50%);pointer-events:none;
+  background:conic-gradient(from 0deg,transparent 0 60%,var(--rc) 75%,#fff 80%,var(--rc) 85%,transparent 100%);animation:spinC 4s linear infinite}
+/* corte interno menor, para a diagonal da moldura ter a mesma espessura dos lados */
+.item-inner{--ci:calc(var(--cut-m) - var(--ibw)*.586);position:relative;z-index:1;flex:1;min-width:0;display:flex;flex-direction:column;background:var(--surface-1);
+  clip-path:polygon(var(--ci) 0,100% 0,100% calc(100% - var(--ci)),calc(100% - var(--ci)) 100%,0 100%,0 var(--ci))}
+.item-stage{position:relative;aspect-ratio:1;overflow:hidden;
+  background:radial-gradient(circle at 50% 55%,color-mix(in srgb,var(--rc) var(--halo),transparent),transparent 68%)}
+.item-stage img{position:absolute;inset:14%;width:72%;height:72%;object-fit:contain}
+.item-ph{position:absolute;left:50%;top:50%;width:48px;height:48px;transform:translate(-50%,-50%) rotate(45deg);
+  box-shadow:inset 0 0 0 1px var(--rc);display:flex;align-items:center;justify-content:center}
+.item-ph b{transform:rotate(-45deg);font-family:var(--disp);font-weight:400;font-size:20px;color:var(--rc)}
+:root[data-theme="light"] .item-ph b{color:color-mix(in srgb,var(--rc) 45%,var(--text))}
+.item-stage .sweep{position:absolute;top:0;bottom:0;left:0;width:40%;pointer-events:none;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.16),transparent);transform:translateX(-160%) skewX(-18deg);
+  animation:sweep var(--sweep-d,6s) ease-in-out infinite}
+.item-stage .twinkle{position:absolute;width:7px;height:7px;margin:-3px 0 0 -3px;background:#fff;opacity:0;pointer-events:none;
+  box-shadow:0 0 6px var(--rc);animation:twinkle 2.4s ease-in-out infinite}
+/* selo da raridade: XS, mono 11, fundo escuro translúcido, canto superior esquerdo */
+.item-rar{position:absolute;top:8px;left:8px;z-index:2;padding:3px 7px;font-family:var(--mono);font-size:var(--fs-label);line-height:16px;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--rc);background:rgba(15,16,18,.72);
+  clip-path:polygon(var(--cut-xs) 0,100% 0,100% calc(100% - var(--cut-xs)),calc(100% - var(--cut-xs)) 100%,0 100%,0 var(--cut-xs))}
+/* cantos do palco: ação (sup. dir.), estado (inf. esq.), alça de arrastar (inf. dir.) */
+.item-stage .poster-fav{position:absolute;top:8px;right:8px;left:auto;bottom:auto;z-index:3;width:32px;height:32px;display:flex;align-items:center;justify-content:center}
+.item-stage .poster-fav svg{width:15px;height:15px;fill:none;stroke:currentColor}
+.item-stage .poster-fav.on svg{fill:var(--danger);stroke:var(--danger)}
+.item-stage .poster-pub{position:absolute;top:auto;left:8px;right:auto;bottom:8px;z-index:2}
+.item-stage .card-drag{position:absolute;top:auto;left:auto;right:8px;bottom:8px;z-index:3;width:28px;height:28px;display:flex;align-items:center;justify-content:center}
+.item-info{display:flex;flex-direction:column;gap:2px;padding:10px 12px 12px;border-top:2px solid var(--rc);min-width:0}
+.item-name{margin:0;font-family:var(--disp);font-weight:400;font-size:18px;line-height:24px;color:var(--text);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.item-meta{font-size:13px;line-height:20px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item-extra{display:flex;flex-direction:column;gap:var(--space-2);padding:0 12px 12px;cursor:default}
+.item-extra .mods{display:flex;flex-wrap:wrap;gap:4px}
+.item-extra .item-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.item-extra input{font-family:var(--serif);font-size:var(--fs-small);color:var(--text)}
+.item-extra .item-ctl input[type=number]{width:56px;height:32px;padding:0 6px;text-align:center;font-family:var(--mono)}
+.item-extra .item-desc{width:100%;height:32px;padding:0 8px;font-size:var(--fs-small)}
+/* foco por teclado: o pai sem corte desenha o contorno em volta do formato cortado (§1.3 .cf-wrap) */
+.item-card:focus-visible{outline:none}
+.item-glow:has(> .item-card:focus-visible){animation:none;
+  filter:drop-shadow(0 0 1px var(--primary)) drop-shadow(0 0 1px var(--primary)) drop-shadow(0 0 1.5px var(--primary))}
+.item-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:var(--space-4);align-items:start}
+.item-grid.with-controls{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+@media (max-width:760px){.item-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-3)}.item-grid.with-controls{grid-template-columns:minmax(0,1fr)}}
+@keyframes glowPulse{0%,100%{filter:drop-shadow(0 0 6px var(--g1))}50%{filter:drop-shadow(0 0 14px var(--g1))}}
+@keyframes glowDouble{0%,100%{filter:drop-shadow(0 0 8px var(--g1)) drop-shadow(0 0 18px var(--g2))}50%{filter:drop-shadow(0 0 14px var(--g1)) drop-shadow(0 0 30px var(--g2))}}
+@keyframes borderFlow{0%{background-position:0% 50%}100%{background-position:200% 50%}}
+@keyframes sweep{0%{transform:translateX(-160%) skewX(-18deg)}30%,100%{transform:translateX(260%) skewX(-18deg)}}
+@keyframes spinC{to{transform:translate(-50%,-50%) rotate(360deg)}}
+@keyframes twinkle{0%,100%{opacity:0;transform:scale(.3) rotate(45deg)}50%{opacity:1;transform:scale(1) rotate(45deg)}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+/* fora da tela (IntersectionObserver em lib/item-card.js): tudo pausado */
+.item-glow.paused,.item-glow.paused *{animation-play-state:paused}
+/* movimento reduzido ou "Animações" desligado: nada em loop; fica moldura, halo e brilho estático */
+@media (prefers-reduced-motion:reduce){
+  .item-glow[data-rarity],.item-glow[data-rarity] .item-card,.item-glow .item-aura,.item-glow .sweep,.item-glow .twinkle{animation:none}
+  .item-glow .sweep,.item-glow .twinkle{display:none}
+  .item-glow:hover{transform:none}
+}
+html[data-motion="off"] .item-glow[data-rarity],html[data-motion="off"] .item-glow[data-rarity] .item-card,
+html[data-motion="off"] .item-glow .item-aura,html[data-motion="off"] .item-glow .sweep,html[data-motion="off"] .item-glow .twinkle{animation:none}
+html[data-motion="off"] .item-glow .sweep,html[data-motion="off"] .item-glow .twinkle{display:none}
+html[data-motion="off"] .item-glow:hover{transform:none}

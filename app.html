@@ -9,10 +9,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="lib/tokens.css?v=4">
+<link rel="stylesheet" href="lib/tokens.css?v=5">
 <link rel="stylesheet" href="lib/theme.css?v=52">
 <link rel="stylesheet" href="lib/theme-ffx.css?v=13">
-<link rel="stylesheet" href="lib/components.css?v=10">
+<link rel="stylesheet" href="lib/components.css?v=11">
 <style>
   /* Lobby — "Latão calmo" (docs/DESIGN-v2-LATAO-CALMO.md §3.2) */
   .home-head{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--space-4);flex-wrap:wrap;margin:0 0 var(--space-5)}
@@ -61,21 +61,6 @@
   .box.dlg .actions{display:flex;justify-content:flex-end;gap:var(--space-2);flex-wrap:wrap;margin-top:var(--space-2)}
   .code-input{font-family:var(--mono);font-size:20px;letter-spacing:.3em;text-transform:uppercase}
   .code-big{font-family:var(--mono);font-size:22px;letter-spacing:.3em;color:var(--text);padding:var(--space-4);text-align:center}
-  /* "Meus itens" (Itens → Criar) em linhas, como mesas e sistemas; a Loja continua em cards */
-  #items.item-grid{display:flex;flex-direction:column;gap:var(--space-2)}
-  #items .rar-frame{width:100%}
-  #items .poster-card{display:flex;flex-direction:row;align-items:center;gap:var(--space-4);min-height:72px;height:auto;
-    padding:var(--space-3) var(--space-4);text-align:left}
-  #items .poster-icon{width:40px;height:40px;flex:0 0 auto;margin:0 4px}
-  #items .poster-body{flex:1;min-width:0;display:flex;flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:2px var(--space-3);padding:0}
-  #items .poster-name{margin:0;font-size:18px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  #items .poster-desc{flex-basis:100%;margin:0;-webkit-line-clamp:1;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;text-align:left}
-  #items .poster-meta{display:none}
-  #items .poster-pub,#items .poster-fav{position:static;flex:0 0 auto}
-  #items .poster-card{text-align:left;justify-content:flex-start}
-  #items .poster-icon{order:0} #items .poster-body{order:1;justify-content:flex-start;text-align:left}
-  #items .poster-pub{order:2} #items .poster-fav{order:3}
-  #items .poster-name,#items .poster-desc{text-align:left}
   /* celular: barra inferior com os 4 destinos; o menu lateral vira só as sub-abas da seção */
   .bottom-nav{display:none}
   @media (max-width:760px){
@@ -324,6 +309,7 @@
 
 <script type="module">
 import * as db from './lib/db.js?v=42';
+import { itemCard } from './lib/item-card.js?v=1';
 import { mountHelp, mountThemeToggle, openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus, wireVerticalTablist, playEnter } from './lib/ui.js?v=10';
 
 mountHelp('home');
@@ -1008,54 +994,17 @@ window.saveItem = (ev) => {
 
 /* ---------- card de item (pôster) — usado em Loja / Favoritos / Criar ---------- */
 const HEART_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.8-9.8-9.3C.6 7.7 2.3 4.5 5.6 4a4.9 4.9 0 0 1 6.4 2 4.9 4.9 0 0 1 6.4-2c3.3.5 5 3.7 3.4 7.2C19.5 15.7 12 20.5 12 20.5Z" stroke-width="1.8" stroke-linejoin="round"/></svg>';
-// moldura de raridade "premium" (referência enviada pelo usuário): borda em degradê animado
-// por fora (via wrapper .rar-frame, truque do padding = espessura da borda) + decorações
-// internas dentro do .poster-card, que corta tudo com overflow:hidden — sweep de luz na
-// diagonal (Épico+), realce interno pulsando + linha no topo (Lendário+), vórtice duplo
-// girando em sentidos opostos + núcleo latejante (só Único) e estrelas de 8 pontas
-// (clip-path) piscando em posições fixas, mais densas a cada tier.
-function posterRarityLayers(rarity) {
-  const glintSpots = {
-    'Épico': [[16, 22]],
-    'Lendário': [[18, 18], [80, 28], [14, 66], [84, 86]],
-    'Único': [[12, 14], [82, 20], [6, 36], [90, 46], [16, 64], [86, 78], [24, 94], [72, 90], [48, 10], [46, 56], [66, 48]],
-  };
-  const spots = glintSpots[rarity] || [];
-  let glints = '';
-  spots.forEach((p, i) => {
-    const delay = (i * 0.28).toFixed(2);
-    const dur = (2.1 + (i % 4) * 0.3).toFixed(2);
-    const size = 8 + (i % 3) * 2;
-    glints += `<i class="pc-glint" style="left:${p[0]}%;top:${p[1]}%;width:${size}px;height:${size}px;animation-delay:${delay}s;animation-duration:${dur}s"></i>`;
-  });
-  let extra = '';
-  if (rarity === 'Épico' || rarity === 'Único') extra += `<span class="pc-sweep"></span>`;
-  if (rarity === 'Lendário' || rarity === 'Único') extra += `<span class="pc-highlight"></span><span class="pc-topline"></span><span class="pc-core"></span>`;
-  if (rarity === 'Único') extra += `<span class="pc-sweep pc-sweep2"></span><span class="pc-ring"></span><span class="pc-ring pc-ring2"></span>`;
-  return extra + glints;
-}
+// card de item: componente único (lib/item-card.js, docs/VITALITY-FORMA-COR-ITENS.md §3.2)
 function itemCardHtml(it) {
   const isFav = _favIds.has(it.id);
   const isMine = !!myUserId && it.owner_id === myUserId;
-  const rarity = it.rarity || 'Comum';
-  const rarityKey = 'r-' + esc(rarity.toLowerCase());
-  const initial = esc((it.name || '?').trim().charAt(0).toUpperCase() || '?');
-  const bgStyle = it.image_url ? ` style="background-image:url('${esc(it.image_url)}')"` : '';
-  return `
-    <div class="rar-frame" data-rarity="${esc(rarity)}">
-      <div class="poster-card" onclick='openItemDetail("${it.id}")' onkeydown='if(event.key==="Enter"||event.key===" "){event.preventDefault();openItemDetail("${it.id}")}' tabindex="0" role="button" aria-label="Ver detalhes de ${esc(it.name)}">
-        ${posterRarityLayers(rarity)}
-        ${isMine ? `<span class="poster-pub ${it.is_published ? 'on' : ''}">${it.is_published ? 'Publicado' : 'Privado'}</span>` : ''}
-        <button class="poster-fav ${isFav ? 'on' : ''}" onclick='event.stopPropagation();toggleFavorite("${it.id}")' aria-label="${isFav ? 'Remover dos favoritos' : 'Favoritar'}" aria-pressed="${isFav}">${HEART_ICON}</button>
-        <div class="poster-icon ${it.image_url ? '' : 'ph ' + rarityKey}"${bgStyle}>${!it.image_url ? `<span class="poster-initial">${initial}</span>` : ''}</div>
-        <div class="poster-body">
-          <h4 class="poster-name">${esc(it.name)}</h4>
-          ${it.rarity ? `<span class="rar-pill" data-rarity="${esc(it.rarity)}">${esc(it.rarity)}</span>` : ''}
-          ${it.description ? `<p class="poster-desc">${esc(it.description)}</p>` : ''}
-          <div class="poster-meta">por ${esc(it.creator_name || '—')}</div>
-        </div>
-      </div>
-    </div>`;
+  return itemCard({
+    item: it,
+    attrs: `onclick='openItemDetail("${it.id}")' onkeydown='if(event.key==="Enter"||event.key===" "){event.preventDefault();openItemDetail("${it.id}")}' tabindex="0" role="button" aria-label="Ver detalhes de ${esc(it.name)}"`,
+    action: `<button class="poster-fav ${isFav ? 'on' : ''}" onclick='event.stopPropagation();toggleFavorite("${it.id}")' aria-label="${isFav ? 'Remover dos favoritos' : 'Favoritar'}" aria-pressed="${isFav}">${HEART_ICON}</button>`,
+    status: isMine ? `<span class="poster-pub ${it.is_published ? 'on' : ''}">${it.is_published ? 'Publicado' : 'Privado'}</span>` : '',
+    meta: `${it.category ? esc(it.category) + ' · ' : ''}por ${esc(it.creator_name || '—')}`,
+  });
 }
 function filterItems(items, qId, catId) {
   const q = ($(qId)?.value || '').trim().toLowerCase();

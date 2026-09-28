@@ -68,6 +68,8 @@
   --cut-xs:4px; --cut-s:6px; --cut-m:12px; --cut-l:18px; --bw-default:1px;
   --cut-sm:var(--cut-s); --cut-md:var(--cut-m);
   /* movimento e camadas */
+  /* raridade de item (docs/VITALITY-FORMA-COR-ITENS.md §3.1) */
+  --rar-comum:#b9c2c6; --rar-incomum:#7ed69a; --rar-raro:#6aaeff; --rar-epico:#b98cff; --rar-lendario:#f2b544; --rar-unico:#ff5a67;
   --t-fast:120ms; --t:200ms; --t-slow:360ms; --ease:cubic-bezier(.2,.7,.2,1);
   --z-base:1; --z-sticky:10; --z-drawer:40; --z-overlay:80; --z-modal:100; --z-toast:120;
 

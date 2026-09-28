@@ -9,10 +9,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="lib/tokens.css?v=4">
+<link rel="stylesheet" href="lib/tokens.css?v=5">
 <link rel="stylesheet" href="lib/theme.css?v=52">
 <link rel="stylesheet" href="lib/theme-ffx.css?v=13">
-<link rel="stylesheet" href="lib/components.css?v=10">
+<link rel="stylesheet" href="lib/components.css?v=11">
 <style>
   /* Construtor — "Latão calmo" (docs/DESIGN-v2-LATAO-CALMO.md §3.4) */
   .sis-layout > .ffx-side{flex-basis:240px}
@@ -151,6 +151,7 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
 
 <script type="module">
 import * as db from './lib/db.js?v=42';
+import { itemCard } from './lib/item-card.js?v=1';
 import { mountHelp, trapFocus, wireVerticalTablist, armEnter, toggleTheme, getTheme } from './lib/ui.js?v=10';
 
 // embutido dentro da mesa (iframe) — ver comentário grande no <style> acima e em arvore.js (mesmo
@@ -2630,26 +2631,6 @@ window.toggleAssign = (treeId, classId, cb) => {
 // moldura de raridade "premium" (mesmo padrão de app.html, duplicado aqui de propósito —
 // convenção do projeto de não compartilhar helpers de UI entre páginas): decorações internas
 // pra dentro do .poster-card/.list-row, que é envolvido por um .rar-frame (borda em degradê animado).
-function posterRarityLayers(rarity) {
-  const glintSpots = {
-    'Épico': [[16, 22]],
-    'Lendário': [[18, 18], [80, 28], [14, 66], [84, 86]],
-    'Único': [[12, 14], [82, 20], [6, 36], [90, 46], [16, 64], [86, 78], [24, 94], [72, 90], [48, 10], [46, 56], [66, 48]],
-  };
-  const spots = glintSpots[rarity] || [];
-  let glints = '';
-  spots.forEach((p, i) => {
-    const delay = (i * 0.28).toFixed(2);
-    const dur = (2.1 + (i % 4) * 0.3).toFixed(2);
-    const size = 8 + (i % 3) * 2;
-    glints += `<i class="pc-glint" style="left:${p[0]}%;top:${p[1]}%;width:${size}px;height:${size}px;animation-delay:${delay}s;animation-duration:${dur}s"></i>`;
-  });
-  let extra = '';
-  if (rarity === 'Épico' || rarity === 'Único') extra += `<span class="pc-sweep"></span>`;
-  if (rarity === 'Lendário' || rarity === 'Único') extra += `<span class="pc-highlight"></span><span class="pc-topline"></span><span class="pc-core"></span>`;
-  if (rarity === 'Único') extra += `<span class="pc-sweep pc-sweep2"></span><span class="pc-ring"></span><span class="pc-ring pc-ring2"></span>`;
-  return extra + glints;
-}
 let _sysItems = [];
 let _itensSubTab = 'itens'; // qual sub-aba de Itens (Itens/Moedas/Tipos de dano/Biblioteca/Pacotes) fica visível — persiste entre re-renders da aba
 window.showItensSub = (sub) => {
@@ -2709,49 +2690,21 @@ async function renderItens(c) {
     const cur = _sysCurrencies.find((cu) => cu.id === it.currency_id);
     return esc(it.price) + (cur ? ' ' + esc(cur.symbol || cur.name) : '');
   };
-  const sysItemCard = (it) => {
-    const rarity = it.rarity || 'Comum';
-    const rarityKey = 'r-' + rarity.toLowerCase();
-    const initial = esc((it.name || '?').trim().charAt(0).toUpperCase() || '?');
-    const bgStyle = it.image_url ? ` style="background-image:url('${esc(it.image_url)}')"` : '';
-    return `
-      <div class="rar-frame" data-rarity="${esc(rarity)}" data-id="${it.id}">
-        <div class="poster-card" onclick='openSysItem("${it.id}")' tabindex="0" role="button" aria-label="Editar ${esc(it.name)}">
-          ${posterRarityLayers(rarity)}
-          <span class="drag-handle card-drag" title="Arrastar para reordenar" onclick="event.stopPropagation()">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>
-          </span>
-          <button class="poster-fav" onclick='event.stopPropagation();rmSysItem("${it.id}")' title="Remover do sistema" aria-label="Remover do sistema"><span class="ic">${ICONS.x}</span></button>
-          <div class="poster-icon ${it.image_url ? '' : 'ph ' + rarityKey}"${bgStyle}>${!it.image_url ? `<span class="poster-initial">${initial}</span>` : ''}</div>
-          <div class="poster-body">
-            <h4 class="poster-name">${esc(it.name)}</h4>
-            <span class="rar-pill" data-rarity="${esc(rarity)}">${esc(rarity)}</span>
-            ${priceLabel(it) ? `<div class="poster-meta" style="color:var(--brass)">${priceLabel(it)}</div>` : ''}
-            ${it.description ? `<p class="poster-desc">${esc(it.description)}</p>` : ''}
-            <div class="poster-meta">${it.item_code ? '#' + esc(it.item_code) : ''}</div>
-          </div>
-        </div>
-      </div>`;
-  };
-  const libItemCard = (it) => {
-    const rarity = it.rarity || 'Comum';
-    const rarityKey = 'r-' + rarity.toLowerCase();
-    const initial = esc((it.name || '?').trim().charAt(0).toUpperCase() || '?');
-    const bgStyle = it.image_url ? ` style="background-image:url('${esc(it.image_url)}')"` : '';
-    return `
-      <div class="rar-frame" data-rarity="${esc(rarity)}">
-        <div class="poster-card" onclick='addLibItem("${it.id}")' tabindex="0" role="button" aria-label="Copiar ${esc(it.name)} pro sistema">
-          ${posterRarityLayers(rarity)}
-          <button class="poster-fav" onclick='event.stopPropagation();addLibItem("${it.id}")' title="Copiar p/ sistema" aria-label="Copiar p/ sistema">${ICONS.plus}</button>
-          <div class="poster-icon ${it.image_url ? '' : 'ph ' + rarityKey}"${bgStyle}>${!it.image_url ? `<span class="poster-initial">${initial}</span>` : ''}</div>
-          <div class="poster-body">
-            <h4 class="poster-name">${esc(it.name)}</h4>
-            <span class="rar-pill" data-rarity="${esc(rarity)}">${esc(rarity)}</span>
-            ${it.category ? `<div class="poster-meta">${esc(it.category)}</div>` : ''}
-          </div>
-        </div>
-      </div>`;
-  };
+  const sysItemCard = (it) => itemCard({
+    item: it,
+    wrapAttrs: `data-id="${it.id}"`,
+    attrs: `onclick='openSysItem("${it.id}")' tabindex="0" role="button" aria-label="Editar ${esc(it.name)}" onkeydown='if(event.key==="Enter"||event.key===" "){event.preventDefault();openSysItem("${it.id}")}'`,
+    action: `<button class="poster-fav" onclick='event.stopPropagation();rmSysItem("${it.id}")' title="Remover do sistema" aria-label="Remover do sistema"><span class="ic">${ICONS.x}</span></button>`,
+    handle: `<span class="drag-handle card-drag" title="Arrastar para reordenar" onclick="event.stopPropagation()">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg></span>`,
+    meta: [priceLabel(it), it.category ? esc(it.category) : '', it.item_code ? '#' + esc(it.item_code) : ''].filter(Boolean).join(' · '),
+  });
+  const libItemCard = (it) => itemCard({
+    item: it,
+    attrs: `onclick='addLibItem("${it.id}")' tabindex="0" role="button" aria-label="Copiar ${esc(it.name)} pro sistema" onkeydown='if(event.key==="Enter"||event.key===" "){event.preventDefault();addLibItem("${it.id}")}'`,
+    action: `<button class="poster-fav" onclick='event.stopPropagation();addLibItem("${it.id}")' title="Copiar p/ sistema" aria-label="Copiar p/ sistema">${ICONS.plus}</button>`,
+    meta: it.category ? esc(it.category) : '',
+  });
   c.innerHTML = `
     <div class="sub-tabs" id="itens-subtabs" role="tablist" aria-label="Itens do sistema">
       <button type="button" role="tab" aria-selected="${_itensSubTab === 'itens'}" class="${_itensSubTab === 'itens' ? 'on' : ''}" data-sub="itens" onclick="showItensSub('itens')">Itens</button>
@@ -2811,7 +2764,7 @@ async function renderItens(c) {
       <div class="list" id="sysitem-packages"><div class="empty loading" role="status"><span>Carregando…</span></div></div>
     </div>`;
   renderSysItemPackages();
-  wireDragReorder($('sysitem-grid'), '.rar-frame[data-id]', 'system_items');
+  wireDragReorder($('sysitem-grid'), '.item-glow[data-id]', 'system_items');
   wireDragReorder($('currencies-list'), '.list-row[data-id]', 'system_currencies');
   wireDragReorder($('damage-types-list'), '.list-row[data-id]', 'system_damage_types');
   // busca só aparece quando há mais de 6 itens (grade pequena não precisa) — filtra por
@@ -2823,7 +2776,7 @@ async function renderItens(c) {
     const filtered = filterBy(inSystem, $('sysitem-q')?.value);
     grid.innerHTML = filtered.length ? filtered.map(sysItemCard).join('')
       : `<div style="grid-column:1/-1">${emptyState(ICONS.bag, 'Nada encontrado', 'Nenhum item do sistema corresponde à busca.')}</div>`;
-    wireDragReorder(grid, '.rar-frame[data-id]', 'system_items');
+    wireDragReorder(grid, '.item-glow[data-id]', 'system_items');
   };
   window.paintLibItems = () => {
     const grid = $('libitem-grid'); if (!grid) return;

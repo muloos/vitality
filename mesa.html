@@ -9,10 +9,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="lib/tokens.css?v=4">
+<link rel="stylesheet" href="lib/tokens.css?v=5">
 <link rel="stylesheet" href="lib/theme.css?v=52">
 <link rel="stylesheet" href="lib/theme-ffx.css?v=13">
-<link rel="stylesheet" href="lib/components.css?v=10">
+<link rel="stylesheet" href="lib/components.css?v=11">
 <style>
   /* Mesa — "Latão calmo" (docs/DESIGN-v2-LATAO-CALMO.md §3.3) */
   /* topbar: o grupo em avatares, traço verde = online */
@@ -168,6 +168,7 @@
 
 <script type="module">
 import * as db from './lib/db.js?v=42';
+import { itemCard } from './lib/item-card.js?v=1';
 import { openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus, wireVerticalTablist, armEnter } from './lib/ui.js?v=10';
 import { mountYtPlayer } from './lib/ytplayer.js?v=6';
 
@@ -1046,26 +1047,6 @@ window.rollNpcInitiative = (ref) => {
 // moldura de raridade "premium" (mesmo padrão de app.html/sistema.html, duplicado aqui de
 // propósito) — usada na mochila somente-leitura que o Mestre vê da ficha do jogador. Diferente
 // do rarityFxLayers() do tabuleiro (paper doll), que é outro efeito (aura/ground/rings/rays).
-function posterRarityLayers(rarity) {
-  const glintSpots = {
-    'Épico': [[16, 22]],
-    'Lendário': [[18, 18], [80, 28], [14, 66], [84, 86]],
-    'Único': [[12, 14], [82, 20], [6, 36], [90, 46], [16, 64], [86, 78], [24, 94], [72, 90], [48, 10], [46, 56], [66, 48]],
-  };
-  const spots = glintSpots[rarity] || [];
-  let glints = '';
-  spots.forEach((p, i) => {
-    const delay = (i * 0.28).toFixed(2);
-    const dur = (2.1 + (i % 4) * 0.3).toFixed(2);
-    const size = 8 + (i % 3) * 2;
-    glints += `<i class="pc-glint" style="left:${p[0]}%;top:${p[1]}%;width:${size}px;height:${size}px;animation-delay:${delay}s;animation-duration:${dur}s"></i>`;
-  });
-  let extra = '';
-  if (rarity === 'Épico' || rarity === 'Único') extra += `<span class="pc-sweep"></span>`;
-  if (rarity === 'Lendário' || rarity === 'Único') extra += `<span class="pc-highlight"></span><span class="pc-topline"></span><span class="pc-core"></span>`;
-  if (rarity === 'Único') extra += `<span class="pc-sweep pc-sweep2"></span><span class="pc-ring"></span><span class="pc-ring pc-ring2"></span>`;
-  return extra + glints;
-}
 // Ficha de um jogador, somente leitura (visão do Mestre — sem anotações). Dividida em sub-abas
 // (Ficha/Biografia/Inventário/Habilidades/Árvores), no mesmo espírito das abas que o próprio
 // jogador já tem — antes era tudo isso amontoado num scroll só. `viewPlayer` é a "casca": busca os
@@ -1281,19 +1262,14 @@ function renderGmInventario(c) {
     ${eqBoardHtml(sys.equipmentSlots, inventory.filter((it) => it.equipped && it.equipped_slot_id), true)}` : ''}
 
     <div class="section-title" role="heading" aria-level="2" style="margin-top:14px">Mochila</div>
-    <div class="list gm-view-inv">${inventory.length ? inventory.map((it) => { const rarity = it.rarity || 'Comum'; return `
-      <div class="rar-frame" data-rarity="${esc(rarity)}">
-      <div class="list-row">
-        ${posterRarityLayers(rarity)}
-        <div class="rar-row-body">
-        <div class="grow"><div class="nm">${esc(it.name)}${it.equipped ? ' <span class="badge" style="border-color:var(--maq);color:var(--maq)">equipado</span>' : ''}</div>
-        ${it.description ? `<div class="sub">${esc(it.description)}</div>` : ''}
-        ${(it.modifiers || []).length ? `<div class="mods" style="margin-top:5px">${it.modifiers.map((m) => `<span class="badge mod">${itemModLabel(m)}</span>`).join('')}</div>` : ''}</div>
-        <div class="sub">x${it.qty}</div>
-        <button class="btn sm auto" onclick="gmOpenInvItemDetail('${it.id}')">Detalhes</button>
-        </div>
-      </div></div>`; }).join('')
-      : '<div class="empty">Mochila vazia.</div>'}</div>
+    <div class="item-grid gm-view-inv">${inventory.length ? inventory.map((it) => itemCard({
+      item: it,
+      attrs: `onclick="gmOpenInvItemDetail('${it.id}')" tabindex="0" role="button" aria-label="Detalhes de ${esc(it.name)}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();gmOpenInvItemDetail('${it.id}')}"`,
+      status: it.equipped ? '<span class="poster-pub on">Equipado</span>' : '',
+      meta: `Qtd. ${esc(String(it.qty ?? 1))}${it.category ? ' · ' + esc(it.category) : ''}`,
+      extra: (it.modifiers || []).length ? `<div class="mods">${it.modifiers.map((m) => `<span class="badge mod">${itemModLabel(m)}</span>`).join('')}</div>` : '',
+    })).join('')
+      : '<div class="empty" style="grid-column:1/-1">Mochila vazia.</div>'}</div>
     ${sys?.items?.length ? `<div class="inline-form" style="margin-top:10px">
       <select id="gm-grant-item" class="fld-input">${sys.items.map((it) => `<option value="${it.id}">${esc(it.name)}</option>`).join('')}</select>
       <button class="btn auto sm" onclick="gmGrantItem()">+ Dar item direto</button>
@@ -3164,12 +3140,12 @@ async function renderInventario(c) {
     ` : ''}
 
     <div class="section-title" role="heading" aria-level="2" style="font-size:12px">Mochila <span style="color:var(--ink-faint);text-transform:none;letter-spacing:0" id="inv-mochila-count">(${unequipped.length})</span></div>
-    <div class="item-grid inv-dropzone" id="inv-mochila-grid" ondragover="onInvDragOver(event)" ondragleave="onInvDragLeave(event)" ondrop="onInvDrop(event, false)">
+    <div class="item-grid with-controls inv-dropzone" id="inv-mochila-grid" ondragover="onInvDragOver(event)" ondragleave="onInvDragLeave(event)" ondrop="onInvDrop(event, false)">
       ${unequipped.length ? unequipped.map(invRow).join('') : '<div class="empty" style="grid-column:1/-1">Nada aqui.</div>'}
     </div>
     ${!eqSlots.length ? `
     <div class="section-title" role="heading" aria-level="2" style="font-size:12px;margin-top:14px">Equipado <span style="color:var(--ink-faint);text-transform:none;letter-spacing:0" id="inv-equipado-count">(${equipped.length})</span></div>
-    <div class="item-grid inv-dropzone" id="inv-equipado-grid" ondragover="onInvDragOver(event)" ondragleave="onInvDragLeave(event)" ondrop="onInvDrop(event, true)">
+    <div class="item-grid with-controls inv-dropzone" id="inv-equipado-grid" ondragover="onInvDragOver(event)" ondragleave="onInvDragLeave(event)" ondrop="onInvDrop(event, true)">
       ${equipped.length ? equipped.map(invRow).join('') : '<div class="empty" style="grid-column:1/-1">Arraste aqui um item com dano, proteção ou modificador pra equipar.</div>'}
     </div>` : ''}
 
@@ -3197,7 +3173,7 @@ async function renderInventario(c) {
 // preserva os cards que não mudaram (scroll, animações em andamento etc.)
 function patchInvGrid(container, items, emptyHtml) {
   if (!container) return;
-  const existing = new Map([...container.querySelectorAll('.poster-card[data-id]')].map((el) => [el.dataset.id, el.parentElement]));
+  const existing = new Map([...container.querySelectorAll('.item-card[data-id]')].map((el) => [el.dataset.id, el.parentElement]));
   if (!items.length) {
     existing.forEach((frame) => frame.remove());
     if (emptyHtml && !container.querySelector('.empty')) container.insertAdjacentHTML('beforeend', emptyHtml);
@@ -3359,43 +3335,31 @@ function invDraft(id) { return _invDrafts[id] || (_invDrafts[id] = {}); }
 function invRow(it) {
   const hasProtection = it.protection != null && it.protection !== '';
   const badges = `${it.weapon_damage ? `<span class="badge mod">Dano ${esc(it.weapon_damage)}${it.damage_scale ? ' + ' + esc(it.damage_scale) : ''}</span>` : ''}${hasProtection ? `<span class="badge mod">Proteção ${esc(String(it.protection))}${it.protection_scale ? ' + ' + esc(it.protection_scale) : ''}</span>` : ''}${(it.modifiers || []).map((m) => `<span class="badge mod">${itemModLabel(m)}</span>`).join('')}`;
-  const mods = badges ? `<div class="mods" style="justify-content:center">${badges}</div>` : '';
+  const mods = badges ? `<div class="mods">${badges}</div>` : '';
   // equipar só faz sentido se o item tiver algum efeito pra aplicar (modificador, dano ou proteção)
   const canEquip = (it.modifiers && it.modifiers.length) || it.weapon_damage || hasProtection;
   // mesmo card-pôster da aba Itens/sistema — o "equipado" vira o selo verde do canto (era o
   // poster-pub/"Publicado"), o excluir vira o botão do canto (era o favoritar), e os controles que
   // só fazem sentido aqui (quantidade, equipar, rolar dano, salvar) moram numa fileira própria
   // dentro do corpo do card, embaixo da descrição (que continua editável, só que centralizada).
-  const rarity = it.rarity || 'Comum';
-  const rarityKey = 'r-' + rarity.toLowerCase();
-  const initial = esc((it.name || '?').trim().charAt(0).toUpperCase() || '?');
-  const bgStyle = it.image_url ? ` style="background-image:url('${esc(it.image_url)}')"` : '';
-  return `<div class="rar-frame" data-rarity="${esc(rarity)}">
-    <div class="poster-card" data-id="${it.id}" ${canEquip ? `draggable="true" ondragstart="onInvDragStart(event,'${it.id}')" ondragend="onInvDragEnd()"` : ''}>
-      ${posterRarityLayers(rarity)}
-      ${it.equipped ? `<span class="poster-pub on">Equipado</span>` : ''}
-      <button class="poster-fav" onclick="delItem('${it.id}')" title="Remover da mochila" aria-label="Remover da mochila">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
-      </button>
-      <div class="poster-icon ${it.image_url ? '' : 'ph ' + rarityKey}"${bgStyle}>${!it.image_url ? `<span class="poster-initial">${initial}</span>` : ''}</div>
-      <div class="poster-body">
-        <h4 class="poster-name">${esc(it.name)}</h4>
-        <span class="rar-pill" data-rarity="${esc(rarity)}">${esc(rarity)}</span>
-        ${mods}
-        <input class="poster-desc" style="background:transparent;border:0;border-bottom:1px dashed var(--line2);text-align:center;width:100%;padding:0 0 2px;font-family:var(--serif);font-size:11.5px;color:var(--ink-dim)"
-          title="Clique para editar a descrição" placeholder="descrição..." value="${esc(it.description)}" oninput="onInvFieldChange('${it.id}','description',this.value)">
-        <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px;width:100%;margin-top:2px">
-          <input type="number" min="0" value="${it.qty}" style="width:56px;color:var(--ink);font-family:var(--mono);padding:6px;text-align:center"
-            oninput="onInvFieldChange('${it.id}','qty',this.value)">
-          <button class="btn sm auto" onclick="openInvItemDetail('${it.id}')" title="Ver o item por completo">Detalhes</button>
-          ${(it.consume_effects && it.consume_effects.length) ? `<button class="btn sm go auto" onclick="consumeInv('${it.id}')" title="Aplica o efeito e gasta 1 unidade">Consumir</button>` : ''}
-          ${it.equipped && it.weapon_damage ? `<button class="btn sm go auto" onclick="rollWeaponDamage('${it.id}')" title="Rola a fórmula de dano da arma">Rolar dano</button>` : ''}
-          ${canEquip ? `<button class="btn sm auto" style="${it.equipped ? 'border-color:var(--maq);color:var(--maq)' : ''}" onclick="onEquipBtn('${it.id}', ${!it.equipped})" title="Equipado aplica os modificadores/dano/proteção automaticamente">${it.equipped ? 'Desequipar' : 'Equipar'}</button>` : ''}
-          <button class="btn sm go auto" id="inv-save-${it.id}" style="display:none" onclick="saveInvRow('${it.id}')"><span class="spin"></span>Salvar</button>
-        </div>
-      </div>
-    </div>
-  </div>`;
+  return itemCard({
+    item: it,
+    attrs: `data-id="${it.id}" ${canEquip ? `draggable="true" ondragstart="onInvDragStart(event,'${it.id}')" ondragend="onInvDragEnd()"` : ''}`,
+    action: `<button class="poster-fav" onclick="delItem('${it.id}')" title="Remover da mochila" aria-label="Remover da mochila">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>`,
+    status: it.equipped ? '<span class="poster-pub on">Equipado</span>' : '',
+    meta: `Qtd. ${esc(String(it.qty ?? 1))}${it.category ? ' · ' + esc(it.category) : ''}`,
+    extra: `${mods}
+      <input class="item-desc" title="Clique para editar a descrição" aria-label="Descrição de ${esc(it.name)}" placeholder="Descrição…" value="${esc(it.description)}" oninput="onInvFieldChange('${it.id}','description',this.value)">
+      <div class="item-ctl">
+        <input type="number" min="0" value="${it.qty}" aria-label="Quantidade" oninput="onInvFieldChange('${it.id}','qty',this.value)">
+        <button class="btn sm auto" onclick="openInvItemDetail('${it.id}')" title="Ver o item por completo">Detalhes</button>
+        ${(it.consume_effects && it.consume_effects.length) ? `<button class="btn sm go auto" onclick="consumeInv('${it.id}')" title="Aplica o efeito e gasta 1 unidade">Consumir</button>` : ''}
+        ${it.equipped && it.weapon_damage ? `<button class="btn sm go auto" onclick="rollWeaponDamage('${it.id}')" title="Rola a fórmula de dano da arma">Rolar dano</button>` : ''}
+        ${canEquip ? `<button class="btn sm auto" onclick="onEquipBtn('${it.id}', ${!it.equipped})" title="Equipado aplica os modificadores/dano/proteção automaticamente">${it.equipped ? 'Desequipar' : 'Equipar'}</button>` : ''}
+        <button class="btn sm go auto" id="inv-save-${it.id}" style="display:none" onclick="saveInvRow('${it.id}')"><span class="spin"></span>Salvar</button>
+      </div>`,
+  });
 }
 // modal de detalhe completo do item da mochila — mesmo layout/classes .ui-modal .item-detail
 // que o modal de item da aba Itens (app.html), só que com as ações que fazem sentido aqui

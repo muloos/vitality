@@ -9,10 +9,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="lib/tokens.css?v=3">
+<link rel="stylesheet" href="lib/tokens.css?v=4">
 <link rel="stylesheet" href="lib/theme.css?v=52">
 <link rel="stylesheet" href="lib/theme-ffx.css?v=13">
-<link rel="stylesheet" href="lib/components.css?v=8">
+<link rel="stylesheet" href="lib/components.css?v=10">
 <style>
   /* Mesa — "Latão calmo" (docs/DESIGN-v2-LATAO-CALMO.md §3.3) */
   /* topbar: o grupo em avatares, traço verde = online */
@@ -1801,7 +1801,7 @@ function conditionChipsHtml(activeIds, editable) {
     const on = activeIds.has(cond.id);
     const color = cond.color || '#f2585e';
     const label = (cond.icon ? esc(cond.icon) + ' ' : '') + esc(cond.name);
-    const styleOn = `style="border-color:${esc(color)};color:${esc(color)};background:color-mix(in srgb, ${esc(color)} 16%, transparent)"`;
+    const styleOn = `style="--cc:${esc(color)}"`;
     return editable
       ? `<button type="button" class="prof-chip ${on ? 'on' : ''}" ${on ? styleOn : ''} title="${esc(cond.description || '')}" onclick="gmToggleCondition('${cond.id}', ${!on})">${label}</button>`
       : `<span class="prof-chip on" ${styleOn} title="${esc(cond.description || '')}">${label}</span>`;

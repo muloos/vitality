@@ -338,8 +338,8 @@ input[type=checkbox]::after{width:8px;height:8px;background:var(--primary)}
 #yt-panel #yt-search:hover{--frame:var(--primary)}
 
 .color-pop,.func-pop,.dmg-pop{--fill:var(--surface-2);--frame:var(--border)}
-.btn.overlay{--fill:rgba(12,9,6,.62);--frame:rgba(255,255,255,.22);color:var(--text)}
-.btn.overlay:hover{--fill:rgba(12,9,6,.8);--frame:var(--primary)}
+.btn.overlay{--fill:rgba(15,16,18,.62);--frame:rgba(255,255,255,.22);color:var(--text)}
+.btn.overlay:hover{--fill:rgba(15,16,18,.8);--frame:var(--primary)}
 .color-swatch.full{--fill:var(--surface-2);--frame:var(--border-strong)}
 .color-swatch.full:hover{--frame:var(--primary)}
 .stat-grid.has-points .stat-ctl [id^="secbtn-"]:not(:disabled){--fill:transparent;--frame:color-mix(in srgb,var(--primary) 50%,transparent)}
@@ -349,6 +349,12 @@ input[type=checkbox]::after{width:8px;height:8px;background:var(--primary)}
 .portrait-cta{--fill:color-mix(in srgb,var(--pc,var(--primary)) 20%,var(--surface-2))}
 /* o clip-path cria um contexto de empilhamento: ícones posicionados antes de um campo chanfrado precisam subir */
 .search-field svg,.pw-wrap .pw-toggle{z-index:1}
+
+/* cores de dado do usuário (recurso, condição) como texto: no tema claro elas são claras demais para o fundo
+   branco, então escurecem misturadas com --text (contraste ≥ 4.5) */
+.prof-chip[style*="--cc"]{--frame:var(--cc);--fill:color-mix(in srgb,var(--cc) 16%,transparent);color:var(--cc)}
+:root[data-theme="light"] .prof-chip[style*="--cc"]{color:color-mix(in srgb,var(--cc) 45%,var(--text))}
+:root[data-theme="light"] .res-label{color:color-mix(in srgb,var(--res-color,var(--primary)) 55%,var(--text))}
 
 /* ---------- raridade calma (decisão do usuário sobre o §2 "nenhum loop") ----------
    a raridade vira uma faixa de 2px no topo do card, na cor dela; nada brilha, pulsa ou flutua.

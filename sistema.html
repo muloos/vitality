@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="lib/tokens.css?v=5">
 <link rel="stylesheet" href="lib/theme.css?v=52">
 <link rel="stylesheet" href="lib/theme-ffx.css?v=13">
-<link rel="stylesheet" href="lib/components.css?v=12">
+<link rel="stylesheet" href="lib/components.css?v=13">
 <style>
   /* Construtor — "Latão calmo" (docs/DESIGN-v2-LATAO-CALMO.md §3.4) */
   .sis-layout > .ffx-side{flex-basis:240px}
@@ -113,17 +113,18 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
 <div class="topbar">
   <a class="iconbtn" href="app.html" title="Voltar" style="text-decoration:none"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="M11 18l-6-6 6-6"/></svg></a>
   <a class="topbar-brand" href="app.html"><img class="mark logo" src="lib/logo.png" alt="" aria-hidden="true">VITALITY</a>
-  <div class="title" id="sys-name" style="font-size:14px">…</div>
+  <div class="title" id="sys-name" style="font-size:14px"></div>
   <div class="spacer"></div>
   <!-- salvamento automático + publicar (docs/DESIGN-v2-LATAO-CALMO.md §3.4) -->
   <div class="save-state" id="save-state" aria-live="polite"></div>
   <button type="button" class="btn go" id="publish-btn" hidden onclick="publishSystem()">Publicar</button>
   <div class="nav-user" id="nav-user">
     <button type="button" class="chip" id="nav-user-btn" aria-haspopup="menu" aria-expanded="false" onclick="toggleUserMenu()">
-      <span class="av" id="who-av" aria-hidden="true">·</span><b id="who">…</b><span style="color:var(--ink-faint)" aria-hidden="true">▾</span>
+      <span class="av" id="who-av" aria-hidden="true"></span><b id="who"></b><span style="color:var(--ink-faint)" aria-hidden="true">▾</span>
     </button>
     <div class="drop glass" role="menu">
       <a role="menuitem" href="app.html"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="M11 18l-6-6 6-6"/></svg></span>Voltar ao lobby</a>
+      <button role="menuitem" onclick="openHelp()"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.3a2.8 2.8 0 1 1 4 2.6c-.9.5-1.7 1-1.7 2.1"/><circle cx="12" cy="17.2" r=".4" fill="currentColor" stroke="none"/></svg></span>Ajuda ou suporte</button>
       <button role="menuitem" id="theme-menu-item" onclick="doToggleTheme()"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z"/></svg></span><span id="theme-menu-label">Tema</span></button>
     </div>
   </div>
@@ -135,29 +136,28 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
 <div class="ffx-layout sis-layout">
   <aside class="ffx-side">
     <div class="build-progress" id="build-progress" aria-live="polite"></div>
-    <div class="ffx-menu" id="tabs" role="tablist" aria-orientation="vertical" aria-label="Seções do construtor"></div>
+    <div class="ffx-menu" id="tabs" role="tablist" aria-orientation="vertical" aria-label="Seções do construtor"><span class="skel skel-menu" aria-hidden="true"></span><span class="skel skel-menu" aria-hidden="true"></span><span class="skel skel-menu" aria-hidden="true"></span><span class="skel skel-menu" aria-hidden="true"></span><span class="skel skel-menu" aria-hidden="true"></span><span class="skel skel-menu" aria-hidden="true"></span><span class="skel skel-menu" aria-hidden="true"></span><span class="skel skel-menu" aria-hidden="true"></span><span class="skel skel-menu" aria-hidden="true"></span><span class="skel skel-menu" aria-hidden="true"></span><span class="skel skel-menu" aria-hidden="true"></span><span class="skel skel-menu" aria-hidden="true"></span></div>
   </aside>
   <main class="ffx-main">
     <div class="sis-head">
       <div class="sh-text"><div class="ffx-eyebrow" id="sis-eyebrow">Sistema</div>
-      <h1 class="ffx-h1" id="sis-title">…</h1></div>
+      <h1 class="ffx-h1" id="sis-title"><span class="skel skel-title" aria-hidden="true"></span></h1></div>
       <div class="sis-actions" id="sis-actions"></div>
     </div>
     <div id="msg" class="msg"></div>
-    <div id="content" role="tabpanel"></div>
+    <div id="content" role="tabpanel"><div class="skel-page"><span class="sr-only" role="status">Carregando…</span><span class="skel skel-line" aria-hidden="true"></span><span class="skel skel-row short" aria-hidden="true"></span><span class="skel skel-row short" aria-hidden="true"></span><span class="skel skel-row short" aria-hidden="true"></span><span class="skel skel-row short" aria-hidden="true"></span><span class="skel skel-row short" aria-hidden="true"></span></div></div>
   </main>
   <aside class="ffx-aside" id="sys-aside" aria-label="Editor de status" hidden></aside>
 </div>
 
 <script type="module">
 import * as db from './lib/db.js?v=42';
-import { itemCard } from './lib/item-card.js?v=2';
-import { mountHelp, trapFocus, wireVerticalTablist, armEnter, toggleTheme, getTheme } from './lib/ui.js?v=10';
+import { itemCard } from './lib/item-card.js?v=3';
+import { openHelpGuide, trapFocus, wireVerticalTablist, armEnter, toggleTheme, getTheme } from './lib/ui.js?v=10';
 
 // embutido dentro da mesa (iframe) — ver comentário grande no <style> acima e em arvore.js (mesmo
 // padrão): sem topbar/FABs próprios (a mesa já cobre isso por fora).
 const embedded = document.body.classList.contains('embedded');
-if (!embedded) mountHelp('sistema');
 // menu do usuário (mesmo padrão do lobby): o tema mora aqui, não num botão flutuante (MELHORIAS-v1.4 P1-16)
 const paintThemeLabel = () => { const l = document.getElementById('theme-menu-label'); if (l) l.textContent = getTheme() === 'light' ? 'Tema escuro' : 'Tema claro'; };
 paintThemeLabel();
@@ -170,6 +170,8 @@ document.addEventListener('click', (e) => {
   const nu = document.getElementById('nav-user');
   if (nu && nu.classList.contains('open') && !nu.contains(e.target)) { nu.classList.remove('open'); document.getElementById('nav-user-btn').setAttribute('aria-expanded', 'false'); }
 });
+// a ajuda mora no menu da conta (o "?" flutuante cobria conteúdo — MELHORIAS-v1.5 P0-5)
+window.openHelp = () => { document.getElementById('nav-user').classList.remove('open'); document.getElementById('nav-user-btn').setAttribute('aria-expanded', 'false'); openHelpGuide('sistema'); };
 window.goBackEmbedded = () => { try { window.parent.backFromSistemaEmbed(); } catch (_) {} };
 const $ = (id) => document.getElementById(id);
 const esc = (s) => (s == null ? '' : String(s)).replace(/[&<>"]/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));

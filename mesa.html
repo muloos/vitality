@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="lib/tokens.css?v=5">
 <link rel="stylesheet" href="lib/theme.css?v=52">
 <link rel="stylesheet" href="lib/theme-ffx.css?v=13">
-<link rel="stylesheet" href="lib/components.css?v=12">
+<link rel="stylesheet" href="lib/components.css?v=13">
 <style>
   /* Mesa — "Latão calmo" (docs/DESIGN-v2-LATAO-CALMO.md §3.3) */
   /* topbar: o grupo em avatares, traço verde = online */
@@ -72,6 +72,12 @@
   .dice-formula input{flex:1;min-width:0;height:40px;padding:0 var(--space-3);font-family:var(--mono);font-size:14px;color:var(--text)}
   .dice-formula .btn{width:auto}
   .roll{padding:var(--space-3);margin-bottom:var(--space-2)}
+  /* histórico/conversa ancorados embaixo (o mais novo por último): sempre sobra um cartão parcial no topo.
+     12px de respiro, encaixe por cartão ao rolar e, quando há mais acima, um esmaecimento de 72px — o
+     cartão parcial passa a ler como "tem mais acima", não como um pedaço solto (MELHORIAS-v1.5 P0-2) */
+  .dice-log,.chat-log{padding-top:12px;scroll-padding-top:12px;scroll-snap-type:y proximity}
+  .dice-log > .roll,.chat-log > .chat-msg{scroll-snap-align:start}
+  .dice-log.more-above,.chat-log.more-above{-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 72px);mask-image:linear-gradient(to bottom,transparent 0,#000 72px)}
   .roll .rtop .who{font-family:var(--serif);font-size:var(--fs-small);letter-spacing:0;text-transform:none;color:var(--text-2)}
   .roll .ftxt{font-size:12px}
   .roll .tot{font-family:var(--disp);font-size:26px;font-variant-numeric:tabular-nums;color:var(--text)}
@@ -120,7 +126,7 @@
     <button type="button" class="chip mesa-menu-chip" id="mesa-menu-btn" aria-haspopup="menu" aria-expanded="false" onclick="toggleMesaMenu()">
       <span class="hamburger"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></span>
       <span id="mesa-av" class="mesa-av sm" style="display:none"></span>
-      <div class="title" id="mesa-name">…</div>
+      <div class="title" id="mesa-name"></div>
     </button>
     <div class="drop glass" id="mesa-menu-drop" role="menu"></div>
   </div>
@@ -128,7 +134,7 @@
   <div class="party-strip" id="party-strip" aria-label="Grupo da mesa"></div>
   <div class="nav-user" id="nav-user">
     <button type="button" class="chip" id="nav-user-btn" aria-haspopup="menu" aria-expanded="false" onclick="toggleUserMenu()">
-      <span class="av" id="nav-av">?</span><b id="who">…</b><span style="color:var(--ink-faint)">▾</span>
+      <span class="av" id="nav-av"></span><b id="who"></b><span style="color:var(--ink-faint)">▾</span>
     </button>
     <div class="drop glass" role="menu">
       <button role="menuitem" onclick="openProfile()"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c.8-4 3.6-6.5 7.5-6.5s6.7 2.5 7.5 6.5"/></svg></span>Meu perfil</button>
@@ -147,7 +153,7 @@
          bloco Grupo/pedidos/ações abaixo continua recolhível lá -->
     <div class="rail-char" id="rail-char" hidden></div>
     <div class="ffx-menu-eyebrow" id="tabs-eyebrow" aria-hidden="true">Mesa</div>
-    <div class="ffx-menu" id="tabs" role="tablist" aria-orientation="vertical" aria-label="Seções da mesa"></div>
+    <div class="ffx-menu" id="tabs" role="tablist" aria-orientation="vertical" aria-label="Seções da mesa"><span class="skel skel-menu" aria-hidden="true"></span><span class="skel skel-menu" aria-hidden="true"></span><span class="skel skel-menu" aria-hidden="true"></span><span class="skel skel-menu" aria-hidden="true"></span><span class="skel skel-menu" aria-hidden="true"></span><span class="skel skel-menu" aria-hidden="true"></span></div>
     <button type="button" class="rail-mobile-toggle" id="rail-mobile-toggle" onclick="toggleMobileRail()" aria-expanded="false">
       <span>Jogadores &amp; mesa</span>
       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
@@ -156,7 +162,7 @@
   </aside>
   <main class="mesa-main">
     <div id="msg" class="msg"></div>
-    <div id="content" role="tabpanel"></div>
+    <div id="content" role="tabpanel"><div class="skel-page"><span class="sr-only" role="status">Carregando…</span><span class="skel skel-hero" aria-hidden="true"></span><span class="skel skel-h3" aria-hidden="true"></span><span class="skel skel-row" aria-hidden="true"></span><span class="skel skel-row" aria-hidden="true"></span><span class="skel skel-row" aria-hidden="true"></span><span class="skel skel-row" aria-hidden="true"></span><span class="skel skel-row" aria-hidden="true"></span></div></div>
   </main>
 </div>
 <button type="button" class="rail-toggle left" id="rail-toggle-left" onclick="toggleRailLeft()" title="Esconder/mostrar jogadores">
@@ -168,7 +174,7 @@
 
 <script type="module">
 import * as db from './lib/db.js?v=42';
-import { itemCard, openItemDetail as openItemDetailModal, detailAttrs } from './lib/item-card.js?v=2';
+import { itemCard, openItemDetail as openItemDetailModal, detailAttrs } from './lib/item-card.js?v=3';
 import { openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus, wireVerticalTablist, armEnter } from './lib/ui.js?v=10';
 import { mountYtPlayer } from './lib/ytplayer.js?v=6';
 
@@ -3253,22 +3259,6 @@ window.onInvDrop = (ev, equip) => {
 // slot em si não pode ter overflow:hidden (o botão de desequipar vaza da borda de propósito),
 // então essas camadas ficam livres pra "vazar" pra fora do slot, o que combina até melhor com o
 // visual de referência (aura se espalhando além do próprio item).
-function rarityFxLayers(rarity) {
-  const tier = { Comum: 0, Incomum: 1, Raro: 2, Épico: 3, Lendário: 4, Único: 5 }[rarity] || 0;
-  if (!tier) return '';
-  const sparkCount = tier >= 5 ? 9 : tier >= 4 ? 5 : tier >= 3 ? 3 : 0;
-  let sparks = '';
-  for (let i = 0; i < sparkCount; i++) {
-    const left = (25 + Math.random() * 50).toFixed(1);
-    const sx = (Math.random() * 44 - 22).toFixed(1);
-    const size = (2.5 + Math.random() * 2.5).toFixed(1);
-    const delay = (Math.random() * 2).toFixed(2);
-    const dur = (1.6 + Math.random() * 1.3).toFixed(2);
-    sparks += `<i class="rar-spark" style="left:${left}%;width:${size}px;height:${size}px;--sx:${sx}px;animation-delay:${delay}s;animation-duration:${dur}s"></i>`;
-  }
-  const rings = tier >= 2 ? '<i class="rar-ring r1"></i><i class="rar-ring r2"></i><i class="rar-ring r3"></i>' : '';
-  return `<span class="rar-ground"></span>${rings}<span class="rar-rays"></span>${sparks}`;
-}
 function eqBoardHtml(slots, boardedItems, readOnly = false) {
   const byId = new Map(boardedItems.map((it) => [it.equipped_slot_id, it]));
   const bgUrl = (sys && sys.system && sys.system.equipment_bg_url) || null;
@@ -3276,21 +3266,29 @@ function eqBoardHtml(slots, boardedItems, readOnly = false) {
   // quadro sempre usava o tamanho padrão aqui, ficando diferente do que foi ajustado lá
   const boardH = (sys && sys.system && sys.system.equipment_board_h) || 760;
   const boardW = (sys && sys.system && sys.system.equipment_board_w) || 0;
-  return `<div class="eq-board${bgUrl ? ' has-bg' : ''}" data-fit-w="${boardW}" style="min-height:${boardH}px${boardW ? `;width:${boardW}px` : ''}">
+  // boneco da mesa (MELHORIAS-v1.5 P0-4): fundo liso; slot ocupado = imagem inteira + faixa da raridade +
+  // nome em até 2 linhas, e o clique abre o detalhe (onde fica Desequipar); slot vazio = rótulo + silhueta a 30%
+  const open = readOnly ? 'gmOpenInvItemDetail' : 'openInvItemDetail';
+  return `<div class="eq-board play${bgUrl ? ' has-bg' : ''}" data-fit-w="${boardW}" style="min-height:${boardH}px${boardW ? `;width:${boardW}px` : ''}">
     ${bgUrl ? `<div class="eq-board-bgimg" style="background-image:url('${esc(bgUrl)}')"></div>` : ''}
     ${slots.map((s) => {
       const it = byId.get(s.id);
-      const bg = it ? (it.image_url || '') : (s.silhouette_url || '');
-      const style = `left:${s.pos_x}%;top:${s.pos_y}%;width:${s.width}px;height:${s.height}px${bg ? `;--cf-img:url('${esc(bg)}');--cf-img-size:60%` : ''}`;
-      const rarity = it ? (it.rarity || 'Comum') : null;
-      return `<div class="eq-slot${it ? ' filled rarity-fx rarity-surface' : ''}" style="${style}" ${it ? `data-rarity="${esc(rarity)}"` : ''}
-        ${readOnly ? '' : `ondragover="onEqSlotDragOver(event,'${s.id}')" ondragleave="onEqSlotDragLeave(event)" ondrop="onEqSlotDrop(event,'${s.id}')"`}
-        ${it && !readOnly ? `draggable="true" ondragstart="onInvDragStart(event,'${it.id}')" ondragend="onInvDragEnd()"` : ''}
-        title="${esc(s.name)}${s.accepts_type ? ' — aceita: ' + esc(s.accepts_type) : ''}${it ? ' — ' + esc(it.name) : ''}">
-        ${it ? rarityFxLayers(rarity) : ''}
-        ${it && !bg ? `<div class="eq-slot-item-fallback">${esc(it.name)}</div>` : ''}
-        ${it && !readOnly ? `<button class="btn sm danger auto" style="position:absolute;top:-10px;right:-10px;padding:2px 5px;line-height:1" onclick="event.stopPropagation();unequipFromBoard('${it.id}')" title="Desequipar" aria-label="Desequipar ${esc(it.name)}">×</button>` : ''}
-        ${/^novo slot$/i.test((s.name || '').trim()) ? '' : `<span class="eq-slot-label">${esc(s.name)}</span>`}
+      const label = /^novo slot$/i.test((s.name || '').trim()) ? '' : esc(s.name);
+      const style = `left:${s.pos_x}%;top:${s.pos_y}%;width:${s.width}px;height:${s.height}px`;
+      const tip = `${esc(s.name)}${s.accepts_type ? ' — aceita: ' + esc(s.accepts_type) : ''}${it ? ' — ' + esc(it.name) : ''}`;
+      const drop = readOnly ? '' : `ondragover="onEqSlotDragOver(event,'${s.id}')" ondragleave="onEqSlotDragLeave(event)" ondrop="onEqSlotDrop(event,'${s.id}')"`;
+      if (!it) {
+        return `<div class="eq-slot" style="${style}" ${drop} title="${tip}">
+          ${s.silhouette_url ? `<img class="eq-sil" src="${esc(s.silhouette_url)}" alt="">` : ''}
+          ${label ? `<span class="eq-slot-label">${label}</span>` : ''}
+        </div>`;
+      }
+      return `<div class="eq-slot filled" style="${style}" data-rarity="${esc(it.rarity || 'Comum')}" ${drop}
+        ${readOnly ? '' : `draggable="true" ondragstart="onInvDragStart(event,'${it.id}')" ondragend="onInvDragEnd()"`}
+        tabindex="0" role="button" aria-label="${esc(it.name)} (${label || 'slot'}) — ver detalhes" title="${tip}"
+        onclick="${open}('${it.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${open}('${it.id}')}">
+        ${it.image_url ? `<img class="eq-item-img" src="${esc(it.image_url)}" alt="">` : ''}
+        <span class="eq-item-name">${esc(it.name)}</span>
       </div>`;
     }).join('')}
   </div>`;
@@ -3324,22 +3322,19 @@ function invRow(it) {
   const mods = badges ? `<div class="mods">${badges}</div>` : '';
   // equipar só faz sentido se o item tiver algum efeito pra aplicar (modificador, dano ou proteção)
   const canEquip = (it.modifiers && it.modifiers.length) || it.weapon_damage || hasProtection;
-  // mesmo card-pôster da aba Itens/sistema — o "equipado" vira o selo verde do canto (era o
-  // poster-pub/"Publicado"), o excluir vira o botão do canto (era o favoritar), e os controles que
-  // só fazem sentido aqui (quantidade, equipar, rolar dano, salvar) moram numa fileira própria
-  // dentro do corpo do card, embaixo da descrição (que continua editável, só que centralizada).
+  // o mesmo card da loja: o card inteiro abre o detalhe (onde ficam excluir e as ações completas);
+  // embaixo, só os atalhos do dia a dia (descrição, quantidade, equipar/usar), que não abrem o detalhe
   return itemCard({
     item: it,
-    attrs: `data-id="${it.id}" ${canEquip ? `draggable="true" ondragstart="onInvDragStart(event,'${it.id}')" ondragend="onInvDragEnd()"` : ''}`,
-    action: `<button class="poster-fav" onclick="delItem('${it.id}')" title="Remover da mochila" aria-label="Remover da mochila">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>`,
+    attrs: `data-id="${it.id}" tabindex="0" role="button" aria-label="Ver ${esc(it.name)}" onclick="openInvItemDetail('${it.id}')"
+      onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();openInvItemDetail('${it.id}')}"
+      ${canEquip ? `draggable="true" ondragstart="onInvDragStart(event,'${it.id}')" ondragend="onInvDragEnd()"` : ''}`,
     status: it.equipped ? '<span class="poster-pub on">Equipado</span>' : '',
     meta: `Qtd. ${esc(String(it.qty ?? 1))}${it.category ? ' · ' + esc(it.category) : ''}`,
     extra: `${mods}
       <input class="item-desc" title="Clique para editar a descrição" aria-label="Descrição de ${esc(it.name)}" placeholder="Descrição…" value="${esc(it.description)}" oninput="onInvFieldChange('${it.id}','description',this.value)">
       <div class="item-ctl">
         <input type="number" min="0" value="${it.qty}" aria-label="Quantidade" oninput="onInvFieldChange('${it.id}','qty',this.value)">
-        <button class="btn sm auto" onclick="openInvItemDetail('${it.id}')" title="Ver o item por completo">Detalhes</button>
         ${(it.consume_effects && it.consume_effects.length) ? `<button class="btn sm go auto" onclick="consumeInv('${it.id}')" title="Aplica o efeito e gasta 1 unidade">Consumir</button>` : ''}
         ${it.equipped && it.weapon_damage ? `<button class="btn sm go auto" onclick="rollWeaponDamage('${it.id}')" title="Rola a fórmula de dano da arma">Rolar dano</button>` : ''}
         ${canEquip ? `<button class="btn sm auto" onclick="onEquipBtn('${it.id}', ${!it.equipped})" title="Equipado aplica os modificadores/dano/proteção automaticamente">${it.equipped ? 'Desequipar' : 'Equipar'}</button>` : ''}
@@ -3626,6 +3621,7 @@ window.selectRailTab = (tab) => {
   document.querySelectorAll('#rail-tabs button').forEach((b) => { const on = b.dataset.rt === tab; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); });
   $('dice-log').style.display = isRolls ? '' : 'none';
   $('chat-log').style.display = isRolls ? 'none' : '';
+  requestAnimationFrame(() => { syncLogEdge($('dice-log')); syncLogEdge($('chat-log')); });
   const icon = $('dice-panel-icon'), label = $('dice-panel-label');
   if (icon) icon.innerHTML = isRolls ? ICONS.dice : ICONS.chat;
   if (label) label.textContent = isRolls ? 'Rolagens' : 'Conversa';
@@ -3795,11 +3791,18 @@ function rollEl(r, justLanded) {
   if (justLanded) div.addEventListener('animationend', () => div.classList.remove('landing'), { once: true });
   return div;
 }
+// marca o log quando há itens escondidos acima (column-reverse: scrollTop vai de 0 até negativo)
+function syncLogEdge(log) {
+  if (!log) return;
+  log.classList.toggle('more-above', log.scrollHeight - log.clientHeight + log.scrollTop > 2);
+  if (!log.dataset.edge) { log.dataset.edge = '1'; log.addEventListener('scroll', () => syncLogEdge(log), { passive: true }); }
+}
 function renderRolls(rolls) {
   const log = $('dice-log'); if (!log) return; log.innerHTML = '';
   if (!rolls.length) { log.innerHTML = '<div class="empty" style="border:0">Sem rolagens ainda.</div>'; return; }
   rolls.forEach((r) => log.appendChild(rollEl(r)));   // desc + column-reverse => mais recente embaixo
   paintLastRoll(rolls[0]);
+  requestAnimationFrame(() => syncLogEdge(log));
 }
 function addRollToLog(r) {
   const log = $('dice-log'); if (!log) return;
@@ -3807,6 +3810,7 @@ function addRollToLog(r) {
   const empty = log.querySelector('.empty'); if (empty) empty.remove();
   log.insertBefore(rollEl(r, true), log.firstChild);
   paintLastRoll(r, true);
+  requestAnimationFrame(() => syncLogEdge(log));
   markRailTabUnread('rolls');
 }
 
@@ -3834,12 +3838,14 @@ function renderChat(msgs) {
   const log = $('chat-log'); if (!log) return; log.innerHTML = '';
   if (!msgs.length) { log.innerHTML = '<div class="empty" style="border:0">Sem mensagens ainda.</div>'; return; }
   msgs.forEach((m) => log.appendChild(msgEl(m)));   // desc + column-reverse => mais recente embaixo
+  requestAnimationFrame(() => syncLogEdge(log));
 }
 function addMsgToLog(m) {
   const log = $('chat-log'); if (!log) return;
   if (log.querySelector(`[data-id="${m.id}"]`)) return;   // evita duplicar (realtime + eco local)
   const empty = log.querySelector('.empty'); if (empty) empty.remove();
   log.insertBefore(msgEl(m, true), log.firstChild);
+  requestAnimationFrame(() => syncLogEdge(log));
   markRailTabUnread('chat');
 }
 

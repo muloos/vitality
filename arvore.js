@@ -46,7 +46,7 @@ try {
 // A classe .embedded já foi aplicada bem mais cedo por um <script> síncrono logo no início do
 // <body> (não depende de nada carregar) — aqui só cobre o caso não-embutido (FABs próprios).
 const embedded = new URLSearchParams(location.search).get('embed') === '1';
-if (!embedded) { mountHelp('arvore', { bottom: '52px' }); mountThemeToggle(); }
+if (!embedded) mountThemeToggle();
 window.goBackEmbedded = async () => {
   if (hasUnsavedChanges()) {
     const ok = await confirmModal({ title: 'Sair sem salvar?', desc: 'Você tem edições não salvas nesta árvore — elas serão perdidas.', confirmLabel: 'Sair sem salvar' });

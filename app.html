@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="lib/tokens.css?v=5">
 <link rel="stylesheet" href="lib/theme.css?v=52">
 <link rel="stylesheet" href="lib/theme-ffx.css?v=13">
-<link rel="stylesheet" href="lib/components.css?v=12">
+<link rel="stylesheet" href="lib/components.css?v=13">
 <style>
   /* Lobby — "Latão calmo" (docs/DESIGN-v2-LATAO-CALMO.md §3.2) */
   .home-head{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--space-4);flex-wrap:wrap;margin:0 0 var(--space-5)}
@@ -71,7 +71,6 @@
     .bottom-nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.6}
     .bottom-nav [aria-current="page"]{color:var(--primary);box-shadow:inset 0 2px 0 var(--primary)}
     body.home-page{padding-bottom:calc(72px + env(safe-area-inset-bottom))}
-    .help-fab{bottom:calc(84px + env(safe-area-inset-bottom))}
     .ffx-layout.lobby > .ffx-side .ffx-menu-eyebrow,.ffx-layout.lobby > .ffx-side .ffx-side-note,
     #home-menu > [data-sec]{display:none}
     #home-menu{flex-direction:row;overflow-x:auto;border-bottom:1px solid var(--border)}
@@ -97,7 +96,7 @@
   <div class="spacer"></div>
   <div class="nav-user" id="nav-user">
     <button type="button" class="chip" id="nav-user-btn" aria-haspopup="menu" aria-expanded="false" onclick="toggleUserMenu()">
-      <span class="av" id="nav-av">?</span><b id="nav-name">…</b><span style="color:var(--ink-faint)">▾</span>
+      <span class="av" id="nav-av"></span><b id="nav-name"></b><span style="color:var(--ink-faint)">▾</span>
     </button>
     <div class="drop glass" role="menu">
       <button role="menuitem" onclick="openProfile()"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c.8-4 3.6-6.5 7.5-6.5s6.7 2.5 7.5 6.5"/></svg></span>Meu perfil</button>
@@ -113,7 +112,7 @@
 <!-- layout em colunas (docs/DESIGN-FFXIII.md §3.1/§3.3): menu vertical à esquerda substitui as abas
      horizontais (.home-tabs) e os segmentados de sub-aba (.seg) — mesmas funções showSec/showSysSub/
      showItemSub de sempre, só a navegação mudou de lugar -->
-<div class="ffx-layout lobby" id="home" style="visibility:hidden">
+<div class="ffx-layout lobby" id="home">
   <aside class="ffx-side">
     <div class="ffx-menu-eyebrow" aria-hidden="true">Menu</div>
     <div class="ffx-menu" id="home-menu" role="tablist" aria-orientation="vertical" aria-label="Seções da plataforma">
@@ -128,7 +127,7 @@
       <button type="button" role="tab" class="sub" id="tab-itens-criar" data-parent="itens" data-sub="criar" aria-selected="false" aria-controls="itens-criar" hidden onclick="showItemSub('criar')">Criar</button>
       <button type="button" role="tab" class="sub" id="tab-itens-pacotes" data-parent="itens" data-sub="pacotes" aria-selected="false" aria-controls="itens-pacotes" hidden onclick="showItemSub('pacotes')">Pacotes</button>
     </div>
-    <div class="ffx-side-note" id="side-note">Dúvidas? Toque no <b>?</b> no canto da tela.</div>
+    <div class="ffx-side-note" id="side-note" hidden></div>
   </aside>
 
   <main class="ffx-main">
@@ -309,10 +308,9 @@
 
 <script type="module">
 import * as db from './lib/db.js?v=42';
-import { itemCard, openItemDetail as openItemDetailModal, detailAttrs } from './lib/item-card.js?v=2';
-import { mountHelp, mountThemeToggle, openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus, wireVerticalTablist, playEnter } from './lib/ui.js?v=10';
+import { itemCard, openItemDetail as openItemDetailModal, detailAttrs } from './lib/item-card.js?v=3';
+import { mountThemeToggle, openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus, wireVerticalTablist, playEnter } from './lib/ui.js?v=10';
 
-mountHelp('home');
 mountThemeToggle();
 const ICON_SUN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.6 4.6l1.7 1.7M17.7 17.7l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.6 19.4l1.7-1.7M17.7 6.3l1.7-1.7"/></svg>';
 const ICON_MOON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z"/></svg>';
@@ -550,6 +548,7 @@ window.showItemSub = (sub) => {
 (function paintLastMesa() {
   let last = null; try { last = JSON.parse(localStorage.getItem('vt_last_mesa') || 'null'); } catch (_) {}
   const el = document.getElementById('side-note'); if (!el || !last || !last.id) return;
+  el.hidden = false;
   el.innerHTML = `<span class="sn-k">Última mesa</span><a class="sn-link" href="mesa.html?id=${encodeURIComponent(last.id)}">${esc(last.name || 'Abrir')} →</a>`;
 })();
 function setMenuCount(sec, n) { const el = $('cnt-' + sec); if (!el) return; el.textContent = n == null ? '' : String(n); el.dataset.n = n == null ? '' : String(n); }

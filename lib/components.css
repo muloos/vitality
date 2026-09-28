@@ -356,6 +356,48 @@ input[type=checkbox]::after{width:8px;height:8px;background:var(--primary)}
 :root[data-theme="light"] .prof-chip[style*="--cc"]{color:color-mix(in srgb,var(--cc) 45%,var(--text))}
 :root[data-theme="light"] .res-label{color:color-mix(in srgb,var(--res-color,var(--primary)) 55%,var(--text))}
 
+/* ---------- skeleton de carregamento (DESIGN-v2 §2.5; MELHORIAS-v1.5 P0-1) ----------
+   Blocos no formato do conteúdo real, com o chanfro do componente que vão virar. Enquanto não há dados,
+   o avatar é --surface-3 sem letra e os nomes viram uma barra — nunca "?" ou "…". */
+.skel{display:block;background:linear-gradient(100deg,var(--surface-2) 30%,var(--surface-3) 50%,var(--surface-2) 70%) 0 0/220% 100%;
+  animation:ffxShimmer 1.4s ease-in-out infinite}
+.skel-page{display:flex;flex-direction:column;gap:var(--space-2)}
+.skel-menu{height:36px;margin:2px var(--space-3) 2px var(--space-5);
+  clip-path:polygon(var(--cut-s) 0,100% 0,100% calc(100% - var(--cut-s)),calc(100% - var(--cut-s)) 100%,0 100%,0 var(--cut-s))}
+.skel-menu:nth-child(3n+2){margin-right:var(--space-7)} .skel-menu:nth-child(3n){margin-right:var(--space-6)}
+.skel-hero{height:148px;margin-bottom:var(--space-4)}
+.skel-h3{width:160px;height:18px;margin:var(--space-3) 0 var(--space-2)}
+.skel-line{width:min(640px,80%);height:14px;margin-bottom:var(--space-4)}
+.skel-title{width:280px;max-width:70vw;height:32px;margin:4px 0}
+.skel-row{height:64px} .skel-row.short{height:48px}
+.skel-hero,.skel-row{clip-path:polygon(var(--cut-m) 0,100% 0,100% calc(100% - var(--cut-m)),calc(100% - var(--cut-m)) 100%,0 100%,0 var(--cut-m))}
+.topbar .title:empty::before,.nav-user .chip b:empty::before{content:"";display:inline-block;vertical-align:middle;height:12px;background:var(--surface-3)}
+.topbar .title:empty::before{width:180px;height:14px}
+.nav-user .chip b:empty::before{width:88px}
+.nav-user .chip .av:empty{--fill:var(--surface-3);--frame:transparent}
+@media (prefers-reduced-motion:reduce){.skel{animation:none}}
+html[data-motion="off"] .skel{animation:none}
+/* o display dos botões não pode vencer o atributo hidden */
+.btn[hidden],.iconbtn[hidden],.ffx-side-note[hidden]{display:none}
+
+/* ---------- boneco de equipamento na mesa (MELHORIAS-v1.5 P0-4) ----------
+   Fundo liso (a grade fica só no construtor, onde serve para posicionar os slots). */
+.eq-board.play{--fill:var(--surface-1);--frame:var(--border)}
+.eq-board.play::before{content:none}
+.eq-board.play .eq-slot{flex-direction:column;gap:2px;padding:4px;overflow:hidden}
+.eq-board.play .eq-slot:not(.filled){--fill:var(--surface-2);--frame:var(--border-strong);cursor:default}
+.eq-slot .eq-sil{position:absolute;top:6px;left:6px;width:calc(100% - 12px);height:calc(100% - 12px);object-fit:contain;opacity:.3;pointer-events:none}
+.eq-board.play .eq-slot-label{position:relative;z-index:1;inset:auto;bottom:auto;left:auto;transform:none;max-width:100%;overflow:hidden;
+  font-family:var(--mono);font-size:var(--fs-label);line-height:14px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);text-align:center;white-space:normal}
+.eq-board.play .eq-slot.filled{--rc:var(--rar-comum);--fill:var(--surface-1);--frame:var(--border);--cf-accent:inset 0 2px 0 var(--rc);cursor:pointer;padding-top:6px}
+.eq-board.play .eq-slot.filled:hover{--frame:var(--primary)}
+.eq-slot.filled[data-rarity="Incomum"]{--rc:var(--rar-incomum)} .eq-slot.filled[data-rarity="Raro"]{--rc:var(--rar-raro)}
+.eq-slot.filled[data-rarity="Épico"]{--rc:var(--rar-epico)} .eq-slot.filled[data-rarity="Lendário"]{--rc:var(--rar-lendario)}
+.eq-slot.filled[data-rarity="Único"]{--rc:var(--rar-unico)}
+.eq-slot .eq-item-img{flex:1 1 auto;min-height:0;width:100%;object-fit:contain;pointer-events:none}
+.eq-slot .eq-item-name{flex:0 0 auto;max-width:100%;font-size:var(--fs-label);line-height:13px;color:var(--text);text-align:center;overflow-wrap:anywhere;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
 /* ---------- raridade calma (decisão do usuário sobre o §2 "nenhum loop") ----------
    a raridade vira uma faixa de 2px no topo do card, na cor dela; nada brilha, pulsa ou flutua.
    Só o Lendário ganha um brilho único ao passar o mouse, e nem isso com movimento reduzido. */
@@ -470,6 +512,7 @@ body.arvore-page #fx{z-index:0}
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
 .item-meta{font-size:13px;line-height:20px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .item-extra{display:flex;flex-direction:column;gap:var(--space-2);padding:0 12px 12px;cursor:default}
+.item-extra .item-ctl .btn{padding:0 var(--space-2)}
 .item-extra .mods{display:flex;flex-wrap:wrap;gap:4px}
 .item-extra .item-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 .item-extra input{font-family:var(--serif);font-size:var(--fs-small);color:var(--text)}
@@ -479,9 +522,10 @@ body.arvore-page #fx{z-index:0}
 .item-card:focus-visible{outline:none}
 .item-glow:has(> .item-card:focus-visible){animation:none;
   filter:drop-shadow(0 0 1px var(--primary)) drop-shadow(0 0 1px var(--primary)) drop-shadow(0 0 1.5px var(--primary))}
-.item-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:var(--space-4);align-items:start}
-.item-grid.with-controls{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
-@media (max-width:760px){.item-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-3)}.item-grid.with-controls{grid-template-columns:minmax(0,1fr)}}
+/* colunas de 168–232px: um item sozinho não ocupa a linha inteira (MELHORIAS-v1.5 P0-3) */
+.item-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,232px));gap:var(--space-4);align-items:start}
+.item-grid.with-controls{grid-template-columns:repeat(auto-fill,minmax(200px,232px))}
+@media (max-width:760px){.item-grid,.item-grid.with-controls{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-3)}}
 @keyframes glowPulse{0%,100%{filter:drop-shadow(0 0 6px var(--g1))}50%{filter:drop-shadow(0 0 14px var(--g1))}}
 @keyframes glowDouble{0%,100%{filter:drop-shadow(0 0 8px var(--g1)) drop-shadow(0 0 18px var(--g2))}50%{filter:drop-shadow(0 0 14px var(--g1)) drop-shadow(0 0 30px var(--g2))}}
 @keyframes borderFlow{0%{background-position:0% 50%}100%{background-position:200% 50%}}

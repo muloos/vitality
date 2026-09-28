@@ -501,3 +501,91 @@ html[data-motion="off"] .item-glow[data-rarity],html[data-motion="off"] .item-gl
 html[data-motion="off"] .item-glow .item-aura,html[data-motion="off"] .item-glow .sweep,html[data-motion="off"] .item-glow .twinkle{animation:none}
 html[data-motion="off"] .item-glow .sweep,html[data-motion="off"] .item-glow .twinkle{display:none}
 html[data-motion="off"] .item-glow:hover{transform:none}
+
+/* ---------- detalhe do item (VITALITY-FORMA-COR-ITENS §3.3; marcação em lib/item-card.js) ----------
+   Computador: modal L de 920×560 (máx. 90vw × 85vh), palco à esquerda e colunas de conteúdo à direita.
+   O .idet-wrap (sem corte) leva a sombra flutuante e o brilho suave na cor da raridade. */
+.idet-modal{align-items:center;justify-content:center}
+.idet-wrap{--rc:var(--rar-comum);display:flex;width:min(920px,90vw);height:min(560px,85vh);
+  filter:drop-shadow(0 16px 24px rgba(0,0,0,.45)) drop-shadow(0 0 24px color-mix(in srgb,var(--rc) 22%,transparent))}
+.idet-wrap[data-rarity="Incomum"]{--rc:var(--rar-incomum)} .idet-wrap[data-rarity="Raro"]{--rc:var(--rar-raro)}
+.idet-wrap[data-rarity="Épico"]{--rc:var(--rar-epico)} .idet-wrap[data-rarity="Lendário"]{--rc:var(--rar-lendario)}
+.idet-wrap[data-rarity="Único"]{--rc:var(--rar-unico)}
+.ui-modal .box.idet{position:relative;width:100%;max-width:none;height:100%;max-height:none;margin:0;padding:0;overflow:hidden;
+  display:grid;grid-template-columns:420px minmax(0,1fr);--fill:var(--surface-2);--frame:var(--border);--cf-accent:inset 0 2px 0 var(--rc)}
+.idet-grip{display:none}
+/* palco: halo da raridade; a imagem ocupa inset 40/40/72 em contain — nunca é cortada */
+.idet-stage{position:relative;overflow:hidden;background:radial-gradient(circle at 50% 45%,color-mix(in srgb,var(--rc) 24%,transparent),transparent 70%),var(--surface-1)}
+/* o palco é opaco e pintaria por cima da moldura da caixa: fica recuado da borda (2px no topo, pela linha
+   da raridade) e com o próprio canto cortado, um pouco menor que o da caixa */
+.idet-stage{margin:2px 0 1px 1px;--sc:calc(var(--cut-l) - 1.5px);clip-path:polygon(var(--sc) 0,100% 0,100% 100%,0 100%,0 var(--sc))}
+.idet-stage img{position:absolute;top:40px;left:40px;width:calc(100% - 80px);height:calc(100% - 112px);object-fit:contain}
+.idet-ph{position:absolute;left:50%;top:calc(50% - 16px);width:48px;height:48px;transform:translate(-50%,-50%) rotate(45deg);box-shadow:inset 0 0 0 1px var(--rc)}
+.idet-stage-foot{position:absolute;left:24px;right:24px;bottom:24px;display:flex;justify-content:space-between;gap:var(--space-3);
+  font-family:var(--mono);font-size:var(--fs-label);line-height:16px;letter-spacing:.14em;text-transform:uppercase}
+.idet-rar,.idet-eyebrow{color:var(--rc)}
+.idet-type{color:var(--text-2);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+:root[data-theme="light"] .idet-rar,:root[data-theme="light"] .idet-eyebrow{color:color-mix(in srgb,var(--rc) 45%,var(--text))}
+.idet-main{display:flex;flex-direction:column;min-width:0;min-height:0}
+/* cabeçalho fixo */
+.idet-head{display:flex;align-items:flex-start;gap:var(--space-4);padding:28px 24px 16px 28px}
+.idet-titles{flex:1;min-width:0}
+.idet-eyebrow{display:none;font-family:var(--mono);font-size:var(--fs-label);line-height:16px;letter-spacing:.14em;text-transform:uppercase;margin-bottom:6px}
+.ui-modal .idet #idet-title{margin:0;font-family:var(--disp);font-size:30px;line-height:36px;font-weight:400;color:var(--text);text-wrap:pretty;overflow-wrap:anywhere}
+.idet-origin{margin-top:4px;font-size:13px;line-height:20px;color:var(--text-3)}
+.idet-x{flex:0 0 auto}
+/* corpo rolável: atributos 2×2 que quebram linha, descrição, efeitos */
+.idet-body{flex:1;min-height:0;overflow:auto;padding:0 28px 20px;display:flex;flex-direction:column;gap:20px}
+.idet-attrs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-2)}
+.idet-cell{--cut:var(--cut-m);--fill:var(--surface-1);--frame:var(--border);display:flex;flex-direction:column;gap:2px;padding:10px 14px 12px;min-width:0;
+  clip-path:polygon(var(--cut) 0,100% 0,100% calc(100% - var(--cut)),calc(100% - var(--cut)) 100%,0 100%,0 var(--cut))}
+.idet-k{font-family:var(--mono);font-size:var(--fs-label);line-height:16px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3)}
+.idet-v{font-family:var(--disp);font-size:20px;line-height:26px;color:var(--text);overflow-wrap:anywhere}
+.idet-desc p{margin:0;max-width:60ch;font-size:15px;line-height:1.65;color:var(--text-2);white-space:pre-line}
+.idet-more{display:none}
+.idet-more[hidden]{display:none}
+.idet-fx ul{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.idet-fx li{display:flex;align-items:baseline;gap:8px;font-size:15px;line-height:22px;color:var(--text)}
+.idet-fx li i{flex:0 0 auto;width:8px;height:8px;background:var(--rc);transform:translateY(-1px) rotate(45deg)}
+.idet-fx li b{color:var(--success);font-weight:600;font-variant-numeric:tabular-nums}
+/* rodapé fixo: excluir (terciário de perigo) à esquerda; secundário + primário contextual à direita */
+.idet-foot{display:flex;align-items:center;gap:var(--space-3);padding:16px 28px 24px;border-top:1px solid var(--border)}
+.idet-foot-r{display:flex;align-items:center;gap:var(--space-2);margin-left:auto;flex-wrap:wrap;justify-content:flex-end}
+.idet-foot .btn{width:auto}
+.idet-foot select{width:auto;max-width:200px}
+.idet-foot .btn svg{width:16px;height:16px;flex:0 0 auto;fill:none;stroke:currentColor}
+.idet-foot .btn.on svg{fill:var(--danger);stroke:var(--danger)}
+.idet-desc .idet-more{width:auto;height:auto;justify-content:flex-start}
+.btn.tertiary.danger{--fill:transparent;--frame:transparent;color:var(--danger)}
+.btn.tertiary.danger:hover{--fill:transparent;--frame:transparent;color:var(--danger);text-decoration:underline}
+/* celular: folha inferior (tela − 64px), chanfro L só no canto superior esquerdo, puxador */
+@media (max-width:760px){
+  .idet-modal{align-items:flex-end;padding:0}
+  .idet-wrap{width:100%;height:calc(100dvh - 64px);filter:drop-shadow(0 -8px 24px rgba(0,0,0,.4))}
+  .ui-modal .box.idet{display:flex;flex-direction:column;overflow:auto;
+    clip-path:polygon(var(--cut) 0,100% 0,100% 100%,0 100%,0 var(--cut));background-size:auto,calc(var(--cut) + 4px) calc(var(--cut) + 4px),0 0}
+  .idet-grip{display:block;position:absolute;left:50%;top:8px;z-index:3;width:40px;height:4px;margin-left:-20px;background:var(--border-strong)}
+  .idet-stage{flex:0 0 240px;height:240px;margin:2px 1px 0 1px}
+  .idet-stage img{top:24px;left:24px;width:calc(100% - 48px);height:calc(100% - 48px)}
+  .idet-ph{top:50%}
+  .idet-stage-foot{display:none}
+  .idet-main{flex:1 0 auto}
+  .idet-x{position:absolute;top:12px;right:12px;z-index:4;width:44px;height:44px;--fill:var(--surface-2)}
+  .idet-head{padding:20px 16px 8px}
+  .idet-eyebrow{display:block}
+  .ui-modal .idet #idet-title{font-size:26px;line-height:32px}
+  .idet-body{flex:0 0 auto;overflow:visible;padding:0 16px 16px}
+  .idet-desc p{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+  .idet-desc.open p{display:block}
+  .idet-more{display:inline-flex;margin-top:var(--space-1)}
+  .idet-foot{position:sticky;bottom:0;z-index:2;flex-direction:column-reverse;align-items:stretch;gap:var(--space-2);
+    padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:var(--surface-2)}
+  .idet-foot-r{margin-left:0;flex-wrap:nowrap}
+  .idet-foot-r .btn{flex:1;height:48px}
+  .idet-foot-r select{flex:1;max-width:none;height:48px}
+  .idet-foot-l{display:flex;justify-content:center}
+}
+@media (max-width:760px) and (prefers-reduced-motion:no-preference){
+  html:not([data-motion="off"]) .idet-wrap{animation:idetUp var(--t-slow) var(--ease)}
+}
+@keyframes idetUp{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}

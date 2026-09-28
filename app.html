@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="lib/tokens.css?v=5">
 <link rel="stylesheet" href="lib/theme.css?v=52">
 <link rel="stylesheet" href="lib/theme-ffx.css?v=13">
-<link rel="stylesheet" href="lib/components.css?v=11">
+<link rel="stylesheet" href="lib/components.css?v=12">
 <style>
   /* Lobby — "Latão calmo" (docs/DESIGN-v2-LATAO-CALMO.md §3.2) */
   .home-head{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--space-4);flex-wrap:wrap;margin:0 0 var(--space-5)}
@@ -309,7 +309,7 @@
 
 <script type="module">
 import * as db from './lib/db.js?v=42';
-import { itemCard } from './lib/item-card.js?v=1';
+import { itemCard, openItemDetail as openItemDetailModal, detailAttrs } from './lib/item-card.js?v=2';
 import { mountHelp, mountThemeToggle, openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus, wireVerticalTablist, playEnter } from './lib/ui.js?v=10';
 
 mountHelp('home');
@@ -1101,37 +1101,21 @@ window.openItemDetail = async (id) => {
   if (!it) return;
   const isOwner = !!myUserId && it.owner_id === myUserId;
   const isFav = _favIds.has(id);
-  const trigger = document.activeElement;
-  const w = document.createElement('div');
-  w.className = 'ui-modal';
+  const favBtn = `<button type="button" class="btn ${isFav ? 'on' : ''}" id="idet-fav">${isFav ? HEART_ICON + ' Remover dos favoritos' : HEART_ICON + ' Favoritar'}</button>`;
+  // dono: edita/exclui; visitante: favorita e copia para um dos próprios sistemas
+  const { el: w, close } = openItemDetailModal({
+    item: it,
+    origin: `Criado por ${esc(it.creator_name || '—')}${it.item_code ? ' · #' + esc(it.item_code) : ''}${isOwner ? ' · ' + (it.is_published ? 'Publicado na loja' : 'Privado') : ''}`,
+    attrs: detailAttrs(it),
+    effects: (it.modifiers || []).map((m) => ({ value: m.value, text: m.name })),
+    actions: isOwner
+      ? { danger: '<button type="button" class="btn tertiary danger" id="idet-del">Excluir</button>', secondary: favBtn,
+          primary: '<button type="button" class="btn go" id="idet-edit">Editar</button>' }
+      : { extra: '<select id="idet-sys-pick" class="fld-input" aria-label="Sistema de destino"><option value="">Carregando sistemas…</option></select>',
+          secondary: favBtn, primary: '<button type="button" class="btn go" id="idet-add-sys">Adicionar ao sistema</button>' },
+    trapFocus,
+  });
   w.dataset.itemId = id;
-  w.setAttribute('role', 'dialog'); w.setAttribute('aria-modal', 'true'); w.setAttribute('aria-labelledby', 'idet-title');
-  w.innerHTML = `<div class="box guide item-detail">
-    <div class="ghead"><h3 id="idet-title">${esc(it.name)} <span style="font-family:var(--mono);font-size:11px;color:var(--ink-faint);font-weight:400">#${esc(it.item_code || '')}</span></h3><button class="x" aria-label="Fechar">×</button></div>
-    ${it.image_url ? `<img class="idet-img" src="${esc(it.image_url)}" alt="">` : ''}
-    <div class="idet-badges">
-      ${it.rarity ? `<span class="badge r-${esc((it.rarity || '').toLowerCase())}">${esc(it.rarity)}</span>` : ''}
-      ${it.category ? `<span class="badge cat">${esc(it.category)}</span>` : ''}
-      ${it.weapon_damage ? `<span class="badge mod">Dano ${esc(it.weapon_damage)}</span>` : ''}
-      ${(it.protection != null && it.protection !== '') ? `<span class="badge mod">Proteção ${esc(String(it.protection))}</span>` : ''}
-      ${it.equipment_type ? `<span class="badge" style="border-color:var(--maq);color:var(--maq)">${esc(it.equipment_type)}</span>` : ''}
-      ${isOwner ? `<span class="badge ${it.is_published ? 'mod' : 'cat'}">${it.is_published ? 'Publicado na loja' : 'Privado'}</span>` : ''}
-    </div>
-    ${it.description ? `<p class="gintro">${esc(it.description)}</p>` : ''}
-    ${(it.modifiers && it.modifiers.length) ? `<div class="mods" style="margin-bottom:12px">${it.modifiers.map((m) => `<span class="badge mod">${esc(m.name)} ${esc(m.value)}</span>`).join('')}</div>` : ''}
-    <div class="idet-creator">Criado por ${esc(it.creator_name || '—')}</div>
-    <div class="idet-actions">
-      <button class="btn auto ${isFav ? 'on' : ''}" id="idet-fav">${isFav ? HEART_ICON + ' Remover dos favoritos' : HEART_ICON + ' Favoritar'}</button>
-      ${isOwner
-        ? `<button class="btn auto" id="idet-edit">Editar</button><button class="btn danger auto" id="idet-del">Excluir</button>`
-        : `<select id="idet-sys-pick" class="fld-input" style="max-width:200px"><option value="">Carregando sistemas…</option></select><button class="btn go auto" id="idet-add-sys">+ Adicionar a um sistema</button>`}
-    </div>
-  </div>`;
-  const untrap = trapFocus(w);
-  const close = () => { untrap(); w.remove(); document.removeEventListener('keydown', onEsc); if (trigger && trigger.focus) trigger.focus(); };
-  const onEsc = (e) => { if (e.key === 'Escape') close(); };
-  w.addEventListener('click', (e) => { if (e.target === w) close(); });
-  w.querySelector('.x').onclick = close;
   w.querySelector('#idet-fav').onclick = () => toggleFavorite(id);
   if (isOwner) {
     w.querySelector('#idet-edit').onclick = () => { close(); showItemSub('criar'); openItemForm(it); };
@@ -1139,7 +1123,7 @@ window.openItemDetail = async (id) => {
   } else {
     const sel = w.querySelector('#idet-sys-pick');
     db.listSystems().then((systems) => {
-      if (!systems.length) { sel.innerHTML = '<option value="">— crie um sistema primeiro —</option>'; sel.disabled = true; return; }
+      if (!systems.length) { sel.innerHTML = '<option value="">Crie um sistema primeiro</option>'; sel.disabled = true; return; }
       sel.innerHTML = systems.map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
     }).catch(() => { sel.innerHTML = '<option value="">Erro ao carregar sistemas</option>'; });
     w.querySelector('#idet-add-sys').onclick = async (ev) => {
@@ -1153,9 +1137,6 @@ window.openItemDetail = async (id) => {
       } catch (e) { showMsg('Não foi possível adicionar: ' + friendlyError(e)); btn.disabled = false; }
     };
   }
-  document.addEventListener('keydown', onEsc);
-  document.body.appendChild(w);
-  w.querySelector('.x').focus();
 };
 
 window.editItem = (id) => { const it = _itemById.get(id); if (it) { showItemSub('criar'); openItemForm(it); } };

@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="lib/tokens.css?v=5">
 <link rel="stylesheet" href="lib/theme.css?v=52">
 <link rel="stylesheet" href="lib/theme-ffx.css?v=13">
-<link rel="stylesheet" href="lib/components.css?v=11">
+<link rel="stylesheet" href="lib/components.css?v=12">
 <style>
   /* Mesa — "Latão calmo" (docs/DESIGN-v2-LATAO-CALMO.md §3.3) */
   /* topbar: o grupo em avatares, traço verde = online */
@@ -168,7 +168,7 @@
 
 <script type="module">
 import * as db from './lib/db.js?v=42';
-import { itemCard } from './lib/item-card.js?v=1';
+import { itemCard, openItemDetail as openItemDetailModal, detailAttrs } from './lib/item-card.js?v=2';
 import { openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus, wireVerticalTablist, armEnter } from './lib/ui.js?v=10';
 import { mountYtPlayer } from './lib/ytplayer.js?v=6';
 
@@ -1306,40 +1306,26 @@ window.gmGrantItem = () => {
     viewPlayer(_gmViewUserId, _gmViewName);
   }).catch((e) => showMsg(e.message));
 };
-// versão enxuta e somente-leitura de openInvItemDetail (mochila do próprio jogador) — mesmo modal
-// rico (imagem/raridade/descrição completa/modificadores), mas SEM rolar dano/equipar/excluir: o
-// pedido foi só "ver a descrição completa", não dar ao Mestre poder de mexer no equipamento de
-// outro jogador (isso ampliaria a autoridade dele sobre um dado que não é seu).
+// efeitos do item no detalhe: "+2" (em verde) + nome do status
+function itemEffects(it) {
+  return (it.modifiers || []).map((m) => {
+    const st = (sys?.stats || []).find((x) => x.id === m.stat_id);
+    const v = String(m.value ?? '');
+    return { value: /^[+-]/.test(v) || isNaN(Number(v)) ? v : (Number(v) >= 0 ? '+' + v : v), text: st ? st.name : '(status removido)' };
+  });
+}
+// versão somente-leitura do detalhe da mochila (visão do Mestre): mesmo modal, sem ações — o
+// Mestre vê o item por completo, mas não mexe no equipamento de outro jogador.
 window.gmOpenInvItemDetail = (id) => {
   const it = _gmViewInventory.find((x) => x.id === id);
   if (!it) return;
-  const hasProtection = it.protection != null && it.protection !== '';
-  const rarity = it.rarity || 'Comum';
-  const trigger = document.activeElement;
-  const w = document.createElement('div');
-  w.className = 'ui-modal';
-  w.setAttribute('role', 'dialog'); w.setAttribute('aria-modal', 'true'); w.setAttribute('aria-labelledby', 'gm-idet-title');
-  w.innerHTML = `<div class="box guide item-detail">
-    <div class="ghead"><h3 id="gm-idet-title">${esc(it.name)}</h3><button class="x" aria-label="Fechar">×</button></div>
-    ${it.image_url ? `<img class="idet-img" src="${esc(it.image_url)}" alt="">` : ''}
-    <div class="idet-badges">
-      <span class="rar-pill" data-rarity="${esc(rarity)}">${esc(rarity)}</span>
-      ${it.weapon_damage ? `<span class="badge mod">Dano ${esc(it.weapon_damage)}${it.damage_scale ? ' + ' + esc(it.damage_scale) : ''}</span>` : ''}
-      ${hasProtection ? `<span class="badge mod">Proteção ${esc(String(it.protection))}${it.protection_scale ? ' + ' + esc(it.protection_scale) : ''}</span>` : ''}
-      ${it.equipped ? `<span class="badge" style="border-color:var(--maq);color:var(--maq)">Equipado</span>` : ''}
-    </div>
-    ${it.description ? `<p class="gintro">${esc(it.description)}</p>` : `<p class="gintro" style="color:var(--ink-faint)">Sem descrição.</p>`}
-    ${(it.modifiers && it.modifiers.length) ? `<div class="mods" style="margin-bottom:12px">${it.modifiers.map((m) => `<span class="badge mod">${itemModLabel(m)}</span>`).join('')}</div>` : ''}
-    <div class="idet-creator">Quantidade: ${esc(String(it.qty))}</div>
-  </div>`;
-  const untrap = trapFocus(w);
-  const close = () => { untrap(); w.remove(); document.removeEventListener('keydown', onEsc); if (trigger && trigger.focus) trigger.focus(); };
-  const onEsc = (e) => { if (e.key === 'Escape') close(); };
-  w.addEventListener('click', (e) => { if (e.target === w) close(); });
-  w.querySelector('.x').onclick = close;
-  document.addEventListener('keydown', onEsc);
-  document.body.appendChild(w);
-  w.querySelector('.x').focus();
+  openItemDetailModal({
+    item: it,
+    origin: `Na mochila de ${esc(_gmViewName || 'jogador')}${it.equipped ? ' · equipado' : ''}`,
+    attrs: detailAttrs(it, { qty: it.qty ?? 1 }),
+    effects: itemEffects(it),
+    trapFocus,
+  });
 };
 
 window.gmSetTreePoints = (treeId, userId) => {
@@ -3361,48 +3347,31 @@ function invRow(it) {
       </div>`,
   });
 }
-// modal de detalhe completo do item da mochila — mesmo layout/classes .ui-modal .item-detail
-// que o modal de item da aba Itens (app.html), só que com as ações que fazem sentido aqui
-// (equipar/desequipar, rolar dano, excluir) em vez de favoritar/publicar.
+// detalhe do item da mochila (§3.3): o primário é contextual — rolar dano (arma equipada), usar
+// (consumível) ou, sem nenhum dos dois, equipar/desequipar.
 window.openInvItemDetail = (id) => {
   const it = _fichaInventory.find((x) => x.id === id);
   if (!it) return;
   const hasProtection = it.protection != null && it.protection !== '';
   const canEquip = (it.modifiers && it.modifiers.length) || it.weapon_damage || hasProtection;
-  const rarity = it.rarity || 'Comum';
-  const trigger = document.activeElement;
-  const w = document.createElement('div');
-  w.className = 'ui-modal';
-  w.setAttribute('role', 'dialog'); w.setAttribute('aria-modal', 'true'); w.setAttribute('aria-labelledby', 'idet-title');
-  w.innerHTML = `<div class="box guide item-detail">
-    <div class="ghead"><h3 id="idet-title">${esc(it.name)}</h3><button class="x" aria-label="Fechar">×</button></div>
-    ${it.image_url ? `<img class="idet-img" src="${esc(it.image_url)}" alt="">` : ''}
-    <div class="idet-badges">
-      <span class="rar-pill" data-rarity="${esc(rarity)}">${esc(rarity)}</span>
-      ${it.weapon_damage ? `<span class="badge mod">Dano ${esc(it.weapon_damage)}${it.damage_scale ? ' + ' + esc(it.damage_scale) : ''}</span>` : ''}
-      ${hasProtection ? `<span class="badge mod">Proteção ${esc(String(it.protection))}${it.protection_scale ? ' + ' + esc(it.protection_scale) : ''}</span>` : ''}
-      ${it.equipped ? `<span class="badge" style="border-color:var(--maq);color:var(--maq)">Equipado</span>` : ''}
-    </div>
-    ${it.description ? `<p class="gintro">${esc(it.description)}</p>` : `<p class="gintro" style="color:var(--ink-faint)">Sem descrição.</p>`}
-    ${(it.modifiers && it.modifiers.length) ? `<div class="mods" style="margin-bottom:12px">${it.modifiers.map((m) => `<span class="badge mod">${itemModLabel(m)}</span>`).join('')}</div>` : ''}
-    <div class="idet-creator">Quantidade: ${esc(String(it.qty))}</div>
-    <div class="idet-actions">
-      ${it.equipped && it.weapon_damage ? `<button class="btn auto" id="idet-roll">Rolar dano</button>` : ''}
-      ${canEquip ? `<button class="btn auto" id="idet-equip" style="${it.equipped ? 'border-color:var(--maq);color:var(--maq)' : ''}">${it.equipped ? 'Desequipar' : 'Equipar'}</button>` : ''}
-      <button class="btn danger auto" id="idet-del">Excluir</button>
-    </div>
-  </div>`;
-  const untrap = trapFocus(w);
-  const close = () => { untrap(); w.remove(); document.removeEventListener('keydown', onEsc); if (trigger && trigger.focus) trigger.focus(); };
-  const onEsc = (e) => { if (e.key === 'Escape') close(); };
-  w.addEventListener('click', (e) => { if (e.target === w) close(); });
-  w.querySelector('.x').onclick = close;
-  const rollBtn = w.querySelector('#idet-roll'); if (rollBtn) rollBtn.onclick = () => { close(); rollWeaponDamage(id); };
-  const equipBtn = w.querySelector('#idet-equip'); if (equipBtn) equipBtn.onclick = () => { close(); onEquipBtn(id, !it.equipped); };
-  w.querySelector('#idet-del').onclick = () => { close(); delItem(id); };
-  document.addEventListener('keydown', onEsc);
-  document.body.appendChild(w);
-  w.querySelector('.x').focus();
+  let primary = '';
+  if (it.equipped && it.weapon_damage) primary = '<button type="button" class="btn go" id="idet-roll">Rolar dano</button>';
+  else if (it.consume_effects && it.consume_effects.length) primary = '<button type="button" class="btn go" id="idet-use">Usar</button>';
+  const equip = canEquip ? `<button type="button" class="btn ${primary ? '' : 'go'}" id="idet-equip">${it.equipped ? 'Desequipar' : 'Equipar'}</button>` : '';
+  const { el: w, close } = openItemDetailModal({
+    item: it,
+    origin: it.equipped ? 'Equipado · na sua mochila' : 'Na sua mochila',
+    attrs: detailAttrs(it, { qty: it.qty ?? 1 }),
+    effects: itemEffects(it),
+    actions: { danger: '<button type="button" class="btn tertiary danger" id="idet-del">Excluir</button>',
+      secondary: primary ? equip : '', primary: primary || equip },
+    trapFocus,
+  });
+  const on = (sel, fn) => { const b = w.querySelector(sel); if (b) b.onclick = () => { close(); fn(); }; };
+  on('#idet-roll', () => rollWeaponDamage(id));
+  on('#idet-use', () => consumeInv(id));
+  on('#idet-equip', () => onEquipBtn(id, !it.equipped));
+  on('#idet-del', () => delItem(id));
 };
 // reaproveita 100% o motor de rolagem já existente (rollFormula/doRoll) — weapon_damage já é uma
 // fórmula de dado (ex.: "1d8+2"); se tiver damage_scale, só concatena o apelido do status na

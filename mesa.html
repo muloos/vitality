@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="lib/tokens.css?v=5">
 <link rel="stylesheet" href="lib/theme.css?v=52">
 <link rel="stylesheet" href="lib/theme-ffx.css?v=14">
-<link rel="stylesheet" href="lib/components.css?v=14">
+<link rel="stylesheet" href="lib/components.css?v=15">
 <style>
   /* Mesa — "Latão calmo" (docs/DESIGN-v2-LATAO-CALMO.md §3.3) */
   /* topbar: o grupo em avatares, traço verde = online */
@@ -36,7 +36,11 @@
   .char-bio-row .char-portrait{width:96px;height:96px;font-size:40px}
   .char-bio-row .char-info h2{font-size:32px;line-height:40px}
   /* o "Editar" fica no canto (absoluto): o nome não corre por baixo dele */
-  @media (min-width:761px){.char-bio-row .char-info h2{padding-right:112px}}
+  @media (min-width:1200px){.char-bio-row .char-info h2{padding-right:112px}}
+  /* coluna estreita: o "Editar" vira só o ícone (o texto segue como nome acessível) e o nome não quebra no meio */
+  @media (min-width:761px) and (max-width:1199px){
+    .char-bio-row > .btn{width:40px;padding:0;font-size:0;gap:0}
+    .char-bio-row .char-info h2{font-size:28px;line-height:34px;padding-right:48px}}
   /* status: grade de 6; clicar rola; a dica mostra a fórmula */
   .mesa-main .stat-grid:not(.compact){grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}
   @media (min-width:1280px){.mesa-main .stat-grid:not(.compact){grid-template-columns:repeat(6,minmax(0,1fr))}}
@@ -390,11 +394,11 @@ let syncTabsTabindex = () => {};
 function paintRailChar() {
   const el = $('rail-char'); if (!el) return;
   const who = role === 'gm' ? { name: mesa?.name, sub: 'Mestre', img: mesa?.image_url } :
-    character ? { name: character.name || 'Sem nome', sub: ['Nível ' + (character.level || 1), character.char_class].filter(Boolean).join(' · '), img: character.avatar_url } : null;
+    character ? { name: character.name || 'Sem nome', sub: character.char_class || '', sub2: 'Nível ' + (character.level || 1), img: character.avatar_url } : null;
   if (!who || !who.name) { el.hidden = true; return; }
   el.hidden = false;
   el.innerHTML = (who.img ? `<img class="rc-av" src="${esc(who.img)}" alt="">` : `<span class="rc-av" aria-hidden="true">${esc(who.name.trim().charAt(0).toUpperCase())}</span>`) +
-    `<span class="rc-txt"><b title="${esc(who.name)}">${esc(who.name)}</b><small>${esc(who.sub)}</small></span>`;
+    `<span class="rc-txt"><b title="${esc(who.name)}">${esc(who.name)}</b>${who.sub ? `<small>${esc(who.sub)}</small>` : ''}${who.sub2 ? `<small>${esc(who.sub2)}</small>` : ''}</span>`;
 }
 function buildTabs() {
   // só o texto no menu vertical (o ícone de cada aba ficava na aba horizontal antiga)

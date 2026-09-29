@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="lib/tokens.css?v=5">
 <link rel="stylesheet" href="lib/theme.css?v=52">
 <link rel="stylesheet" href="lib/theme-ffx.css?v=14">
-<link rel="stylesheet" href="lib/components.css?v=14">
+<link rel="stylesheet" href="lib/components.css?v=15">
 <style>
   /* Lobby — "Latão calmo" (docs/DESIGN-v2-LATAO-CALMO.md §3.2) */
   .home-head{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--space-4);flex-wrap:wrap;margin:0 0 var(--space-5)}
@@ -94,7 +94,7 @@
 
 <!-- Barra superior -->
 <header class="nav">
-  <div class="brand"><img class="mark logo" src="lib/logo.png" alt="" aria-hidden="true"> VITALITY<small>VTT · MESA VIRTUAL</small></div>
+  <div class="brand"><img class="mark logo" src="lib/logo.png" alt="" aria-hidden="true"> VITALITY</div>
   <div class="spacer"></div>
   <div class="nav-user" id="nav-user">
     <button type="button" class="chip" id="nav-user-btn" aria-haspopup="menu" aria-expanded="false" onclick="toggleUserMenu()">
@@ -518,7 +518,7 @@ function paintMenu() {
   });
   const [eyebrow, intro] = SEC_COPY[_sec];
   const titles = { mesas: 'Minhas mesas', sistemas: 'Sistemas', itens: 'Itens' };
-  $('sec-eyebrow').textContent = eyebrow + ' · Olá, ' + (profileName || 'Aventureiro');
+  $('sec-eyebrow').textContent = eyebrow;
   $('greet').textContent = titles[_sec];
   $('sec-intro').textContent = intro; $('sec-intro').hidden = !intro;
   $('mesas-actions').hidden = _sec !== 'mesas';

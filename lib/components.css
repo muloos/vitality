@@ -478,6 +478,24 @@ html[data-motion="off"] .skel{animation:none}
 .class-block > .sub-list .inline-form{margin:0;display:flex;align-items:center;gap:var(--space-3)}
 .class-block > .sub-list .inline-form input{flex:1 1 auto;min-width:0;max-width:420px}
 
+/* ---------- MELHORIAS-v1.5 P2 ---------- */
+.rc-txt small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* nome do personagem quebra entre palavras, não no meio ("Duskwh/isper") */
+.char-bio-row .char-info h2,.char-cover-info .char-info h2{overflow-wrap:break-word;word-break:normal;font-size:clamp(24px,2.6vw,32px);line-height:1.2}
+.char-bio-row .char-info{min-width:min(220px,100%)}
+/* P2-2: − e + no mesmo peso e tamanho (o mono deixava o sinal de menos parecendo hífen) */
+.res-btn,.stat-ctl .plus{font-family:var(--serif);font-size:20px;font-weight:500;line-height:1}
+/* P2-3: o recolher do painel de rolagens é uma aba presa ao cabeçalho dele (ao lado de Rolagens/Conversa),
+   não um botão solto no meio da ficha */
+@media (min-width:821px) and (max-width:1199px){
+  .mesa-page .rail-toggle.right{top:58px;transform:none;height:41px;width:18px;--fill:var(--surface-1);--frame:var(--border);
+    clip-path:polygon(6px 0,100% 0,100% 100%,0 100%,0 6px);background-size:auto,10px 10px,0 0}
+  .mesa-page .rail-toggle.right::before{content:none}
+}
+/* P2-4: cursores de faixa sempre em losango de 10px */
+#yt-bar #yt-seek::-webkit-slider-thumb,#yt-bar #yt-vol::-webkit-slider-thumb{width:10px;height:10px;transform:rotate(45deg);box-shadow:none}
+#yt-bar #yt-seek::-moz-range-thumb,#yt-bar #yt-vol::-moz-range-thumb{width:9px;height:9px;transform:rotate(45deg)}
+
 /* ---------- raridade calma (decisão do usuário sobre o §2 "nenhum loop") ----------
    a raridade vira uma faixa de 2px no topo do card, na cor dela; nada brilha, pulsa ou flutua.
    Só o Lendário ganha um brilho único ao passar o mouse, e nem isso com movimento reduzido. */

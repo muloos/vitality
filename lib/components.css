@@ -27,7 +27,7 @@
 /* tamanhos (§1.1) */
 :where(.cf-xs,.cp-swatch,.cp-preview,.cp-sv-cursor,.cp-hue-cursor,.gstep .n,.seg > button,input[type=checkbox],.role,.badge,.char-tag,.featured-badge,.rar-pill,.poster-pub,.mod-badge,.prof-chip,.skill-chip,
   .code-chip,.picker-card-bonus,.color-swatch,.se-sw,.eq-slot,.ffx-seg > button,.unread-count){--cut:var(--cut-xs)}
-:where(.cf,.cf-s,.seg,#yt-search,.chip,.tool,.zoom,.via-del,.via-add-btn,.btn,.iconbtn,.res-btn,.stat-ctl .plus,.dice-quick button,#chat-form button,.yt-btn,.help-fab,.theme-fab,.dice-fab,
+:where(.cf,.cf-s,.cond-icon-btn,.seg,#yt-search,.chip,.tool,.zoom,.via-del,.via-add-btn,.btn,.iconbtn,.res-btn,.stat-ctl .plus,.dice-quick button,#chat-form button,.yt-btn,.help-fab,.theme-fab,.dice-fab,
   .yt-unlock-fab,.poster-fav,.card-drag,.drag-handle,.gal-act,.portrait-edit-btn,.av,.mesa-av,.ps-av,.rc-av,.toolbar-back,.embed-back,.ffx-seg,
   .ffx-menu button,.ffx-menu a,.nav-user .chip,.nav-user .drop button,.nav-user .drop a,.msg:not(.inline),.list-search,
   input:not([type=checkbox],[type=radio],[type=range],[type=color],[type=file],[type=hidden],[type=image]),select,textarea){--cut:var(--cut-s)}
@@ -37,7 +37,7 @@
 :where(.cf-l,.epanel,.ui-modal .box,.box.dlg,.stat-editor){--cut:var(--cut-l)}
 
 /* forma + moldura: a mesma regra para todos os tamanhos (especificidade zero: o componente ajusta) */
-:where(.cf,.cf-xs,.cf-s,.cf-m,.cf-l,.color-pop,.func-pop,.dmg-pop,.cp-swatch,.cp-preview,.cp-sv-cursor,.cp-hue-cursor,.gstep .n,.seg > button,.seg,#yt-search,#yt-panel .yt-section,#yt-panel .yt-panel-box,.chip,.tool,.zoom,.via-del,.via-add-btn,.tools,.via-legend,.boot-error-banner,.epanel,
+:where(.cf,.cf-xs,.cf-s,.cf-m,.cf-l,.cond-icon-btn,.color-pop,.func-pop,.dmg-pop,.cp-swatch,.cp-preview,.cp-sv-cursor,.cp-hue-cursor,.gstep .n,.seg > button,.seg,#yt-search,#yt-panel .yt-section,#yt-panel .yt-panel-box,.chip,.tool,.zoom,.via-del,.via-add-btn,.tools,.via-legend,.boot-error-banner,.epanel,
   input[type=checkbox],.role,.badge,.char-tag,.featured-badge,.rar-pill,.poster-pub,.mod-badge,.prof-chip,.skill-chip,
   .code-chip,.picker-card-bonus,.color-swatch,.se-sw,.eq-slot,.ffx-seg > button,.unread-count,
   .btn,.iconbtn,.res-btn,.stat-ctl .plus,.dice-quick button,#chat-form button,.yt-btn,.help-fab,.theme-fab,.dice-fab,
@@ -61,7 +61,7 @@
 }
 /* foco: moldura de latão em 2px, dentro do corte (§1.5). O :focus-visible repetido dá especificidade (0,3,0):
    vence a pele de qualquer componente, e só perde para exceções declaradas depois (primário, erro, terciário). */
-:where(.cf,.cf-xs,.cf-s,.cf-m,.cf-l,.color-pop,.func-pop,.dmg-pop,.cp-swatch,.cp-preview,.cp-sv-cursor,.cp-hue-cursor,.gstep .n,.seg > button,.seg,#yt-search,#yt-panel .yt-section,#yt-panel .yt-panel-box,.chip,.tool,.zoom,.via-del,.via-add-btn,.tools,.via-legend,.boot-error-banner,.epanel,
+:where(.cf,.cf-xs,.cf-s,.cf-m,.cf-l,.cond-icon-btn,.color-pop,.func-pop,.dmg-pop,.cp-swatch,.cp-preview,.cp-sv-cursor,.cp-hue-cursor,.gstep .n,.seg > button,.seg,#yt-search,#yt-panel .yt-section,#yt-panel .yt-panel-box,.chip,.tool,.zoom,.via-del,.via-add-btn,.tools,.via-legend,.boot-error-banner,.epanel,
   input[type=checkbox],.role,.badge,.char-tag,.featured-badge,.rar-pill,.poster-pub,.mod-badge,.prof-chip,.skill-chip,
   .code-chip,.picker-card-bonus,.color-swatch,.se-sw,.eq-slot,.ffx-seg > button,.unread-count,
   .btn,.iconbtn,.res-btn,.stat-ctl .plus,.dice-quick button,#chat-form button,.yt-btn,.help-fab,.theme-fab,.dice-fab,
@@ -222,17 +222,16 @@ input[type=checkbox]:disabled{--fill:var(--surface-1);--frame:var(--surface-3);c
 .nav-user .drop button:hover,.nav-user .drop a:hover{--fill:var(--surface-3)}
 
 /* ---------- superfícies: painel, card, linha (chanfro M) ---------- */
-.ffx-panel,.glass,.surface,.action-card,.card-tile,.poster-card,.stat-tile:not(.compact),.hud-bars,.ui-modal .box,.picker-card{
+.ffx-panel,.glass,.surface,.action-card,.card-tile,.stat-tile:not(.compact),.hud-bars,.ui-modal .box,.picker-card{
   -webkit-backdrop-filter:none;backdrop-filter:none}
 .ffx-panel,.glass,.surface,.action-card,.card-tile,.hud-bars,.char-bio-row,.char-cover,.ostep,.formula-row,.points-card,.hud-cell,.char-card,
 #yt-panel .card,.eq-board,.sub-list{--fill:var(--surface-1);--frame:var(--border)}
-.card-tile,.poster-card,.picker-card,.list-row{transition:--fill var(--t) var(--ease),--frame var(--t) var(--ease)}
+.card-tile,.picker-card,.list-row{transition:--fill var(--t) var(--ease),--frame var(--t) var(--ease)}
 .card-tile:hover{transform:none;--fill:var(--surface-2);--frame:var(--primary)}
 .card-tile.featured{--frame:var(--primary)}
 .card-tile h3{font-family:var(--disp);font-size:20px;line-height:28px;font-weight:400}
-.card-tile::after,.action-card::after,.list-row::after,.poster-card::after,.stat-tile::after{content:none}
-.poster-card{--fill:var(--surface-1);--frame:var(--border)}
-.poster-card:hover{--fill:var(--surface-2);--frame:var(--primary)}
+.card-tile::after,.action-card::after,.list-row::after,.stat-tile::after{content:none}
+
 .picker-card{--fill:var(--surface-2);--frame:var(--border)}
 .picker-card:hover,.picker-card.selected{--frame:var(--primary)}
 .list-row{min-height:64px;padding:var(--space-3) var(--space-4);gap:var(--space-4);--fill:var(--surface-1);--frame:var(--border)}
@@ -251,7 +250,7 @@ input[type=checkbox]:disabled{--fill:var(--surface-1);--frame:var(--surface-3);c
 .se-sw[aria-pressed="true"],.color-swatch.on{--frame:var(--primary);--bw:2px}
 
 /* ---------- selos (chanfro XS) ---------- */
-.role,.badge,.char-tag,.featured-badge,.rar-pill,.poster-pub,.prof-chip,.code-chip,.picker-card-bonus,.mod-badge{display:inline-flex;align-items:center;gap:var(--space-1);padding:3px 8px;line-height:16px;
+.role,.badge,.char-tag,.featured-badge,.poster-pub,.prof-chip,.code-chip,.picker-card-bonus,.mod-badge{display:inline-flex;align-items:center;gap:var(--space-1);padding:3px 8px;line-height:16px;
   font-family:var(--mono);font-size:var(--fs-label);letter-spacing:.14em;text-transform:uppercase;
   --fill:transparent;--frame:var(--border-strong);color:var(--text-2)}
 .role.gm,.featured-badge{--fill:var(--primary);--frame:var(--primary);color:var(--on-primary)}
@@ -496,22 +495,18 @@ html[data-motion="off"] .skel{animation:none}
 #yt-bar #yt-seek::-webkit-slider-thumb,#yt-bar #yt-vol::-webkit-slider-thumb{width:10px;height:10px;transform:rotate(45deg);box-shadow:none}
 #yt-bar #yt-seek::-moz-range-thumb,#yt-bar #yt-vol::-moz-range-thumb{width:9px;height:9px;transform:rotate(45deg)}
 
+/* ícones de condição (sem emoji) */
+.cond-ic{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;margin-right:6px;vertical-align:-3px}
+.cond-ic svg{width:16px;height:16px}
+.cond-icon-btn{flex:0 0 auto;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;
+  color:var(--cc,var(--text));--fill:color-mix(in srgb,var(--cc,var(--primary)) 20%,var(--surface-2));--frame:color-mix(in srgb,var(--cc,var(--primary)) 45%,transparent)}
+.cond-icon-btn:hover{--frame:var(--primary)}
+.cond-icon-btn .cond-ic{margin:0;width:20px;height:20px} .cond-icon-btn .cond-ic svg{width:20px;height:20px}
+.cond-icon-btn .cond-ic.empty{width:10px;height:10px;box-shadow:inset 0 0 0 1px currentColor;transform:rotate(45deg);opacity:.6}
+
 /* ---------- raridade calma (decisão do usuário sobre o §2 "nenhum loop") ----------
    a raridade vira uma faixa de 2px no topo do card, na cor dela; nada brilha, pulsa ou flutua.
    Só o Lendário ganha um brilho único ao passar o mouse, e nem isso com movimento reduzido. */
-.rar-frame,.rar-frame::before,.rarity-fx,.rarity-fx *{animation:none}
-.rar-frame{padding:0;background:none;box-shadow:none;filter:none;transform:none}
-.rar-frame::before{content:none}
-.rar-frame:hover{transform:none;filter:none}
-.rar-ground,.rar-ring,.rar-rays,.rar-spark,.pc-sweep,.pc-highlight,.pc-ring,.pc-core,.pc-glint{display:none}
-.rar-frame > .poster-card,.rar-frame > .list-row,.rarity-fx.rarity-surface{--frame:var(--border);--cf-accent:inset 0 2px 0 var(--rc,var(--border-strong))}
-.rar-frame > .poster-card:hover,.rar-frame > .list-row:hover{--fill:var(--surface-2);--frame:var(--border-strong)}
-@keyframes rarOnce{
-  0%{box-shadow:inset 0 2px 0 var(--rc),inset 0 0 0 1px var(--rc),inset 0 0 28px color-mix(in srgb,var(--rc) 40%,transparent)}
-  100%{box-shadow:inset 0 2px 0 var(--rc),inset 0 0 0 1px var(--border-strong),inset 0 0 28px transparent}}
-.rar-frame[data-rarity="Lendário"]:hover > .poster-card{animation:rarOnce .9s var(--ease) 1}
-@media (prefers-reduced-motion:reduce){.rar-frame[data-rarity="Lendário"]:hover > .poster-card{animation:none}}
-html[data-motion="off"] .rar-frame[data-rarity="Lendário"]:hover > .poster-card{animation:none}
 
 /* ---------- contexto: refinos que o legado aplicava por cima dos componentes ----------
    Vieram de theme.css/theme-ffx.css (hoje na @layer legacy, que perde para este arquivo). Ficam aqui,
@@ -523,14 +518,7 @@ html[data-motion="off"] .rar-frame[data-rarity="Lendário"]:hover > .poster-card
 /* celular: a barra vira coluna, e o flex-basis de 280px do legado virava ALTURA do campo de busca */
 @media (max-width:760px){.toolbar .search-field{flex:none;width:100%}}
 /* selos de raridade: no card da loja é só o rótulo na cor da raridade; fora dele, selo com fundo a 14% */
-.rar-pill[data-rarity="Comum"]{color:#c3c9d3;--fill:rgba(174,180,192,.14)}
-.rar-pill[data-rarity="Incomum"]{color:#5fe0a0;--fill:rgba(95,224,160,.14)}
-.rar-pill[data-rarity="Raro"]{color:#6fb2ff;--fill:rgba(111,178,255,.14)}
-.rar-pill[data-rarity="Épico"]{color:#d59cff;--fill:rgba(213,156,255,.14)}
-.rar-pill[data-rarity="Lendário"]{color:#ffd47a;--fill:rgba(255,212,122,.14)}
-.rar-pill[data-rarity="Único"]{color:#ff6773;--fill:rgba(255,45,63,.16)}
-.poster-card .rar-pill,.poster-card .rar-pill[data-rarity]{padding:0;--fill:transparent;--frame:transparent;clip-path:none;color:var(--rc,var(--text-2))}
-:root[data-theme="light"] .poster-card .rar-pill{color:color-mix(in srgb,var(--rc,var(--text-2)) 35%,var(--text))}
+
 /* modificadores de item e selo "Publicado/Equipado" */
 .badge.mod{color:var(--primary-hover);text-transform:none;letter-spacing:.04em}
 .poster-pub.on{color:var(--primary-hover)}

@@ -8,7 +8,7 @@ Leia antes de mexer em qualquer UI, nesta ordem de precedência:
 
 ## CSS: camadas e arquivos
 - `lib/tokens.css` — única fonte de cor, tipo, espaço, corte (`--cut-xs/s/m/l`), movimento e raridade (`--rar-*`). Cores novas só entram aqui.
-- `lib/theme.css` e `lib/theme-ffx.css` — legado, dentro de `@layer legacy`: perdem para tudo que está fora de camada. Não acrescente regras novas neles.
+- `lib/theme.css` — legado (inclui o antigo `theme-ffx.css`, apagado), dentro de `@layer legacy`: perde para tudo que está fora de camada. Não acrescente regras novas nele; ao mexer num componente, prefira apagar a regra legada que atrapalha.
 - `lib/components.css` — a camada final de componentes, fora de camada. O `<style>` de cada página vem depois dele.
 - **Sem `!important`** em `components.css` e no CSS das páginas. Se o legado atrapalhar, remova ou suavize a regra do legado.
 - Ao mudar um CSS ou JS compartilhado, suba o `?v=` dele em todas as páginas que o carregam.

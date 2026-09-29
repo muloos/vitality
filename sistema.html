@@ -10,9 +10,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="lib/tokens.css?v=5">
-<link rel="stylesheet" href="lib/theme.css?v=52">
-<link rel="stylesheet" href="lib/theme-ffx.css?v=14">
-<link rel="stylesheet" href="lib/components.css?v=15">
+<link rel="stylesheet" href="lib/theme.css?v=53">
+<link rel="stylesheet" href="lib/components.css?v=16">
 <style>
   /* Construtor — "Latão calmo" (docs/DESIGN-v2-LATAO-CALMO.md §3.4) */
   .sis-layout > .ffx-side{flex-basis:240px}
@@ -151,6 +150,7 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
 
 <script type="module">
 import * as db from './lib/db.js?v=42';
+import { CONDITION_ICONS, condIconKey, condIconHtml } from './lib/cond-icons.js?v=1';
 import { itemCard } from './lib/item-card.js?v=3';
 import { openHelpGuide, trapFocus, wireVerticalTablist, armEnter, toggleTheme, getTheme } from './lib/ui.js?v=10';
 
@@ -1457,9 +1457,7 @@ function closeFuncPicker() {
 }
 function _fpOutside(e) { if (_funcPop && !_funcPop.contains(e.target)) closeFuncPicker(); }
 function _fpEsc(e) { if (e.key === 'Escape') closeFuncPicker(); }
-// paleta rápida de emojis comuns pra ícone de condição — o campo continua aceitando texto livre,
-// isso é só um atalho pros mais usados em RPG
-const CONDITION_ICON_PRESETS = ['🩸', '☠️', '🔥', '❄️', '😵', '💀', '✨', '🐍', '⛓️', '💫', '🌀', '🛡️'];
+// ícone de condição: escolha numa paleta de ícones de traço (lib/cond-icons.js — sem emoji)
 let _iconPop = null;
 function closeIconPicker() {
   if (!_iconPop) return;
@@ -1473,17 +1471,21 @@ window.openIconPicker = (trigger, input) => {
   closeIconPicker();
   const pop = document.createElement('div');
   pop.className = 'func-pop';
-  pop.style.cssText = 'position:fixed;z-index:9999;display:flex;flex-wrap:wrap;gap:4px;max-width:180px;padding:8px';
-  pop.innerHTML = CONDITION_ICON_PRESETS.map((e) => `<button type="button" class="btn sm auto" style="font-size:16px;padding:6px 9px" data-emoji="${e}">${e}</button>`).join('');
+  pop.style.cssText = 'position:fixed;z-index:9999;display:grid;grid-template-columns:repeat(4,40px);gap:4px;padding:8px;width:auto;max-width:none';
+  pop.setAttribute('role', 'listbox'); pop.setAttribute('aria-label', 'Ícone da condição');
+  const cur = condIconKey(input.value);
+  pop.innerHTML = Object.entries(CONDITION_ICONS).map(([k, v]) => `<button type="button" class="btn icon${k === cur ? ' on' : ''}" role="option" aria-selected="${k === cur}" aria-label="${v.label}" title="${v.label}" data-key="${k}">${v.svg}</button>`).join('')
+    + `<button type="button" class="btn tertiary" style="grid-column:1/-1" data-key="">Sem ícone</button>`;
   document.body.appendChild(pop);
   pop.querySelectorAll('button').forEach((b) => {
     b.onclick = () => {
-      const d = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(input), 'value');
-      d.set.call(input, b.dataset.emoji);
+      input.value = b.dataset.key;
       input.dispatchEvent(new Event('change', { bubbles: true }));
-      closeIconPicker();
+      const prev = document.querySelector(`[data-icon-for="${input.id}"]`); if (prev) prev.innerHTML = condIconHtml(b.dataset.key) || '<span class="cond-ic empty"></span>';
+      closeIconPicker(); trigger.focus();
     };
   });
+  requestAnimationFrame(() => (pop.querySelector('.on') || pop.querySelector('button'))?.focus());
   const r = trigger.getBoundingClientRect();
   let left = r.left, top = r.bottom + 6;
   if (left + pop.offsetWidth > window.innerWidth - 8) left = window.innerWidth - pop.offsetWidth - 8;
@@ -2344,9 +2346,9 @@ function conditionRow(cond) {
   return `<div class="list-row cond-row" data-id="${cond.id}" style="flex-direction:column;align-items:stretch;gap:8px;--cc:${esc(cond.color || '#f2585e')}">
     <div class="cond-line" style="display:flex;gap:8px;align-items:center">
       ${DRAG_HANDLE_SVG}
-      <input value="${esc(cond.icon || '')}" placeholder="ícone" maxlength="4" onchange="onCondFieldChange('${cond.id}','icon',this.value)" id="cond-icon-${cond.id}" class="cond-icon" aria-label="Ícone da condição"
-        style="width:44px;text-align:center;color:var(--ink);font-size:15px;padding:8px 4px">
-      <button type="button" class="btn sm auto cond-pick" style="flex-shrink:0" title="Escolher ícone" aria-label="Escolher ícone da condição" onclick="openIconPicker(this, document.getElementById('cond-icon-${cond.id}'))">▾</button>
+      <input type="hidden" value="${esc(condIconKey(cond.icon) || cond.icon || '')}" onchange="onCondFieldChange('${cond.id}','icon',this.value)" id="cond-icon-${cond.id}">
+      <button type="button" class="cond-icon-btn" data-icon-for="cond-icon-${cond.id}" title="Escolher ícone" aria-label="Escolher ícone da condição"
+        onclick="openIconPicker(this, document.getElementById('cond-icon-${cond.id}'))">${condIconHtml(cond.icon) || '<span class="cond-ic empty"></span>'}</button>
       <input class="nm" value="${esc(cond.name)}" aria-label="Nome da condição" onchange="onCondFieldChange('${cond.id}','name',this.value)"
         style="flex:1;background:transparent;border:0;color:var(--bone);font-family:var(--disp);font-size:16px">
       <button type="button" class="color-swatch cond-color" style="--sw:${esc(cond.color || '#f2585e')}" title="Cor do selo na ficha" aria-label="Cor do selo na ficha" onclick="openColorPicker(this, '${esc(cond.color || '#f2585e')}', (v)=>{ this.closest('.cond-row')?.style.setProperty('--cc', v); updateConditionColor('${cond.id}',v); })"></button>

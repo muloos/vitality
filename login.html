@@ -11,8 +11,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="lib/tokens.css?v=5">
 <link rel="stylesheet" href="lib/theme.css?v=52">
-<link rel="stylesheet" href="lib/theme-ffx.css?v=13">
-<link rel="stylesheet" href="lib/components.css?v=13">
+<link rel="stylesheet" href="lib/theme-ffx.css?v=14">
+<link rel="stylesheet" href="lib/components.css?v=14">
 <style>
   /* Login — "Latão calmo" (docs/DESIGN-v2-LATAO-CALMO.md §3.1): herói à esquerda, formulário de
      até 400px à direita; no celular uma coluna com o botão principal preso no rodapé */
@@ -99,7 +99,7 @@
       <button type="button" role="tab" id="tab-signup" aria-selected="false" aria-controls="form" tabindex="-1" onclick="setMode('signup')">Criar conta</button>
     </div>
 
-    <div id="msg" class="msg"></div>
+    <div id="msg" class="msg inline"></div>
 
     <form id="form" role="tabpanel" aria-labelledby="tab-signin" onsubmit="return submitForm(event)">
       <div class="fld" id="fld-name" style="display:none">
@@ -181,9 +181,9 @@ const syncAuthTabindex = () => ['signin', 'signup'].forEach((m) => { $('tab-' + 
 
 function showMsg(text, kind) {
   msgEl.textContent = text;
-  msgEl.className = 'msg show ' + (kind || 'err');
+  msgEl.className = 'msg inline show ' + (kind || 'err');
 }
-function clearMsg() { msgEl.className = 'msg'; }
+function clearMsg() { msgEl.className = 'msg inline'; }
 
 // carregando: rótulo com verbo no gerúndio + campos travados (o que já foi digitado nunca some)
 const BUSY_LABEL = { signin: 'Entrando…', signup: 'Criando conta…', recover: 'Enviando link…', reset: 'Salvando…' };

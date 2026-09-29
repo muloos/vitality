@@ -11,8 +11,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="lib/tokens.css?v=5">
 <link rel="stylesheet" href="lib/theme.css?v=52">
-<link rel="stylesheet" href="lib/theme-ffx.css?v=13">
-<link rel="stylesheet" href="lib/components.css?v=13">
+<link rel="stylesheet" href="lib/theme-ffx.css?v=14">
+<link rel="stylesheet" href="lib/components.css?v=14">
 <style>
   /* Construtor — "Latão calmo" (docs/DESIGN-v2-LATAO-CALMO.md §3.4) */
   .sis-layout > .ffx-side{flex-basis:240px}
@@ -112,7 +112,6 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
 
 <div class="topbar">
   <a class="iconbtn" href="app.html" title="Voltar" style="text-decoration:none"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="M11 18l-6-6 6-6"/></svg></a>
-  <a class="topbar-brand" href="app.html"><img class="mark logo" src="lib/logo.png" alt="" aria-hidden="true">VITALITY</a>
   <div class="title" id="sys-name" style="font-size:14px"></div>
   <div class="spacer"></div>
   <!-- salvamento automático + publicar (docs/DESIGN-v2-LATAO-CALMO.md §3.4) -->
@@ -439,14 +438,15 @@ const TABS = [['geral', `<span class="ic">${ICONS.gear}</span>Geral`], ['status'
   const requestedTab = new URLSearchParams(location.search).get('tab');
   const validTab = requestedTab === 'calculos' ? 'status' : TABS.some(([id]) => id === requestedTab) ? requestedTab : 'geral';
   paintPublish(); paintProgress();
+  if (!$('save-state').dataset.state) setSaveState('');
   openTab(validTab);
 })();
 
 // contador de "linhas com edição pendente" (botão Salvar visível) nas abas Status/Perícias/Classes
 // — sem isso, trocar de aba descartava qualquer edição em memória sem nenhum aviso
 let _dirtyCount = 0;
-window.markDirty = () => { _dirtyCount++; };
-window.clearDirty = () => { _dirtyCount = Math.max(0, _dirtyCount - 1); };
+window.markDirty = () => { _dirtyCount++; if ($('save-state')?.dataset.state !== 'saving') setSaveState('dirty'); };
+window.clearDirty = () => { _dirtyCount = Math.max(0, _dirtyCount - 1); if (!_dirtyCount) setSaveState('saved'); };
 addEventListener('beforeunload', (e) => { if (_dirtyCount > 0) { e.preventDefault(); e.returnValue = ''; } });
 let enterTab = null; // animação de entrada do #content na troca de aba (P2-10, ver armEnter)
 // ---------- construtor em 3 etapas com progresso (§3.4) ----------
@@ -491,7 +491,8 @@ function setSaveState(st, retry) {
     _savedAt = Date.now();
     const paint = () => { const s2 = Math.round((Date.now() - _savedAt) / 1000); el.textContent = s2 < 5 ? 'Salvo agora' : s2 < 60 ? `Salvo há ${s2}s` : `Salvo há ${Math.round(s2 / 60)} min`; };
     paint(); _saveTick = setInterval(paint, 5000);
-  } else el.textContent = '';
+  } else if (st === 'dirty') el.innerHTML = '<span class="ss-dot"></span>Alterações não salvas';
+  else el.textContent = 'Tudo salvo';
   el.dataset.state = st || '';
 }
 window.retrySave = () => { if (_saveRetry) _saveRetry(); };
@@ -519,6 +520,7 @@ window.openTab = async (name) => {
     const ok = await confirmModal({ title: 'Sair sem salvar?', desc: 'Você tem edições não salvas nesta aba — elas serão perdidas ao trocar de aba.', confirmLabel: 'Sair sem salvar' });
     if (!ok) return;
   }
+  if (_dirtyCount) setSaveState('');
   _dirtyCount = 0;
   currentTab = name;
   $('tabs').querySelectorAll('[role="tab"]').forEach((b) => { const on = b.dataset.tab === name; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); });
@@ -576,13 +578,13 @@ async function renderGeral(c) {
     <div class="fld">
       <label class="check-row" for="g-published">
         <input type="checkbox" id="g-published" ${system.is_published ? 'checked' : ''} onchange="markGeralDirty()">
-        <span>Publicar na loja — outros usuários podem ver este sistema e favoritá-lo</span>
+        <span>Publicar na loja</span><small>Outros usuários podem ver este sistema e favoritá-lo.</small>
       </label>
     </div>
     <div class="fld">
       <label class="check-row" for="g-weight">
         <input type="checkbox" id="g-weight" ${system.weight_enabled ? 'checked' : ''} onchange="onWeightEnabledChange()">
-        <span>Usar peso/capacidade de carga — desativado, itens não mostram peso e a mochila não soma carga</span>
+        <span>Usar peso e carga</span><small>Desligado, os itens não mostram peso e a mochila não soma carga.</small>
       </label>
     </div>
     <div class="fld" id="g-capacity-fld" style="display:${system.weight_enabled ? '' : 'none'}">
@@ -592,7 +594,7 @@ async function renderGeral(c) {
         ${stats.map((s) => `<option value="${s.id}" ${system.carry_capacity_stat_id === s.id ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}
       </select>
     </div>
-    <button class="btn go sm" id="geral-save-btn" style="display:none" onclick="saveGeral()"><span class="spin"></span>Salvar alterações</button>
+    <button class="btn go" id="geral-save-btn" style="display:none" onclick="saveGeral()"><span class="spin"></span>Salvar alterações</button>
 
     <div class="section-title" role="heading" aria-level="2">Documentos do sistema <span style="color:var(--ink-faint);text-transform:none;letter-spacing:0">(regras, lore — opcional)</span></div>
     <p style="font-family:var(--mono);font-size:11px;color:var(--ink-dim);line-height:1.6;margin:0 0 12px">
@@ -1665,22 +1667,21 @@ async function renderClasses(c) {
   // proficiências, resistências, traços, item inicial) — antes eram 7 controles amontoados aqui,
   // com até 5 painéis abrindo pra baixo ao mesmo tempo
   const classCard = (cl, isSub) => `
-    <div class="list-row cls-row${isSub ? ' is-sub' : ''}">
+    <div class="list-row cls-row${isSub ? ' is-sub' : ''}" tabindex="0" role="button" aria-label="Editar ${esc(cl.name)}"
+      onclick="if(!event.target.closest('.drag-handle'))openClassEditor('${cl.id}')"
+      onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();openClassEditor('${cl.id}')}">
       ${!isSub ? DRAG_HANDLE_SVG : ''}
       <div class="grow">
-        <div class="nm" style="font-family:var(--disp);font-size:${isSub ? 14 : 16}px;color:${isSub ? 'var(--ink)' : 'var(--bone)'}">${esc(cl.name)}</div>
-        ${cl.description ? `<div class="sub" style="margin-top:2px">${esc(cl.description)}</div>` : ''}
+        <div class="nm">${esc(cl.name)}</div>
+        ${cl.description ? `<div class="sub">${esc(cl.description)}</div>` : ''}
       </div>
-      <span class="cls-type">${isSub ? 'Subclasse' : 'Classe'}</span>
-      <span class="cls-actions">
-      <button class="btn sm auto icon" title="Editar" aria-label="Editar ${esc(cl.name)}" onclick="openClassEditor('${cl.id}')"><span class="ic">${ICONS.pencil}</span></button>
-      <button class="btn sm danger auto icon" title="Excluir classe" aria-label="Excluir classe ${esc(cl.name)}" onclick="delClass('${cl.id}')"><span class="ic">${ICONS.x}</span></button>
-      </span>
+      ${!isSub ? `<span class="cls-meta">${(() => { const n = subs(cl.id).length; return n ? `${n} ${n === 1 ? 'subclasse' : 'subclasses'}` : 'Sem subclasses'; })()}</span>` : ''}
+      <span class="cls-chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
     </div>
     ${!isSub ? `<div class="sub-list">` + subs(cl.id).map((s) => classCard(s, true)).join('') + `
       <form class="inline-form" onsubmit="return addSub(event,'${cl.id}')">
         <input placeholder="Nova subclasse de ${esc(cl.name)}" required maxlength="40">
-        <button class="btn go auto sm" type="submit">+ Subclasse</button>
+        <button class="btn tertiary" type="submit">+ Adicionar subclasse</button>
       </form></div>` : ''}`;
   c.innerHTML = `
     <div class="section-title" role="heading" aria-level="2">Classes e subclasses</div>
@@ -1688,7 +1689,7 @@ async function renderClasses(c) {
       'Classes definem os status base e as árvores de cada tipo de personagem. Crie a primeira no campo abaixo ↓')}</div>
     <form class="inline-form" style="margin-top:14px" onsubmit="return addClass(event)">
       <input id="cl-name" placeholder="Nova classe (ex.: Guerreiro)" required maxlength="40">
-      <button class="btn go auto" type="submit">+ Criar classe</button>
+      <button class="btn auto" type="submit">+ Criar classe</button>
     </form>`;
   // só a raiz arrasta (o bloco inteiro, com suas subclasses dentro) — subclasse fica presa à
   // ordem de criação sob o pai dela, não faz sentido reordenar solta entre outras classes
@@ -1730,6 +1731,7 @@ window.openClassEditor = (classId) => {
     <p style="font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint);margin:14px 2px 0">
       Proficiências, resistências, traços e item inicial salvam na hora — só nome/descrição/cor/status base dependem do Salvar.</p>
     <div class="full actions" style="margin-top:10px">
+      <button class="btn tertiary danger" id="class-editor-del" style="margin-right:auto">${isSub ? 'Excluir subclasse' : 'Excluir classe'}</button>
       <button class="btn auto" id="class-editor-cancel">Fechar</button>
       <button class="btn go auto" id="class-editor-save"><span class="spin"></span>Salvar</button>
     </div>
@@ -1741,6 +1743,7 @@ window.openClassEditor = (classId) => {
   w.querySelector('.x').onclick = close;
   w.querySelector('#class-editor-cancel').onclick = close;
   w.querySelector('#class-editor-save').onclick = () => saveClassEditor(classId);
+  w.querySelector('#class-editor-del').onclick = () => { close(); delClass(classId); };
   document.addEventListener('keydown', onEsc);
   document.body.appendChild(w);
   window._closeClassEditor = close;
@@ -2696,7 +2699,6 @@ async function renderItens(c) {
     item: it,
     wrapAttrs: `data-id="${it.id}"`,
     attrs: `onclick='openSysItem("${it.id}")' tabindex="0" role="button" aria-label="Editar ${esc(it.name)}" onkeydown='if(event.key==="Enter"||event.key===" "){event.preventDefault();openSysItem("${it.id}")}'`,
-    action: `<button class="poster-fav" onclick='event.stopPropagation();rmSysItem("${it.id}")' title="Remover do sistema" aria-label="Remover do sistema"><span class="ic">${ICONS.x}</span></button>`,
     handle: `<span class="drag-handle card-drag" title="Arrastar para reordenar" onclick="event.stopPropagation()">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg></span>`,
     meta: [priceLabel(it), it.category ? esc(it.category) : '', it.item_code ? '#' + esc(it.item_code) : ''].filter(Boolean).join(' · '),
@@ -2717,10 +2719,11 @@ async function renderItens(c) {
     </div>
 
     <div id="itens-sub-itens" style="${_itensSubTab === 'itens' ? '' : 'display:none'}">
-      <div class="section-title" role="heading" aria-level="2">Itens do sistema (${inSystem.length})</div>
-      <p style="font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint);line-height:1.6;margin:0 0 12px">
-        Itens aqui são <b>cópias do sistema</b> — editá-los NÃO altera o item original da sua biblioteca.</p>
-      <button class="btn go auto sm" onclick="openSysItem()">+ Criar item no sistema</button>
+      <div class="sec-head">
+        <div class="section-title" role="heading" aria-level="2">Itens do sistema (${inSystem.length})</div>
+        <button class="btn auto" onclick="openSysItem()">+ Criar item</button>
+      </div>
+      <p class="sec-note">Editar aqui não altera o item original da sua biblioteca.</p>
 
       <div id="sysitem-editor" class="surface" style="display:none;margin-top:14px"></div>
 
@@ -2729,7 +2732,7 @@ async function renderItens(c) {
         <input id="sysitem-q" placeholder="Buscar item do sistema por nome ou descrição..." oninput="paintSysItems()"></div></div>` : ''}
       <div class="item-grid" id="sysitem-grid" style="margin-top:14px">${inSystem.length ? inSystem.map(sysItemCard).join('') : `<div style="grid-column:1/-1">${emptyState(ICONS.bag, 'Nenhum item no sistema',
           'Crie itens direto no sistema ou copie da sua biblioteca — eles ficam disponíveis pros jogadores das mesas.',
-          '<button class="btn go auto sm" onclick="openSysItem()">+ Criar item no sistema</button>')}</div>`}</div>
+          '<button class="btn go auto" onclick="openSysItem()">+ Criar item no sistema</button>')}</div>`}</div>
     </div>
 
     <div id="itens-sub-moedas" style="${_itensSubTab === 'moedas' ? '' : 'display:none'}">
@@ -2920,7 +2923,8 @@ window.openSysItem = (id = null) => {
       ${system.weight_enabled ? `<div class="fld"><label for="si-weight">Peso <span style="text-transform:none;letter-spacing:0;color:var(--ink-faint)">(opcional)</span></label>
         <input id="si-weight" type="number" min="0" step="0.01" value="${it?.weight ?? ''}" placeholder="Ex.: 2.5"></div>` : ''}
 
-      <div class="full actions"><button class="btn auto" onclick="closeSysItem()">Cancelar</button>
+      <div class="full actions">${id ? `<button class="btn tertiary danger" style="margin-right:auto" onclick="rmSysItem('${id}')">Excluir do sistema</button>` : ''}
+        <button class="btn auto" onclick="closeSysItem()">Cancelar</button>
         <button class="btn go auto" onclick="saveSysItem()">Salvar</button></div>
     </div>`;
   _siImgUrl = it?.image_url || null; _siImgFile = null;

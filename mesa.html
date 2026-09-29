@@ -11,8 +11,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="lib/tokens.css?v=5">
 <link rel="stylesheet" href="lib/theme.css?v=52">
-<link rel="stylesheet" href="lib/theme-ffx.css?v=13">
-<link rel="stylesheet" href="lib/components.css?v=13">
+<link rel="stylesheet" href="lib/theme-ffx.css?v=14">
+<link rel="stylesheet" href="lib/components.css?v=14">
 <style>
   /* Mesa — "Latão calmo" (docs/DESIGN-v2-LATAO-CALMO.md §3.3) */
   /* topbar: o grupo em avatares, traço verde = online */
@@ -1180,8 +1180,7 @@ function statTileHtml(a, ctx) {
   const val = values[a.id] ?? a.default_value ?? 0;
   const bonus = bonusMap[a.id];
   return `<div class="${cls}" style="--stc:${esc(a.color || '#7ee6dc')}">
-    ${bonus ? `<span class="mod-badge" title="${esc(bonusTitle(bonus))}">+${bonus.total}</span>` : ''}
-    <div class="stat-val" id="${idPrefix || ''}${a.id}">${esc(val)}</div>
+    <div class="stat-val" id="${idPrefix || ''}${a.id}">${esc(val)}${bonus ? `<span class="mod-badge${bonus.total < 0 ? ' neg' : ''}" title="${esc(bonusTitle(bonus))}">${bonus.total >= 0 ? '+' : '−'}${Math.abs(bonus.total)}</span>` : ''}</div>
     <div class="stat-name">${esc(a.name)}</div>
     ${adjustFn ? `<div class="stat-ctl">
       <button class="plus" title="Desce 1 (ajuste direto)" onclick="${adjustFn}('${a.id}', -1)">−</button>
@@ -1909,12 +1908,19 @@ function originBonusPreview(originId) {
 // embutir nome de classe/raça direto num atributo onclick="..." — mesmo escape de aspas que a
 // linha de "Ver ficha" do log de combate já usa pra esse mesmo risco (nome com apóstrofo)
 const jsStr = (s) => esc(s).replace(/'/g, "\\'");
+function bonusListHtml(text) {
+  if (!text) return '<div class="picker-card-bonus muted">Sem bônus direto</div>';
+  return `<ul class="pc-bonus">${String(text).split(' · ').map((seg) => {
+    const m = seg.match(/^(.+?)\s([+\-−]?\d+(?:[.,]\d+)?)$/);
+    return m ? `<li><span>${m[1]}</span><b>${m[2]}</b></li>` : `<li class="wide"><span>${seg}</span></li>`;
+  }).join('')}</ul>`;
+}
 function pickerCard(node, color, bonusText, onclick, selected) {
   const c = color || 'var(--maq)';
   return `<button type="button" class="picker-card${selected ? ' selected' : ''}" style="--pc:${c}" onclick="${onclick}">
     <div class="picker-card-name">${esc(node.name)}${selected ? `<span class="ic picker-check">${ICONS.check}</span>` : ''}</div>
     ${node.description ? `<div class="picker-card-desc">${esc(node.description)}</div>` : ''}
-    <div class="picker-card-bonus${bonusText ? '' : ' muted'}">${bonusText || 'Sem bônus direto'}</div>
+    ${bonusListHtml(bonusText)}
   </button>`;
 }
 function pickerCardLocked(node, color, bonusText) {
@@ -1922,7 +1928,7 @@ function pickerCardLocked(node, color, bonusText) {
   return `<div class="picker-card locked" style="--pc:${c}">
     <div class="picker-card-name">${esc(node.name)}<span class="ic picker-lock">${ICONS.lock}</span></div>
     ${node.description ? `<div class="picker-card-desc">${esc(node.description)}</div>` : ''}
-    ${bonusText ? `<div class="picker-card-bonus">${bonusText}</div>` : ''}
+    ${bonusText ? bonusListHtml(bonusText) : ''}
   </div>`;
 }
 // enquanto ainda está criando o personagem (inOnboarding), classe/subclasse/raça/variação ficam
@@ -2002,10 +2008,11 @@ async function refreshClassOriginSection() {
 // as duas telas que mostram classe/raça (a etiqueta compacta em char-tags e os cartões novos na
 // Biografia) mudam juntas sempre que uma escolha é feita ou recusada — chamado no lugar das duas
 function refreshClassPickers() { refreshCharTags(); refreshClassOriginSection(); }
+// nível, idade e sexo são meta (uma linha de texto); só classe/subclasse/origem viram etiqueta (MELHORIAS-v1.5 P1-10)
 function charTagsHtml(ch) {
-  const otherTags = [ch.age ? 'Idade: ' + esc(ch.age) : '', ch.gender ? esc(ch.gender) : ''].filter(Boolean);
-  return `<span class="char-tag" id="char-level-tag">Nível ${ch.level || 1}</span>` +
-    otherTags.map((t) => `<span class="char-tag" title="${t}">${t}</span>`).join('') + classSubclassChips(ch) + originVariantChips(ch);
+  const age = ch.age ? (/^\d+$/.test(String(ch.age).trim()) ? esc(ch.age) + ' anos' : esc(ch.age)) : '';
+  const meta = [`<span id="char-level-tag">Nível ${ch.level || 1}</span>`, age, ch.gender ? esc(ch.gender) : ''].filter(Boolean).join(' · ');
+  return `<span class="char-meta">${meta}</span>` + classSubclassChips(ch) + originVariantChips(ch);
 }
 // repinta só a etiqueta de nível/idade/gênero/classe-subclasse (usado depois de escolher
 // classe/subclasse, que troca o <select> por uma etiqueta travada) — sem recarregar a ficha toda
@@ -2354,6 +2361,12 @@ function pointsLeft() { return (character.stat_points || 0) - pendingSum(); }
 // A fórmula vem de uma propriedade opcional do status (a.roll_formula), com "1d20+{valor}" como padrão —
 // assim o sistema pode configurar outra (ex.: "2d6+{valor}") depois, sem mudar nada aqui.
 const DEFAULT_ROLL = '1d20+{valor}';
+// modificador (algo que se soma a uma rolagem: tudo que rola, fora as Defesas) sempre com sinal; o número
+// "cru" continua em data-v, que é o que a rolagem lê (MELHORIAS-v1.5 P1-14)
+function signedFor(el, v) {
+  if (!el.closest('[data-roll]') || el.closest('.no-roll')) return String(v);
+  return v > 0 ? '+' + v : v < 0 ? '−' + Math.abs(v) : '0';
+}
 function statRollFormula(id) {
   const a = _fichaAttrs.find((x) => x.id === id); if (!a) return null;
   const vEl = $('secval-' + id) || $('comp-' + id); if (!vEl) return null;
@@ -2389,8 +2402,7 @@ function secStatRow(a, compact) {
   const canSpend = pointsLeft() > 0;
   const bonus = _fichaSkillBonus[a.id];
   return `<div class="stat-tile${compact ? ' compact' : ''}${pend > 0 ? ' pending' : ''}" id="sectile-${a.id}" data-roll="${a.id}" tabindex="0" role="button" aria-label="Rolar ${esc(a.name)}" style="--stc:${esc(a.color || '#7ee6dc')}">
-    <span class="mod-badge" id="secbonus-${a.id}" style="${bonus ? '' : 'display:none;'}" title="${bonus ? esc(bonusTitle(bonus)) : ''}">${bonus ? `${bonus.total >= 0 ? '+' : ''}${bonus.total}` : ''}</span>
-    <div class="stat-val" id="secval-${a.id}">${base + pend + (bonus ? bonus.total : 0)}<span class="stat-pend" id="secpend-${a.id}">${pend > 0 ? '+' + pend : ''}</span></div>
+    <div class="stat-val" id="secval-${a.id}">${base + pend + (bonus ? bonus.total : 0)}<span class="stat-pend" id="secpend-${a.id}">${pend > 0 ? '+' + pend : ''}</span><span class="mod-badge${bonus && bonus.total < 0 ? ' neg' : ''}" id="secbonus-${a.id}" style="${bonus ? '' : 'display:none;'}" title="${bonus ? esc(bonusTitle(bonus)) : ''}">${bonus ? `${bonus.total >= 0 ? '+' : '−'}${Math.abs(bonus.total)}` : ''}</span></div>
     <div class="stat-name">${esc(a.name)}</div>
     <div class="stat-ctl">
       <button class="plus" id="secminus-${a.id}" title="Tirar do rascunho" onclick="removeDraftPoint('${a.id}')" ${pend > 0 ? '' : 'disabled'}>−</button>
@@ -2423,7 +2435,7 @@ function refreshSecRow(statId) {
   }
   const pEl = $('secpend-' + statId); if (pEl) pEl.textContent = pend > 0 ? '+' + pend : '';
   $('sectile-' + statId)?.classList.toggle('pending', pend > 0);
-  const bEl = $('secbonus-' + statId); if (bEl) { bEl.style.display = bonus ? '' : 'none'; bEl.textContent = bonus ? `${bonus.total >= 0 ? '+' : ''}${bonus.total}` : ''; bEl.title = bonus ? bonusTitle(bonus) : ''; }
+  const bEl = $('secbonus-' + statId); if (bEl) { bEl.style.display = bonus ? '' : 'none'; bEl.classList.toggle('neg', !!bonus && bonus.total < 0); bEl.textContent = bonus ? `${bonus.total >= 0 ? '+' : '−'}${Math.abs(bonus.total)}` : ''; bEl.title = bonus ? bonusTitle(bonus) : ''; }
   const minusEl = $('secminus-' + statId); if (minusEl) minusEl.disabled = pend <= 0;
   const left = pointsLeft();
   document.querySelectorAll('[id^="secbtn-"]').forEach((b) => { b.disabled = left <= 0; });
@@ -2523,24 +2535,24 @@ async function renderBiografia(c) {
 }
 
 async function identitySection(ch, onboarding) {
-  const f = (label, key, val, ph, id) => `<div class="fld row"><label>${label}</label>
+  const f = (label, key, val, ph, id) => `<div class="fld"><label>${label}</label>
       <input ${id ? `id="${id}"` : ''} value="${esc(val)}" placeholder="${ph || ''}" oninput="onIdentityFieldChange('${key}', this.value)"></div>`;
   const ta = (label, key, val, ph) => `<div class="fld"><label>${label}</label>
       <textarea style="width:100%;min-height:52px;background:var(--field);color:var(--ink);font-family:var(--serif);font-size:14px;padding:10px 12px;line-height:1.5" oninput="onIdentityFieldChange('${key}', this.value)" placeholder="${ph || ''}">${esc(val)}</textarea></div>`;
 
-  const ageField = `<div class="fld row"><label>Idade</label>
+  const ageField = `<div class="fld"><label>Idade</label>
       <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" value="${esc(ch.age)}" placeholder="Ex.: 27" oninput="onAgeInput(this)"></div>`;
   const knownGenders = ['', 'Masculino', 'Feminino'];
   const isCustomGender = !!(ch.gender && !knownGenders.includes(ch.gender));
-  const genderField = `<div class="fld row"><label>Sexo</label>
-      <select id="gender-select" style="flex:1" onchange="onGenderSelectChange(this.value)">
+  const genderField = `<div class="fld"><label for="gender-select">Sexo</label>
+      <select id="gender-select" onchange="onGenderSelectChange(this.value)">
         <option value="" ${!ch.gender ? 'selected' : ''}>— não informado —</option>
         <option value="Masculino" ${ch.gender === 'Masculino' ? 'selected' : ''}>Masculino</option>
         <option value="Feminino" ${ch.gender === 'Feminino' ? 'selected' : ''}>Feminino</option>
         <option value="__custom__" ${isCustomGender ? 'selected' : ''}>Outro (digitar)</option>
-      </select></div>
-      <div class="fld row" id="gender-custom-row" style="${isCustomGender ? '' : 'display:none'}"><label></label>
-        <input value="${esc(isCustomGender ? ch.gender : '')}" placeholder="Como prefere descrever" oninput="onIdentityFieldChange('gender', this.value)"></div>`;
+      </select>
+      <div id="gender-custom-row" style="${isCustomGender ? '' : 'display:none'}">
+        <input aria-label="Sexo (texto livre)" value="${esc(isCustomGender ? ch.gender : '')}" placeholder="Como prefere descrever" oninput="onIdentityFieldChange('gender', this.value)"></div></div>`;
 
   const gallery = Array.isArray(ch.gallery) ? ch.gallery : [];
   const loreFiles = Array.isArray(ch.lore_files) ? ch.lore_files : [];
@@ -2554,8 +2566,7 @@ async function identitySection(ch, onboarding) {
 
     <div class="section-title" role="heading" aria-level="2">Identidade</div>
     ${f('Nome <span style="color:var(--escarlate)">*</span>', 'name', ch.name, 'Nome do personagem', 'ident-name')}
-    ${ageField}
-    ${genderField}
+    <div class="fld-pair">${ageField}${genderField}</div>
 
     ${await classOriginSection(ch)}
 
@@ -2940,7 +2951,7 @@ function conditionBonusMap(conditions, activeIds) {
 function bonusTitle(entry) { return entry ? entry.sources.map((s) => `${s.name}: +${s.amount}`).join(', ') : ''; }
 window.recalcComputed = () => {
   _fichaAttrs.forEach((a) => { if (a.kind !== 'computed') { const el = $('attr-' + a.id); if (el) _fichaValues[a.id] = el.value; } });
-  _fichaAttrs.forEach((a) => { if (a.kind === 'computed' && !a.is_resource) { const el = $('comp-' + a.id); if (el) { const v = evalStat(a); el.innerHTML = v == null ? `<span class="ic" style="color:var(--escarlate)" title="Fórmula com erro">${ICONS.warning}</span>${a.is_skill ? '' : 'fórmula'}` : String(v); el.dataset.v = v == null ? '' : String(v); const tile = el.closest('.stat-tile, .skill-chip'); if (tile && a.formula) tile.title = a.formula; } } });
+  _fichaAttrs.forEach((a) => { if (a.kind === 'computed' && !a.is_resource) { const el = $('comp-' + a.id); if (el) { const v = evalStat(a); el.innerHTML = v == null ? `<span class="ic" style="color:var(--escarlate)" title="Fórmula com erro">${ICONS.warning}</span>${a.is_skill ? '' : 'fórmula'}` : signedFor(el, v); el.dataset.v = v == null ? '' : String(v); const tile = el.closest('.stat-tile, .skill-chip'); if (tile && a.formula) tile.title = a.formula; } } });
   _fichaAttrs.forEach((a) => { if (a.is_resource) refreshRes(a.id); });
   _fichaAttrs.forEach((a) => { if (a.kind !== 'computed' && !a.is_resource) refreshSecRow(a.id); });
 };
@@ -3432,7 +3443,8 @@ function abilityCardHtml(a) {
   const kindLabel = a.kind === 'core' ? 'Núcleo' : a.kind === 'active' ? 'Ativa' : 'Passiva';
   const color = a.via_color || '#7ee6dc';
   const modLabel = (m) => { const s = (sys?.stats || []).find((x) => x.id === m.stat_id); return (s ? esc(s.name) : '(atributo removido)') + ': ' + (m.amount >= 0 ? '+' : '') + esc(String(m.amount)); };
-  return `<div class="list-row skill-row" style="border-left:3px solid ${esc(color)}">
+  // a cor da via vira a faixa de 2px no topo (como nos itens) — a lateral torta no chanfro saiu (MELHORIAS-v1.5 P1-11)
+  return `<div class="list-row skill-row" style="--cf-accent:inset 0 2px 0 ${esc(color)}">
     <div class="grow">
       <div class="nm">${esc(a.name || '(sem nome)')}</div>
       <div class="sub">${esc(a.tree_name)} · ${esc(a.via_name)}</div>

@@ -11,8 +11,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="lib/tokens.css?v=5">
 <link rel="stylesheet" href="lib/theme.css?v=52">
-<link rel="stylesheet" href="lib/theme-ffx.css?v=13">
-<link rel="stylesheet" href="lib/components.css?v=13">
+<link rel="stylesheet" href="lib/theme-ffx.css?v=14">
+<link rel="stylesheet" href="lib/components.css?v=14">
 <style>
   /* Lobby — "Latão calmo" (docs/DESIGN-v2-LATAO-CALMO.md §3.2) */
   .home-head{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--space-4);flex-wrap:wrap;margin:0 0 var(--space-5)}
@@ -23,18 +23,20 @@
   [role="tabpanel"] > .section-title:first-child{margin-top:var(--space-2)}
   .head-actions[hidden]{display:none}
   .head-actions .btn,.ec-actions .btn,.box.dlg .actions .btn,#mesas .btn{width:auto}
-  .list-toolbar{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--space-4);flex-wrap:wrap;margin-bottom:var(--space-4)}
-  .list-toolbar .sub-tabs{flex:1 1 auto;border-bottom:1px solid var(--border)}
+  .list-toolbar{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--space-4);flex-wrap:nowrap;margin-bottom:var(--space-4)}
+  .list-toolbar .sub-tabs{flex:1 1 auto;min-width:0;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
+  .list-toolbar .list-search{margin-bottom:2px}
+  .list-toolbar .sub-tabs::-webkit-scrollbar{display:none}
   .sub-tabs .tc{font-family:var(--mono);font-size:var(--fs-label);color:var(--text-3);margin-left:6px}
-  .list-search{flex:0 1 240px;height:40px;padding:0 var(--space-3);font:inherit;font-size:var(--fs-body);color:var(--text);
+  .list-search{flex:0 1 280px;min-width:160px;height:36px;padding:0 var(--space-3);font:inherit;font-size:var(--fs-body);color:var(--text);
     }
   /* linha de mesa: avatar · nome · meta · quando · selo · › */
   .mesa-rows{display:flex;flex-direction:column;gap:var(--space-2)}
-  .mesa-row{min-height:72px}
+  .mesa-row{min-height:72px;height:72px}
   .mesa-row .mesa-row-name{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .mesa-row .mesa-row-meta{display:flex;gap:0 var(--space-2);flex-wrap:wrap}
+  .mesa-row .mesa-row-meta{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .mesa-row .mesa-row-meta > span:empty{display:none}
-  .mesa-row .mesa-row-meta > span + span::before{content:"·";margin-right:var(--space-2);color:var(--text-3)}
+  .mesa-row .mesa-row-meta > span + span::before{content:"·";margin:0 var(--space-2);color:var(--text-3)}
   .mesa-when{flex:0 0 auto;font-size:var(--fs-small);color:var(--text-3);white-space:nowrap}
   .row-chev{flex:0 0 auto;width:16px;height:16px;fill:none;stroke:var(--text-3);stroke-width:1.6}
   .mesa-row:hover .row-chev{stroke:var(--primary)}
@@ -80,7 +82,7 @@
     .ffx-layout.lobby[data-sec="mesas"] > .ffx-side{display:none}
     .head-actions{width:100%}
     .head-actions .btn{flex:1;min-height:44px}
-    .list-search{flex:1 1 100%}
+    .list-toolbar{flex-wrap:wrap} .list-search{flex:1 1 100%;margin-bottom:0}
     .mesa-when,.row-chev{display:none}
     .mesa-row .mesa-row-meta{flex-wrap:nowrap;overflow:hidden;white-space:nowrap}
     .mesa-row{min-height:64px}
@@ -114,7 +116,6 @@
      showItemSub de sempre, só a navegação mudou de lugar -->
 <div class="ffx-layout lobby" id="home">
   <aside class="ffx-side">
-    <div class="ffx-menu-eyebrow" aria-hidden="true">Menu</div>
     <div class="ffx-menu" id="home-menu" role="tablist" aria-orientation="vertical" aria-label="Seções da plataforma">
       <button type="button" role="tab" id="tab-mesas" data-sec="mesas" class="on" aria-selected="true" aria-controls="sec-mesas" onclick="showSec('mesas')"><span>Mesas</span><span class="count" id="cnt-mesas"></span></button>
       <button type="button" role="tab" id="tab-sistemas" data-sec="sistemas" aria-selected="false" aria-expanded="false" aria-controls="sec-sistemas" onclick="showSec('sistemas')"><span>Sistemas</span><span class="count" id="cnt-sistemas"></span></button>
@@ -293,7 +294,7 @@
     <div id="itens-pacotes" role="tabpanel" aria-labelledby="tab-itens-pacotes" style="display:none">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
         <div class="section-title" role="heading" aria-level="2" style="margin:0">Meus pacotes de itens</div>
-        <button class="btn go auto sm" onclick="openPackageForm()">+ Criar pacote</button>
+        <button class="btn auto" onclick="openPackageForm()">+ Criar pacote</button>
       </div>
       <p style="font-family:var(--mono);font-size:var(--fs-label);color:var(--ink-faint);line-height:1.6;margin:0 0 14px">
         Agrupe vários itens da sua biblioteca num pacote — depois, dentro de qualquer sistema, importe o pacote inteiro de uma vez em vez de copiar item por item.</p>
@@ -595,12 +596,14 @@ async function renderSystems() {
     // "minhas coisas" em linhas, igual às mesas (docs/MELHORIAS-v1.4.md P1-5) — cards ficam só na Loja
     box.className = 'mesa-rows';
     box.innerHTML = mine.map((s) => `
-      <a class="list-row mesa-row sys-row" href="sistema.html?id=${s.id}">
+      <a class="list-row mesa-row sys-row" href="sistema.html?id=${s.id}" title="${esc(s.name)}">
+        <span class="mesa-av" aria-hidden="true">${esc((s.name || '?').trim().charAt(0).toUpperCase() || '?')}</span>
         <span class="grow">
           <span class="mesa-row-name">${esc(s.name)}</span>
-          <span class="mesa-row-meta" id="sysmeta-${s.id}">Abrir construtor →</span>
+          <span class="mesa-row-meta" id="sysmeta-${s.id}">Construtor de sistema</span>
         </span>
-        ${s.is_published ? '<span class="role published">Publicado</span>' : ''}
+        ${s.is_published ? '<span class="role published">Publicado</span>' : '<span class="role player">Rascunho</span>'}
+        ${CHEVRON}
       </a>`).join('');
     mine.forEach((s) => db.getSystemBundle(s.id).then((b) => {
       const el = $('sysmeta-' + s.id); if (el) el.textContent = `${pl(b.stats.length, 'status', 'status')} · ${pl(b.classes.length, 'classe', 'classes')} · ${pl(b.trees.length, 'árvore', 'árvores')}`;
@@ -618,9 +621,9 @@ function systemCardHtml(s, featured) {
     <div class="card-tile${featured ? ' featured' : ''}" onclick='openSystemDetail("${s.id}")' onkeydown='if(event.key==="Enter"||event.key===" "){event.preventDefault();openSystemDetail("${s.id}")}' tabindex="0" role="button" aria-label="Ver detalhes de ${esc(s.name)}${featured ? ' (sistema em destaque)' : ''}">
       ${featured ? `<div class="featured-badge">${ICON.star}Destaque</div>` : ''}
       ${mine ? '' : `<button class="poster-fav ${isFav ? 'on' : ''}" style="position:absolute;top:10px;right:10px" onclick='event.stopPropagation();toggleFavoriteSystem("${s.id}")' aria-label="${isFav ? 'Remover dos favoritos' : 'Favoritar'}" aria-pressed="${isFav}">${HEART_ICON}</button>`}
-      <h3 style="padding-right:26px">${esc(s.name)}</h3>
-      ${s.description ? `<p class="meta" style="white-space:normal;-webkit-line-clamp:3;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;margin:2px 0">${esc(s.description)}</p>` : ''}
-      <div class="meta">${mine ? '<span class="role mine">Seu</span>' : 'por ' + esc(s.creator_name || '—')}</div>
+      <h3>${esc(s.name)}</h3>
+      ${s.description ? `<p class="card-desc">${esc(s.description)}</p>` : ''}
+      <div class="card-by">${mine ? '<span class="role mine">Seu</span>' : 'por ' + esc(s.creator_name || '—')}</div>
     </div>`;
 }
 async function renderStoreSystems() {
@@ -732,7 +735,7 @@ function mesaRowHtml(m) {
           : `<span class="mesa-av" aria-hidden="true">${esc((m.name || '?').trim().charAt(0).toUpperCase() || '?')}</span>`}
         <span class="grow">
           <span class="mesa-row-name">${esc(m.name)}</span>
-          <span class="mesa-row-meta"><span class="mr-sys" data-sys="${esc(m.system_id || '')}">${esc(_systemById.get(m.system_id)?.name || '')}</span>${m.role === 'gm' && m.join_code ? `<span>Código ${esc(m.join_code)}</span>` : ''}</span>
+          <span class="mesa-row-meta"><span class="mr-sys" data-sys="${esc(m.system_id || '')}">${esc(_systemById.get(m.system_id)?.name || '')}</span></span>
         </span>
         <span class="mesa-when">${esc(relTime(m.last_active_at || m.created_at))}</span>
         <span class="role ${m.role}">${m.role === 'gm' ? 'Mestre' : 'Jogador'}</span>

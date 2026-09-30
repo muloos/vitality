@@ -623,7 +623,7 @@ function busGeometry(g) {
 function drawBus(ctx, g, visible) {
   if (!g.parents.some((id) => visible.has(id)) && !g.children.some((id) => visible.has(id))) return;
   const lines = busGeometry(g); if (!lines) return;
-  const color = viaByKey(g.fac).color || edgeColor;
+  const color = edgeColor; // mesma "Cor das linhas" da árvore que as conexões normais usam
   const [er, eg, eb] = hexToRgb(color);
   const allOff = [...g.parents, ...g.children].every((id) => byId(id)?.enabled === false);
   ctx.save();

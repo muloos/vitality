@@ -187,6 +187,15 @@
   .via-row input[type=color]{width:28px;height:28px;flex:0 0 auto;border:0;background:none;padding:0;cursor:pointer;
     clip-path:polygon(var(--cut-xs) 0,100% 0,100% calc(100% - var(--cut-xs)),calc(100% - var(--cut-xs)) 100%,0 100%,0 var(--cut-xs))}
   .via-row input[type=text]{flex:1;min-width:0;color:var(--ink);font-family:var(--serif);font-size:13px;padding:7px 9px;box-sizing:border-box}
+  /* níveis e barramento — escondidos até a migração rodar (ver arvore.js: hasLevelCol/hasTreeOpts) */
+  body.no-levels .lvl-only{display:none !important}
+  body.no-tree-opts .tree-opts > :not(.tree-opts-missing){display:none !important}
+  .tree-opts-missing{display:none;font-family:var(--mono);font-size:11px;color:var(--ink-faint)}
+  body.no-tree-opts .tree-opts-missing{display:inline}
+  .tree-opt-check,.fld label.via-lock{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-family:var(--serif);font-size:13px;
+    letter-spacing:0;text-transform:none;color:var(--ink-dim);white-space:nowrap}
+  .via-row.via-lvl{flex-wrap:wrap;justify-content:space-between;gap:6px 10px;margin:-2px 0 10px 35px}
+  .via-lvl .tool{padding:6px 9px;white-space:nowrap}
   .via-del,.via-add-btn{flex:0 0 auto;width:28px;height:28px;--fill:var(--surface-2);--frame:var(--border);color:var(--ink-faint);cursor:pointer;font-size:13px;line-height:1}
   .via-del:hover{color:var(--danger);--frame:var(--danger)}
   .via-add-btn{color:var(--brass);--frame:color-mix(in srgb,var(--primary) 40%,transparent)}
@@ -294,6 +303,25 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
       <option value="linear">Linear (quadrado)</option>
     </select>
   </div>
+  <div class="tools tree-opts" title="Níveis e linhas" style="gap:8px">
+    <span style="font-family:var(--mono);font-size:11px;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em">Linhas</span>
+    <select id="edge-style" onchange="setEdgeStyle(this.value)" aria-label="Estilo das ligações"
+      style="color:var(--ink);font-family:var(--mono);font-size:11px;padding:6px 8px;cursor:pointer">
+      <option value="lines">Todas as linhas</option>
+      <option value="bus">Barramento por nível</option>
+    </select>
+    <select id="bus-dir" onchange="setBusDir(this.value)" aria-label="Para que lado a árvore cresce" hidden
+      style="color:var(--ink);font-family:var(--mono);font-size:11px;padding:6px 8px;cursor:pointer">
+      <option value="auto">Direção automática</option>
+      <option value="down">Cresce para baixo</option>
+      <option value="up">Cresce para cima</option>
+      <option value="right">Cresce para a direita</option>
+      <option value="left">Cresce para a esquerda</option>
+    </select>
+    <label class="tree-opt-check"><input type="checkbox" id="req-char-level" onchange="setRequireCharLevel(this.checked)"><span>Exigir nível do personagem</span></label>
+    <button type="button" class="tool lvl-only" id="auto-levels-btn" onclick="autoLevels()">Nível pelo anel</button>
+    <span class="tree-opts-missing">Níveis e barramento: aplique a migração no Supabase</span>
+  </div>
   <div class="tools" title="Cor de fundo da árvore" style="gap:8px">
     <span style="font-family:var(--mono);font-size:11px;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em;display:inline-flex;align-items:center;gap:5px"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.4 0 2-1 2-2s-.6-1.6-.6-2.4c0-1 .8-1.6 1.8-1.6H17a4 4 0 0 0 4-4c0-4.4-4-8-9-8Z"/><circle cx="7.5" cy="10.5" r="1" fill="currentColor" stroke="none"/><circle cx="11" cy="7.5" r="1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="8.5" r="1" fill="currentColor" stroke="none"/></svg>Cor de fundo</span>
     <button type="button" class="color-swatch sm" style="--sw:#1b1536" onclick="openColorPicker(this, document.getElementById('bg-color').value, (v)=>{ document.getElementById('bg-color').value = v; previewBg(v); })"></button>
@@ -341,6 +369,9 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
         <button type="button" class="btn sm auto" id="e-color-reset" onclick="resetNodeColor()" style="display:none">Usar cor da via</button>
       </div>
     </div>
+    <div class="fld lvl-only"><label for="e-level">Nível <span style="font-weight:400;color:var(--ink-faint);text-transform:none">(vazio = sem nível)</span></label>
+      <input id="e-level" type="number" min="1" max="99" inputmode="numeric" placeholder="—"
+        oninput="patch('level', this.value === '' ? null : Math.max(1, Math.min(99, parseInt(this.value, 10) || 1)))"></div>
     <div class="fld"><label>Custo em pontos</label><input id="e-cost" type="number" min="0" inputmode="numeric" placeholder="0" oninput="patch('cost',Math.max(0,parseInt(this.value)||0))"></div>
     <div class="fld"><label>Descrição</label><textarea id="e-desc" placeholder="O que essa habilidade faz..." oninput="patch('descr',this.value)"
       style="width:100%;min-height:80px;resize:vertical;line-height:1.55;color:var(--ink);font-family:var(--serif);font-size:14px;padding:10px 12px"></textarea></div>
@@ -391,6 +422,12 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
       <div class="chip" onclick="batchSet('shape','triangle')">Triângulo</div>
       <div class="chip" onclick="batchSet('shape','square')">Quadrado</div>
       <div class="chip" onclick="batchSet('shape','hexagon')">Hexágono</div></div></div>
+    <div class="fld lvl-only"><label for="batch-level">Nível</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input id="batch-level" type="number" min="1" max="99" inputmode="numeric" placeholder="—" style="max-width:90px">
+        <button type="button" class="tool" onclick="(function(v){ batchSet('level', v === '' ? null : Math.max(1, Math.min(99, parseInt(v, 10) || 1))); })(document.getElementById('batch-level').value)">Aplicar</button>
+        <button type="button" class="tool" onclick="autoLevels()">Numerar pela camada</button>
+      </div></div>
     <div class="fld"><label>Estado (linhas ligadas ficam vivas/apagadas)</label><div class="chips" id="batch-enabled">
       <div class="chip" onclick="batchSet('enabled',true)">Ativada</div>
       <div class="chip" onclick="batchSet('enabled',false)">Desativada</div></div></div>
@@ -428,6 +465,6 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
 <div class="count" id="count"></div>
 <div class="via-legend" id="via-legend" style="display:none"></div>
 
-<script src="arvore.js?v=28"></script>
+<script src="arvore.js?v=29"></script>
 </body>
 </html>

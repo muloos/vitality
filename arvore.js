@@ -351,7 +351,7 @@ function buildGridVisual() {
 }
 window.changeGridShape = (v) => {
   if (!isGM) return;
-  gridShape = v; buildGridVisual(); buildRings(); renderDupOptions();
+  gridShape = v; buildGridVisual(); buildRings(); renderDupOptions(); busDirty = true; syncLevelUi();
   db.updateSystemTree(treeId, { grid_shape: v }).catch((e) => showMsg(e.message));
 };
 let snapMarkPos = null;
@@ -368,6 +368,12 @@ let vias = DEFAULT_VIAS.map((v) => ({ ...v }));
 let stats = [];
 let unlockedIds = new Set();
 let myPoints = 0;
+// níveis e barramento (supabase/migrations/20260930_arvore_niveis_barramento.sql). hasLevelCol/hasTreeOpts
+// dizem se a migração já rodou — sem ela os controles novos ficam escondidos e nada do resto muda.
+let hasLevelCol = false, hasTreeOpts = false;
+let edgeStyle = 'lines', busDir = 'auto', requireCharLevel = false;
+// nível do personagem: a mesa passa &lvl= ao embutir a árvore (o servidor confere de novo ao desbloquear)
+const charLevel = params.get('lvl') ? Math.max(1, parseInt(params.get('lvl'), 10) || 1) : null;
 const statById = (id) => stats.find((s) => s.id === id);
 const viaByKey = (key) => vias.find((v) => v.key === key) || vias[0] || DEFAULT_VIAS[0];
 const genViaKey = () => 'v' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -408,6 +414,10 @@ function renderViaManager() {
       <input type="text" value="${esc(v.name)}" maxlength="24" oninput="onViaFieldChange('${v.key}','name',this.value)">
       <button type="button" class="btn sm go" id="via-save-${v.key}" style="display:none" onclick="saveViaRow('${v.key}')" title="Salvar"><span class="ic">${ICONS.check}</span></button>
       <button type="button" class="via-del" onclick="deleteVia('${v.key}')" title="Excluir via" aria-label="Excluir via"><span class="ic">${ICONS.x}</span></button>
+    </div>
+    <div class="via-row via-lvl lvl-only">
+      <label class="via-lock"><input type="checkbox" ${v.lock ? 'checked' : ''} onchange="toggleViaLock('${v.key}', this.checked)"><span>Uma escolha por nível</span></label>
+      <button type="button" class="tool" onclick="linkViaLevels('${v.key}')" title="Liga cada habilidade desta via a todas do nível seguinte">Ligar nível a nível</button>
     </div>`).join('') + `
     <div class="via-row">
       <button type="button" class="color-swatch sm" title="Cor da nova via" style="--sw:#7ee6dc" onclick="openColorPicker(this, document.getElementById('via-new-color').value, (v)=>{ document.getElementById('via-new-color').value = v; })"></button>
@@ -450,6 +460,193 @@ window.deleteVia = async (key) => {
   vias = vias.filter((v) => v.key !== key);
   renderViaChips(); renderViaManager(); saveVias().catch((e) => showMsg(e.message));
 };
+
+
+/* ============================================================
+   Níveis e barramento (opções da árvore)
+   ============================================================ */
+function syncLevelUi() {
+  document.body.classList.toggle('no-levels', !hasLevelCol);
+  document.body.classList.toggle('no-tree-opts', !hasTreeOpts);
+  const es = $('edge-style'); if (es) es.value = edgeStyle;
+  const bd = $('bus-dir'); if (bd) { bd.value = busDir; bd.hidden = !(edgeStyle === 'bus' && gridShape === 'linear'); }
+  const rc = $('req-char-level'); if (rc) rc.checked = requireCharLevel;
+  const al = $('auto-levels-btn'); if (al) al.textContent = gridShape === 'linear' ? 'Nível pela fileira' : 'Nível pelo anel';
+}
+function saveTreeOpt(patchObj, okMsg) {
+  if (!isGM || !hasTreeOpts) return;
+  db.updateSystemTree(treeId, patchObj).then(() => showMsg(okMsg, 'ok')).catch((e) => showMsg(e.message));
+}
+window.setEdgeStyle = (v) => { edgeStyle = v === 'bus' ? 'bus' : 'lines'; busDirty = true; syncLevelUi(); saveTreeOpt({ edge_style: edgeStyle }, edgeStyle === 'bus' ? 'Barramento por nível ativado.' : 'Todas as linhas.'); };
+window.setBusDir = (v) => { busDir = v; syncLevelUi(); saveTreeOpt({ bus_dir: v }, 'Direção salva.'); };
+window.setRequireCharLevel = (on) => { requireCharLevel = !!on; saveTreeOpt({ require_char_level: requireCharLevel }, on ? 'A árvore agora exige o nível do personagem.' : 'Nível do personagem não é mais exigido.'); };
+window.toggleViaLock = (key, on) => {
+  if (!isGM) return; const v = viaByKey(key); if (!v) return;
+  v.lock = !!on;
+  saveVias().then(() => showMsg(on ? `"${v.name}": uma escolha por nível.` : `"${v.name}": sem trava por nível.`, 'ok')).catch((e) => showMsg(e.message));
+};
+
+// direção de crescimento no formato linear: automática (de onde está o nível de cima para o de baixo) ou fixa
+function linearDir(P, C) {
+  if (busDir && busDir !== 'auto') return busDir;
+  const mean = (arr, k) => arr.reduce((s, n) => s + n[k], 0) / arr.length;
+  const dx = mean(C, 'x') - mean(P, 'x'), dy = mean(C, 'y') - mean(P, 'y');
+  return Math.abs(dy) >= Math.abs(dx) ? (dy >= 0 ? 'down' : 'up') : (dx >= 0 ? 'right' : 'left');
+}
+const TO_LOCAL = { down: (p) => ({ l: p.x, d: p.y }), up: (p) => ({ l: p.x, d: -p.y }), right: (p) => ({ l: p.y, d: p.x }), left: (p) => ({ l: p.y, d: -p.x }) };
+const TO_WORLD = { down: (l, d) => ({ x: l, y: d }), up: (l, d) => ({ x: l, y: -d }), right: (l, d) => ({ x: d, y: l }), left: (l, d) => ({ x: -d, y: l }) };
+
+// "Nível pelo anel" / "pela fileira": numera as camadas de cada via a partir do Núcleo (1, 2, 3…),
+// sem buracos — anéis ou fileiras vazias não viram níveis
+window.autoLevels = async () => {
+  if (!isGM || !hasLevelCol) return;
+  const core = coreNode || nodes.find((n) => n.kind === 'core');
+  const pool = (areaSelection.size ? nodes.filter((n) => areaSelection.has(n.id)) : nodes).filter((n) => n.kind !== 'core');
+  if (!pool.length) { showMsg('Nenhuma habilidade para numerar.'); return; }
+  const linear = gridShape === 'linear';
+  const dir = busDir && busDir !== 'auto' ? busDir : 'down';
+  const layer = (n) => {
+    if (!linear && core) return Math.max(1, Math.round(Math.hypot(n.x - core.x, n.y - core.y) / RING_STEP));
+    const base = core ? TO_LOCAL[dir](core).d : Math.min(...pool.map((x) => TO_LOCAL[dir](x).d)) - LINEAR_STEP;
+    return Math.round((TO_LOCAL[dir](n).d - base) / LINEAR_STEP);
+  };
+  const byVia = new Map();
+  pool.forEach((n) => { const k = n.fac || ''; (byVia.get(k) || byVia.set(k, []).get(k)).push(n); });
+  const next = new Map();
+  byVia.forEach((list) => {
+    const layers = [...new Set(list.map(layer))].sort((a, b) => a - b);
+    list.forEach((n) => next.set(n.id, layers.indexOf(layer(n)) + 1));
+  });
+  const changed = pool.filter((n) => (n.level ?? null) !== next.get(n.id));
+  if (!changed.length) { showMsg('Os níveis já estão numerados assim.', 'ok'); return; }
+  const ok = await confirmModal({ title: linear ? 'Nível pela fileira' : 'Nível pelo anel', danger: false, confirmLabel: 'Numerar',
+    desc: `Define o nível de ${changed.length} habilidade(s) ${areaSelection.size ? 'selecionada(s)' : 'da árvore'} pela ${linear ? 'fileira' : 'distância do Núcleo'}, contando 1, 2, 3… em cada via. Os níveis que você já tinha colocado nelas serão trocados.` });
+  if (!ok) return;
+  changed.forEach((n) => { n.level = next.get(n.id); });
+  busDirty = true;
+  Promise.all(changed.map((n) => db.updateTreeNode(n.id, { level: n.level })))
+    .then(() => showMsg(`${changed.length} habilidade(s) numerada(s).`, 'ok')).catch((e) => showMsg(e.message));
+};
+
+// "Ligar nível a nível": cada esfera de nível N da via se liga a todas as de nível N+1 (o que já estiver
+// ligado fica como está); nível 1 sem nenhuma conexão se liga ao Núcleo
+window.linkViaLevels = async (key) => {
+  if (!isGM || !hasLevelCol) return;
+  const via = viaByKey(key);
+  const list = nodes.filter((n) => n.fac === key && n.kind !== 'core' && n.level != null);
+  if (!list.length) { showMsg(`Defina o nível das habilidades de "${via?.name || 'desta via'}" primeiro.`); return; }
+  const has = (a, b) => edges.some((e) => (e.a === a && e.b === b) || (e.a === b && e.b === a));
+  const pairs = [];
+  list.forEach((p) => list.forEach((c) => { if (c.level === p.level + 1 && !has(p.id, c.id)) pairs.push([p.id, c.id]); }));
+  const core = coreNode || nodes.find((n) => n.kind === 'core');
+  if (core) list.filter((n) => n.level === 1 && !edges.some((e) => e.a === n.id || e.b === n.id)).forEach((n) => pairs.push([core.id, n.id]));
+  if (!pairs.length) { showMsg('Os níveis desta via já estão todos ligados.', 'ok'); return; }
+  const ok = await confirmModal({ title: 'Ligar nível a nível', danger: false, confirmLabel: 'Ligar',
+    desc: `Cria ${pairs.length} conexão(ões) em "${via?.name || 'esta via'}": cada habilidade passa a levar a todas as do nível seguinte.` });
+  if (!ok) return;
+  try {
+    const made = await Promise.all(pairs.map(([a, b]) => db.insertTreeEdge(treeId, a, b)));
+    made.forEach((e) => { if (e) edges.push({ id: e.id, a: e.a, b: e.b }); });
+    render();
+    showMsg(`${made.filter(Boolean).length} conexão(ões) criada(s).`, 'ok');
+  } catch (e) { showMsg(e.message); }
+};
+
+// ---------- barramento: um grupo = (via, nível N → N+1) em que TODA esfera de N liga a TODA de N+1 ----------
+let busGroups = [], busEdges = new Set(), busDirty = true;
+function computeBusGroups() {
+  busGroups = []; busEdges = new Set();
+  if (edgeStyle !== 'bus') return;
+  const layers = new Map();
+  for (const n of nodes) {
+    if (n.kind === 'core' || n.level == null) continue;
+    const k = (n.fac || '') + '|' + n.level;
+    (layers.get(k) || layers.set(k, []).get(k)).push(n);
+  }
+  const edgeOf = new Map();
+  for (const e of edges) { edgeOf.set(e.a + '|' + e.b, e); edgeOf.set(e.b + '|' + e.a, e); }
+  for (const [k, parents] of layers) {
+    const cut = k.lastIndexOf('|'), fac = k.slice(0, cut), lvl = +k.slice(cut + 1);
+    const children = layers.get(fac + '|' + (lvl + 1)); if (!children) continue;
+    const found = [];
+    let complete = true;
+    for (const p of parents) {
+      for (const c of children) { const e = edgeOf.get(p.id + '|' + c.id); if (!e) { complete = false; break; } found.push(e); }
+      if (!complete) break;
+    }
+    if (!complete) continue;
+    busGroups.push({ fac, parents: parents.map((n) => n.id), children: children.map((n) => n.id) });
+    found.forEach((e) => busEdges.add(e));
+  }
+}
+// geometria: a barra fica no meio do caminho entre os dois níveis e vai de ponta a ponta das esferas
+// de baixo e das de cima que estão na fileira/anel mais perto; quem está nessa faixa desce reto,
+// quem está fora (ou desalinhado para o lado) chega em diagonal até a ponta mais próxima
+function busGeometry(g) {
+  const P = g.parents.map(byId).filter(Boolean), C = g.children.map(byId).filter(Boolean);
+  if (!P.length || !C.length) return null;
+  const core = coreNode;
+  const lines = [];
+  if (gridShape !== 'linear' && core) {
+    const ang = (n) => Math.atan2(n.y - core.y, n.x - core.x), rad = (n) => Math.hypot(n.x - core.x, n.y - core.y);
+    const ref = Math.atan2(C.reduce((s, n) => s + Math.sin(ang(n)), 0), C.reduce((s, n) => s + Math.cos(ang(n)), 0));
+    const rel = (a) => { let d = a - ref; while (d > Math.PI) d -= 2 * Math.PI; while (d <= -Math.PI) d += 2 * Math.PI; return d; };
+    const rp = P.map(rad), rc = C.map(rad);
+    const outward = rc.reduce((s, v) => s + v, 0) / rc.length >= rp.reduce((s, v) => s + v, 0) / rp.length;
+    const pEdge = outward ? Math.max(...rp) : Math.min(...rp), cEdge = outward ? Math.min(...rc) : Math.max(...rc);
+    const rb = (pEdge + cEdge) / 2;
+    const tol = RING_STEP * .5;
+    const near = P.filter((n) => Math.abs(rad(n) - pEdge) <= tol);
+    const spanA = [...C, ...near].map((n) => rel(ang(n)));
+    const a0 = Math.min(...spanA), a1 = Math.max(...spanA);
+    const at = (a) => ({ x: core.x + rb * Math.cos(ref + a), y: core.y + rb * Math.sin(ref + a) });
+    const steps = Math.max(1, Math.ceil(((a1 - a0) * rb) / 10));
+    const bar = []; for (let i = 0; i <= steps; i++) bar.push(at(a0 + (a1 - a0) * i / steps));
+    if (a1 - a0 > 1e-4) lines.push({ pts: bar, id: null });
+    const eps = 1e-3;
+    P.forEach((n) => { const a = rel(ang(n)); lines.push({ pts: [n, at(a >= a0 - eps && a <= a1 + eps ? a : (a < a0 ? a0 : a1))], id: n.id }); });
+    C.forEach((n) => lines.push({ pts: [at(rel(ang(n))), n], id: n.id }));
+    return lines;
+  }
+  const dir = linearDir(P, C), L = TO_LOCAL[dir], Wd = TO_WORLD[dir];
+  const lp = P.map((n) => ({ n, ...L(n) })), lc = C.map((n) => ({ n, ...L(n) }));
+  const pEdge = Math.max(...lp.map((p) => p.d)), cEdge = Math.min(...lc.map((c) => c.d));
+  const db = (pEdge + cEdge) / 2;
+  const tol = LINEAR_STEP * .5;
+  const span = [...lc, ...lp.filter((p) => Math.abs(p.d - pEdge) <= tol)].map((q) => q.l);
+  const l0 = Math.min(...span), l1 = Math.max(...span);
+  if (l1 - l0 > .5) lines.push({ pts: [Wd(l0, db), Wd(l1, db)], id: null });
+  lp.forEach((p) => lines.push({ pts: [p.n, Wd(p.l >= l0 - .5 && p.l <= l1 + .5 ? p.l : (p.l < l0 ? l0 : l1), db)], id: p.n.id }));
+  lc.forEach((c) => lines.push({ pts: [Wd(c.l, db), c.n], id: c.n.id }));
+  return lines;
+}
+function drawBus(ctx, g, visible) {
+  if (!g.parents.some((id) => visible.has(id)) && !g.children.some((id) => visible.has(id))) return;
+  const lines = busGeometry(g); if (!lines) return;
+  const color = viaByKey(g.fac).color || edgeColor;
+  const [er, eg, eb] = hexToRgb(color);
+  const allOff = [...g.parents, ...g.children].every((id) => byId(id)?.enabled === false);
+  ctx.save();
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  for (const ln of lines) {
+    const off = ln.id ? byId(ln.id)?.enabled === false : allOff;
+    // brilho: o mesmo sprite das conexões normais, esticado em cada trecho reto
+    if (!off) {
+      for (let i = 1; i < ln.pts.length; i++) {
+        const A = ln.pts[i - 1], B = ln.pts[i], dx = B.x - A.x, dy = B.y - A.y, len = Math.hypot(dx, dy);
+        if (len < .5) continue;
+        ctx.save(); ctx.translate(A.x, A.y); ctx.rotate(Math.atan2(dy, dx)); ctx.globalAlpha = EDGE_GLOW_ALPHA;
+        ctx.drawImage(edgeGlowStripFor(color), 0, -EDGE_GLOW_THICKNESS / 2, len, EDGE_GLOW_THICKNESS);
+        ctx.restore();
+      }
+    }
+    ctx.strokeStyle = `rgba(${er},${eg},${eb},${off ? .3 : .85})`; ctx.lineWidth = off ? 1.4 : 1.8;
+    ctx.beginPath(); ctx.moveTo(ln.pts[0].x, ln.pts[0].y);
+    for (let i = 1; i < ln.pts.length; i++) ctx.lineTo(ln.pts[i].x, ln.pts[i].y);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
 
 /* ---------- tamanho da esfera ---------- */
 const SIZE_SCALE = { small: 1, medium: 1.4, large: 1.8 };
@@ -545,6 +742,10 @@ setTimeout(() => {
     ringOpacity = tree?.ring_opacity ?? 1; $('ring-opacity').value = ringOpacity;
     edgeColor = tree?.edge_color || '#d6f0ff'; $('edge-color').value = edgeColor;
     vias = (tree?.vias && tree.vias.length) ? tree.vias.map((v) => ({ ...v })) : DEFAULT_VIAS.map((v) => ({ ...v }));
+    hasTreeOpts = !!tree && 'edge_style' in tree;
+    edgeStyle = tree?.edge_style === 'bus' ? 'bus' : 'lines';
+    busDir = tree?.bus_dir || 'auto';
+    requireCharLevel = !!tree?.require_char_level;
     renderViaChips(); renderViaManager();
     bootStep('carregando status do sistema (listStats)');
     try { stats = await db.listStats(tree.system_id); } catch (_) { stats = []; } // sem atributos cadastrados ainda — ok
@@ -557,6 +758,8 @@ setTimeout(() => {
       const core = await db.insertTreeNode(treeId, { name: 'Núcleo', kind: 'core', fac: 'neutral', cost: 0, descr: 'A origem da árvore.', x: 0, y: 0 });
       nodes.push({ ...core });
     }
+    hasLevelCol = nodes.length ? 'level' in nodes[0] : false;
+    syncLevelUi();
     if (!isGM) { // progresso de desbloqueio só existe pro jogador
       try { unlockedIds = await db.getMyUnlocks(treeId); myPoints = await db.getMyProgress(treeId); }
       catch (_) { unlockedIds = new Set(); myPoints = 0; }
@@ -974,6 +1177,7 @@ function computeNodeDists() {
 // desenho em si roda todo quadro dentro de tick()/drawWorld(), então qualquer mudança de dados
 // (posição, cor, nome, seleção...) aparece sozinha no próximo quadro sem precisar chamar nada aqui.
 function render() {
+  busDirty = true;
   coreNode = nodes.find((n) => n.kind === 'core') || null;
   rebuildIndexes();
   computeNodeDists();
@@ -1081,7 +1285,9 @@ function drawWorld(now) {
   ctx.translate(view.x, view.y);
   ctx.scale(view.s, view.s);
   const visible = computeVisibleIds();
+  if (busDirty) { computeBusGroups(); busDirty = false; }
   for (const e of edges) {
+    if (busEdges.has(e)) continue; // desenhada pelo barramento, logo abaixo
     const A = nodeById.get(e.a), B = nodeById.get(e.b);
     if (!A || !B) continue;
     // corta a conexão se NENHUMA das duas pontas está visível — mesma lógica de antes, só que
@@ -1089,6 +1295,7 @@ function drawWorld(now) {
     if (!visible.has(e.a) && !visible.has(e.b)) continue;
     drawEdge(ctx, A, B, e, now);
   }
+  for (const g of busGroups) drawBus(ctx, g, visible);
   for (const n of nodes) {
     if (!visible.has(n.id)) continue;
     drawNode(ctx, n, now);
@@ -1214,7 +1421,8 @@ function drawNode(ctx, n, now) {
   // (.25 de alpha) — na prática lia como "preto sem efeito nenhum". fadeMul multiplica em cima do
   // alpha normal de cada elemento colorido, deixando tudo bem apagado (quase cinza) mas ainda dá
   // pra reconhecer a cor original de cada via/habilidade.
-  const fadeMul = disabled ? 0.2 : 1;
+  const lockedSib = lockedBy(n), lvlBlocked = levelBlocked(n);
+  const fadeMul = disabled ? 0.2 : lockedSib ? 0.3 : lvlBlocked ? 0.45 : 1;
   // halo — ver comentário nos sprites; substitui filter:drop-shadow (caro por elemento em SVG)
   const glowR = r * 2.4, sprite = glowSpriteFor(color, glowR);
   ctx.globalAlpha = (acquired ? .9 : .6) * fadeMul;
@@ -1242,6 +1450,12 @@ function drawNode(ctx, n, now) {
   if (n === linkSrc) ctx.setLineDash([2, 4]);
   traceShapePath(ctx, shape, r); ctx.stroke();
   ctx.setLineDash([]); ctx.globalAlpha = 1;
+  // travada (outra esfera deste nível já foi escolhida nesta via): risco diagonal por cima
+  if (lockedSib) {
+    ctx.strokeStyle = cssVar('--ink-faint', '#8d8b85'); ctx.lineWidth = 1.6; ctx.globalAlpha = .9;
+    ctx.beginPath(); ctx.moveTo(-r * .8, r * .8); ctx.lineTo(r * .8, -r * .8); ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
   // flash de desbloqueio — anel branco que expande e some (disparado em doUnlock)
   if (n._flashStart != null) {
     const p = (now - n._flashStart) / 700;
@@ -1289,7 +1503,7 @@ function drawNode(ctx, n, now) {
     // rasterizar em canvas a cada quadro, muito mais que um drawImage) e, abaixo de um tamanho de
     // tela onde o texto seria ilegível de qualquer jeito, nem desenha (sprite ou não).
     if (!disabled && r * view.s > 5) {
-      const label = (n.cost || 0) + ' ✦';
+      const label = lvlBlocked ? 'Nv ' + n.level : (n.cost || 0) + ' ✦';
       const sp = costBadgeSpriteFor(label, color);
       // o sprite é desenhado numa resolução MAIOR que o tamanho final (ver COST_SPRITE_OVERSAMPLE) só
       // pra ficar nítido no zoom — dividir por DPR sozinho esquecia de desfazer esse fator extra, e o
@@ -1338,6 +1552,7 @@ const EDGE_HIT_TOLERANCE = 5;
 function hitTestEdgeAt(wx, wy) {
   let best = null, bestD = EDGE_HIT_TOLERANCE;
   for (const e of edges) {
+    if (busEdges.has(e)) continue;
     const A = nodeById.get(e.a), B = nodeById.get(e.b); if (!A || !B) continue;
     const d = distToSegment(wx, wy, A.x, A.y, B.x, B.y);
     if (d <= bestD) { bestD = d; best = e; }
@@ -1378,7 +1593,7 @@ async function selectNode(n) {
   if (isGM) openEditor(n); else openViewer(n);
 }
 function snapshotNode(n) {
-  return { name: n.name, kind: n.kind, size: n.size, shape: n.shape, color: n.color, enabled: n.enabled, fac: n.fac, cost: n.cost, descr: n.descr,
+  return { name: n.name, kind: n.kind, size: n.size, shape: n.shape, color: n.color, enabled: n.enabled, fac: n.fac, cost: n.cost, descr: n.descr, level: n.level ?? null,
     modifiers: (n.modifiers || []).map((m) => ({ ...m })) };
 }
 function discardEditorDraft() {
@@ -1394,6 +1609,8 @@ function refreshEditorFields(n) {
   $('e-cost').value = n.kind === 'core' ? 0 : (n.cost || 0);
   $('e-cost').disabled = n.kind === 'core';
   $('e-cost').title = n.kind === 'core' ? 'O Núcleo é a habilidade inicial — sempre grátis' : '';
+  $('e-level').value = n.kind === 'core' ? '' : (n.level ?? '');
+  $('e-level').disabled = n.kind === 'core';
   document.querySelectorAll('#e-type .chip').forEach((c) => c.classList.toggle('on', c.dataset.v === n.kind));
   document.querySelectorAll('#e-size .chip').forEach((c) => c.classList.toggle('on', c.dataset.s === (n.size || 'small')));
   document.querySelectorAll('#e-shape .chip').forEach((c) => c.classList.toggle('on', c.dataset.sh === (n.shape || 'circle')));
@@ -1424,6 +1641,7 @@ window.saveNodeEditor = () => {
   const btn = $('node-save-btn'); if (btn) { btn.classList.add('loading'); btn.disabled = true; }
   const patch = { name: selected.name, kind: selected.kind, size: selected.size, shape: selected.shape, color: selected.color, enabled: selected.enabled,
     fac: selected.fac, cost: selected.cost, descr: selected.descr, modifiers: selected.modifiers };
+  if (hasLevelCol) patch.level = selected.kind === 'core' ? null : (selected.level ?? null);
   db.updateTreeNode(selected.id, patch).then(() => {
     editorSnapshot = snapshotNode(selected); editorDirty = false;
     if (btn) btn.style.display = 'none';
@@ -1478,6 +1696,7 @@ window.closePanel = async () => {
 // mudam o visual da esfera inteira (cor/raio/classe) e só acontecem uma vez por clique, não a cada tecla.
 window.patch = async (k, v) => {
   if (!isGM || !selected) return;
+  busDirty = true;
   // só um Núcleo por árvore — os anéis/âncora da grade (polarSnap, updateCoreAnchor, buildRings)
   // sempre pegam o PRIMEIRO nó com kind:'core' que encontram; um segundo Núcleo simplesmente
   // ficava inerte, sem nenhum aviso de que aquele clique não fazia o que parecia fazer
@@ -1525,6 +1744,16 @@ window.resetNodeColor = () => patch('color', null);
 // o Núcleo É a esfera inicial — só pode haver um por árvore (ver patch()) e ele nasce
 // automaticamente desbloqueado, sem precisar de nenhuma marcação separada.
 function isNodeUnlocked(n) { return n.kind === 'core' || unlockedIds.has(n.id); }
+// "uma escolha por nível": a via tem trava e o jogador já tem outra esfera desta via neste nível
+function lockedBy(n) {
+  if (isGM || n.level == null || n.kind === 'core' || isNodeUnlocked(n)) return null;
+  if (!viaByKey(n.fac)?.lock) return null;
+  return nodes.find((x) => x !== n && x.kind !== 'core' && x.fac === n.fac && x.level === n.level && unlockedIds.has(x.id)) || null;
+}
+// "exigir nível do personagem": a esfera de nível N só abre com o personagem no nível N
+function levelBlocked(n) {
+  return !isGM && requireCharLevel && n.level != null && charLevel != null && !isNodeUnlocked(n) && charLevel < n.level;
+}
 // usado no aria-label do proxy de foco de teclado (ver seção "teclado (canvas)") — inclui tipo e
 // (pro jogador) custo/estado de desbloqueio, não só o nome: quem navega só por teclado não tem
 // como "ver" a cor do aro ou o selo de custo desenhado na esfera, então precisa ouvir essa
@@ -1533,11 +1762,17 @@ function nodeAriaLabel(n) {
   const kindLabel = n.kind === 'core' ? 'Núcleo' : n.kind === 'active' ? 'habilidade ativa' : 'habilidade passiva';
   let label = (n.name || 'Habilidade sem nome') + ', ' + kindLabel;
   if (n.enabled === false) label += ', desativada';
-  if (!isGM) label += isNodeUnlocked(n) ? ', desbloqueada' : `, bloqueada, custa ${n.cost || 0} ponto${n.cost === 1 ? '' : 's'}`;
+  if (n.level != null) label += ', nível ' + n.level;
+  if (!isGM) label += isNodeUnlocked(n) ? ', desbloqueada'
+    : lockedBy(n) ? ', travada: outra habilidade deste nível já foi escolhida'
+    : levelBlocked(n) ? `, exige o nível ${n.level} do personagem`
+    : `, bloqueada, custa ${n.cost || 0} ponto${n.cost === 1 ? '' : 's'}`;
   return label;
 }
 function canUnlock(n) {
   if (isNodeUnlocked(n)) return { ok: false, reason: 'already' };
+  const by = lockedBy(n); if (by) return { ok: false, reason: 'locked', by };
+  if (levelBlocked(n)) return { ok: false, reason: 'level' };
   const connected = edges.some((e) => (e.a === n.id || e.b === n.id) && isNodeUnlocked(byId(e.a === n.id ? e.b : e.a) || {}));
   if (!connected) return { ok: false, reason: 'connectivity' };
   // o Núcleo é sempre grátis — não entra na conta de pontos gastos, mesmo que tenha um custo>0
@@ -1550,7 +1785,7 @@ function canUnlock(n) {
 function openViewer(n) {
   closeOtherPanels('viewer');
   $('v-name').textContent = n.name || '(sem nome)';
-  $('v-type').textContent = n.kind === 'core' ? 'Núcleo' : n.kind === 'active' ? 'Ativa' : 'Passiva';
+  $('v-type').textContent = (n.kind === 'core' ? 'Núcleo' : n.kind === 'active' ? 'Ativa' : 'Passiva') + (n.level != null ? ' · Nível ' + n.level : '');
   const via = viaByKey(n.fac);
   $('v-via').innerHTML = `<div class="chip on" data-f="${esc(via.key)}" style="--vc:${via.color};flex:0 0 auto;cursor:default">${esc(via.name)}</div>`;
   $('v-cost').innerHTML = `<span class="ic">${ICONS.sparkle}</span>${n.cost || 0}`;
@@ -1574,6 +1809,8 @@ function openViewer(n) {
       btn.disabled = !check.ok;
       btn.textContent = `Desbloquear (custo: ${n.cost || 0} ponto${n.cost === 1 ? '' : 's'})`;
       msg.textContent = check.ok ? ''
+        : check.reason === 'locked' ? `Você já escolheu "${check.by.name || 'outra habilidade'}" neste nível. Só dá para escolher uma por nível nesta via.`
+        : check.reason === 'level' ? `Exige o nível ${n.level}. Seu personagem está no nível ${charLevel}.`
         : check.reason === 'connectivity' ? 'Conecte a uma habilidade já desbloqueada primeiro.'
         : `Pontos insuficientes (você tem ${Math.max(0, check.remaining)} disponível).`;
     }
@@ -1769,6 +2006,7 @@ window.batchSet = (key, value) => {
   if (!ids.length) return;
   // canvas lê o campo direto da esfera em todo quadro — não precisa de nenhuma atualização visual manual aqui
   ids.forEach((id) => { const n = byId(id); if (n) n[key] = value; });
+  busDirty = true;
   if (key === 'enabled') computeNodeDists(); // a onda de luz é cacheada e ignora conexões desativadas — ver computeNodeDists
   Promise.all(ids.map((id) => db.updateTreeNode(id, { [key]: value })))
     .then(() => showMsg(`${ids.length} habilidade(s) atualizada(s).`))
@@ -1832,7 +2070,7 @@ window.duplicateSelection = async (op) => {
       const n = byId(id); if (!n) return null;
       const t = transformPoint(n.x, n.y, core.x, core.y, op);
       const snapped = gridSnap(t.x, t.y);
-      const saved = await db.insertTreeNode(treeId, { name: n.name, kind: n.kind, fac: n.fac, size: n.size, shape: n.shape, color: customColor ?? n.color, cost: n.cost, descr: n.descr, x: snapped.x, y: snapped.y });
+      const saved = await db.insertTreeNode(treeId, { name: n.name, kind: n.kind, fac: n.fac, size: n.size, shape: n.shape, color: customColor ?? n.color, cost: n.cost, descr: n.descr, x: snapped.x, y: snapped.y, ...(hasLevelCol ? { level: n.level ?? null } : {}) });
       return { oldId: id, saved };
     }));
     const idMap = new Map();

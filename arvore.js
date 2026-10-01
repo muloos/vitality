@@ -373,7 +373,7 @@ let myPoints = 0;
 let hasLevelCol = false, hasTreeOpts = false;
 let edgeStyle = 'lines', busDir = 'auto', requireCharLevel = false;
 // barramento editável (supabase/migrations/20261001_arvore_barramento_editavel.sql): group + paths
-let hasBusConfig = false, busConfig = { group: 'level', paths: {} };
+let hasBusConfig = false, busConfig = { group: 'level', paths: {}, stubs: {} };
 // nível do personagem: a mesa passa &lvl= ao embutir a árvore (o servidor confere de novo ao desbloquear)
 const charLevel = params.get('lvl') ? Math.max(1, parseInt(params.get('lvl'), 10) || 1) : null;
 const statById = (id) => stats.find((s) => s.id === id);
@@ -620,7 +620,7 @@ function busAutoGeometry(g) {
     const bar = []; for (let i = 0; i <= steps; i++) bar.push(at(a0 + (a1 - a0) * i / steps));
     const eps = 1e-3;
     P.forEach((n) => { const a = rel(ang(n)); stubs.push({ pts: [n, at(a >= a0 - eps && a <= a1 + eps ? a : (a < a0 ? a0 : a1))], id: n.id }); });
-    C.forEach((n) => stubs.push({ pts: [at(rel(ang(n))), n], id: n.id }));
+    C.forEach((n) => stubs.push({ pts: [n, at(rel(ang(n)))], id: n.id }));
     // pontos editáveis: as pontas e onde cada esfera toca o arco — vira um polígono que acompanha o anel
     const hs = [...new Set([a0, a1, ...spanA].map((a) => +a.toFixed(4)))].sort((x, y) => x - y);
     return { bar, stubs, handles: hs.map(at) };
@@ -633,19 +633,67 @@ function busAutoGeometry(g) {
   const l0 = Math.min(...span), l1 = Math.max(...span);
   const bar = [Wd(l0, db), Wd(l1, db)];
   lp.forEach((p) => stubs.push({ pts: [p.n, Wd(p.l >= l0 - .5 && p.l <= l1 + .5 ? p.l : (p.l < l0 ? l0 : l1), db)], id: p.n.id }));
-  lc.forEach((c) => stubs.push({ pts: [Wd(c.l, db), c.n], id: c.n.id }));
+  lc.forEach((c) => stubs.push({ pts: [c.n, Wd(c.l, db)], id: c.n.id }));
   return { bar, stubs, handles: bar.map((p) => ({ ...p })) };
 }
-// geometria final: se o Mestre desenhou a barra (bus_config.paths), ela manda; cada esfera do grupo
-// se liga com um traço reto até o ponto mais próximo dela
+// onde um traço que sai de p encontra a barra: prefere cair reto (vertical, horizontal ou, na árvore
+// em anel, na direção do Núcleo) quando isso não fica muito mais longo que o caminho mais curto —
+// o ponto mais próximo puro deixa a ligação torta sempre que o trecho da barra é inclinado
+function straightAttach(bar, p) {
+  const q = nearestOnPath(bar, p.x, p.y);
+  const dirs = [[0, 1], [1, 0]];
+  if (gridShape !== 'linear' && coreNode) {
+    const dx = p.x - coreNode.x, dy = p.y - coreNode.y, L = Math.hypot(dx, dy);
+    if (L > 1) dirs.push([dx / L, dy / L]);
+  }
+  let best = null;
+  for (const [ux, uy] of dirs) for (let i = 1; i < bar.length; i++) {
+    const A = bar[i - 1], B = bar[i], ex = B.x - A.x, ey = B.y - A.y, den = ux * ey - uy * ex;
+    if (Math.abs(den) < 1e-9) continue;
+    const wx = A.x - p.x, wy = A.y - p.y;
+    const s = (wx * ey - wy * ex) / den, t = (wx * uy - wy * ux) / den;
+    if (t < -1e-6 || t > 1 + 1e-6) continue;
+    if (!best || Math.abs(s) < best.d) best = { x: p.x + s * ux, y: p.y + s * uy, d: Math.abs(s) };
+  }
+  return best && best.d <= q.d * 1.6 + 4 ? { x: best.x, y: best.y } : { x: q.x, y: q.y };
+}
+// geometria final: se o Mestre desenhou a barra (bus_config.paths), ela manda e cada esfera desce
+// reta até ela; por cima disso entram os ajustes de cada ligação (bus_config.stubs): o ponto onde
+// ela toca a barra ("at", sempre reprojetado na barra para continuar grudado nela) e as dobras ("via").
+// Todo traço vai da esfera para a barra: pts = [esfera, ...dobras, ponto na barra].
 function busGeometry(g) {
   const manual = busConfig.paths[g.key];
-  if (!manual || manual.length < 2) return busAutoGeometry(g);
-  const bar = manual.map(([x, y]) => ({ x, y }));
-  const stubs = [...g.parents, ...g.children].map(byId).filter(Boolean)
-    .map((n) => { const q = nearestOnPath(bar, n.x, n.y); return { pts: [n, { x: q.x, y: q.y }], id: n.id }; });
-  return { bar, stubs, handles: bar, manual: true };
+  let geo;
+  if (!manual || manual.length < 2) geo = busAutoGeometry(g);
+  else {
+    const bar = manual.map(([x, y]) => ({ x, y }));
+    const stubs = [...g.parents, ...g.children].map(byId).filter(Boolean)
+      .map((n) => ({ pts: [n, straightAttach(bar, n)], id: n.id }));
+    geo = { bar, stubs, handles: bar, manual: true };
+  }
+  const ov = geo && busConfig.stubs[g.key];
+  if (ov) geo.stubs = geo.stubs.map((st) => {
+    const o = ov[st.id]; if (!o) return st;
+    const via = (o.via || []).map(([x, y]) => ({ x, y }));
+    let end = st.pts[st.pts.length - 1];
+    if (o.at) { const q = nearestOnPath(geo.bar, o.at[0], o.at[1]); end = { x: q.x, y: q.y }; }
+    else if (via.length) end = straightAttach(geo.bar, via[via.length - 1]);
+    return { pts: [st.pts[0], ...via, end], id: st.id, custom: true };
+  });
+  return geo;
 }
+// alças da barra selecionada: pontos da barra, uma alça no meio do último trecho de cada ligação
+// (arrastar desliza o ponto de encontro pela barra) e as dobras de cada ligação
+function busHandles(geo) {
+  const hs = geo.handles.map((h, i) => ({ t: 'bar', i, x: h.x, y: h.y }));
+  for (const st of geo.stubs) {
+    const n = st.pts.length, A = st.pts[n - 2], B = st.pts[n - 1];
+    if (Math.hypot(B.x - A.x, B.y - A.y) > 4) hs.push({ t: 'at', id: st.id, x: (A.x + B.x) / 2, y: (A.y + B.y) / 2 });
+    for (let j = 1; j < n - 1; j++) hs.push({ t: 'via', id: st.id, j: j - 1, x: st.pts[j].x, y: st.pts[j].y });
+  }
+  return hs;
+}
+const sameBusHandle = (a, b) => !!a && !!b && a.t === b.t && a.i === b.i && a.id === b.id && a.j === b.j;
 function strokeGlowPath(ctx, pts, color, off) {
   const [er, eg, eb] = hexToRgb(color);
   if (!off) {
@@ -682,27 +730,35 @@ function drawBusSelection(ctx) {
   const geo = busGeometry(g); if (!geo) return;
   ctx.save();
   {
-    const brass = cssVar('--brass', '#c9a45c');
-    ctx.strokeStyle = brass; ctx.lineWidth = 3 / Math.max(view.s, .4); ctx.globalAlpha = .9;
-    ctx.beginPath(); ctx.moveTo(geo.bar[0].x, geo.bar[0].y);
-    for (let i = 1; i < geo.bar.length; i++) ctx.lineTo(geo.bar[i].x, geo.bar[i].y);
-    ctx.stroke(); ctx.globalAlpha = 1;
-    const hsz = 6 / view.s;
-    geo.handles.forEach((h, i) => {
+    const brass = cssVar('--brass', '#c9a45c'), lw = 1 / Math.max(view.s, .4);
+    const line = (pts) => { ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y); for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y); ctx.stroke(); };
+    ctx.strokeStyle = brass; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    // ligações: traço fino; a da alça selecionada fica tão forte quanto a barra
+    for (const st of geo.stubs) {
+      const on = selectedBusHandle && selectedBusHandle.t !== 'bar' && selectedBusHandle.id === st.id;
+      ctx.globalAlpha = on ? .9 : .45; ctx.lineWidth = (on ? 3 : 1.6) * lw; line(st.pts);
+    }
+    ctx.globalAlpha = .9; ctx.lineWidth = 3 * lw; line(geo.bar); ctx.globalAlpha = 1;
+    // alças: losango cheio = ponto da barra; losango menor = ligação (meio do trecho final) e dobras
+    for (const h of busHandles(geo)) {
+      const hsz = (h.t === 'bar' ? 6 : 5) / view.s;
+      const on = sameBusHandle(h, selectedBusHandle) && (h.t !== 'bar' || geo.manual);
       ctx.save(); ctx.translate(h.x, h.y); ctx.rotate(Math.PI / 4);
-      ctx.fillStyle = geo.manual && i === selectedBusVertex ? brass : 'rgba(15,16,18,.9)';
-      ctx.strokeStyle = brass; ctx.lineWidth = 1.6 / view.s;
+      ctx.fillStyle = on ? brass : h.t === 'at' ? 'rgba(15,16,18,.6)' : 'rgba(15,16,18,.9)';
+      ctx.strokeStyle = brass; ctx.lineWidth = (h.t === 'bar' ? 1.6 : 1.2) / view.s;
       ctx.fillRect(-hsz / 2, -hsz / 2, hsz, hsz); ctx.strokeRect(-hsz / 2, -hsz / 2, hsz, hsz);
       ctx.restore();
-    });
+    }
   }
   ctx.restore();
 }
 /* ---------- edição do barramento pelo Mestre ----------
-   Clicar numa barra (ferramenta Selecionar) seleciona; arrastar uma alça move o ponto (encaixa numa
-   grade mais fina que a das esferas; Alt solta livre); duplo clique na barra cria um ponto de dobra;
-   Delete apaga o ponto selecionado; "Restaurar automático" volta ao traçado calculado. */
-let selectedBusKey = null, selectedBusVertex = null, _busSaveT = null;
+   Clicar numa barra ou numa ligação (ferramenta Selecionar) seleciona; arrastar uma alça da barra move
+   o ponto (encaixa numa grade mais fina que a das esferas; Alt solta livre); arrastar a alça de uma
+   ligação desliza o ponto onde ela toca a barra (gruda na posição reta); duplo clique na barra ou numa
+   ligação cria um ponto de dobra; Delete apaga o ponto selecionado (numa ligação, volta ela ao reto);
+   "Endireitar ligações" desfaz os ajustes das ligações; "Restaurar automático" volta tudo ao calculado. */
+let selectedBusKey = null, selectedBusHandle = null, _busSaveT = null;
 const busGroupByKey = (key) => busGroups.find((g) => g.key === key) || null;
 function fineSnap(x, y) {
   if (gridShape === 'linear' || !coreNode) { const st = LINEAR_STEP / 2; return { x: Math.round(x / st) * st, y: Math.round(y / st) * st }; }
@@ -712,6 +768,8 @@ function fineSnap(x, y) {
   const step = (Math.PI * 2) / segs, a = Math.round(Math.atan2(dy, dx) / step) * step;
   return { x: Math.round(core.x + r * Math.cos(a)), y: Math.round(core.y + r * Math.sin(a)) };
 }
+// acerta a barra ou uma ligação de qualquer barramento; a ponta da ligação colada na esfera fica de
+// fora (ali o clique é da esfera)
 function hitTestBusAt(wx, wy) {
   if (edgeStyle !== 'bus') return null;
   const tol = (EDGE_HIT_TOLERANCE + 3) / Math.max(view.s, .4);
@@ -719,7 +777,11 @@ function hitTestBusAt(wx, wy) {
   for (const g of busGroups) {
     const geo = busGeometry(g); if (!geo || geo.bar.length < 2) continue;
     const q = nearestOnPath(geo.bar, wx, wy);
-    if (q.d <= bestD) { bestD = q.d; best = { g, geo, q }; }
+    if (q.d <= bestD) { bestD = q.d; best = { g, geo, q, stub: null }; }
+    for (const st of geo.stubs) {
+      const s = nearestOnPath(st.pts, wx, wy);
+      if (s.d < bestD) { bestD = s.d; best = { g, geo, q: s, stub: st }; }
+    }
   }
   return best;
 }
@@ -728,7 +790,7 @@ function busHandleAt(wx, wy) {
   const geo = busGeometry(g); if (!geo) return null;
   const tol = 9 / view.s;
   let best = null, bestD = tol;
-  geo.handles.forEach((h, i) => { const d = Math.hypot(h.x - wx, h.y - wy); if (d <= bestD) { bestD = d; best = { g, geo, i }; } });
+  for (const h of busHandles(geo)) { const d = Math.hypot(h.x - wx, h.y - wy); if (d <= bestD) { bestD = d; best = { g, geo, h }; } }
   return best;
 }
 // converte a barra automática em pontos editáveis na primeira mexida
@@ -736,72 +798,147 @@ function ensureManualPath(g, geo) {
   if (!busConfig.paths[g.key]) busConfig.paths[g.key] = geo.handles.map((h) => [Math.round(h.x), Math.round(h.y)]);
   return busConfig.paths[g.key];
 }
+// ajuste de uma ligação (cria vazio na primeira mexida)
+function stubOverride(key, id) {
+  const all = busConfig.stubs[key] || (busConfig.stubs[key] = {});
+  return all[id] || (all[id] = {});
+}
+function dropStubOverride(key, id) {
+  const all = busConfig.stubs[key]; if (!all) return;
+  delete all[id]; if (!Object.keys(all).length) delete busConfig.stubs[key];
+}
 function saveBusConfig(msg) {
   if (!hasBusConfig) { showMsg('Para guardar o desenho da barra, aplique a migração 20261001 no Supabase.'); return; }
   clearTimeout(_busSaveT);
   _busSaveT = setTimeout(() => db.updateSystemTree(treeId, { bus_config: busConfig }).then(() => { if (msg) showMsg(msg, 'ok'); }).catch((e) => showMsg(e.message)), 350);
 }
-function selectBus(key) {
-  selectedBusKey = key; selectedBusVertex = null;
+function refreshBusPanel() {
+  const key = selectedBusKey; if (!key) return;
+  const nStubs = Object.keys(busConfig.stubs[key] || {}).length;
+  $('bus-mode').textContent = (busConfig.paths[key] ? 'Barra desenhada à mão' : 'Barra automática')
+    + (nStubs ? ` · ${nStubs} ${nStubs > 1 ? 'ligações ajustadas' : 'ligação ajustada'}` : '');
+  $('bus-reset').disabled = !busConfig.paths[key] && !nStubs;
+  $('bus-straighten').disabled = !nStubs;
+}
+function selectBus(key, handle = null) {
+  selectedBusKey = key; selectedBusHandle = handle;
   deselectEdge();
   if (selected) { $('editor').classList.remove('open'); selected = null; }
   closeOtherPanels('buspanel');
   const g = busGroupByKey(key);
   const via = g?.fac != null ? viaByKey(g.fac) : null;
   $('bus-title').textContent = g ? `Nível ${g.level} → ${g.level + 1}${via ? ' · ' + via.name : ''}` : 'Barramento';
-  $('bus-mode').textContent = busConfig.paths[key] ? 'Desenhado à mão' : 'Automático';
-  $('bus-reset').disabled = !busConfig.paths[key];
+  refreshBusPanel();
   $('bus-nomig').hidden = hasBusConfig;
   $('buspanel').classList.add('open');
 }
 function deselectBus() {
-  selectedBusKey = null; selectedBusVertex = null;
+  selectedBusKey = null; selectedBusHandle = null;
   $('buspanel')?.classList.remove('open');
 }
 window.closeBusPanel = () => deselectBus();
 window.resetBusPath = () => {
   if (!isGM || !selectedBusKey) return;
-  delete busConfig.paths[selectedBusKey]; selectedBusVertex = null;
-  saveBusConfig('Barra de volta ao automático.'); selectBus(selectedBusKey);
+  delete busConfig.paths[selectedBusKey]; delete busConfig.stubs[selectedBusKey];
+  saveBusConfig('Barra e ligações de volta ao automático.'); selectBus(selectedBusKey);
+};
+window.straightenBusStubs = () => {
+  if (!isGM || !selectedBusKey) return;
+  delete busConfig.stubs[selectedBusKey];
+  saveBusConfig('Ligações endireitadas.'); selectBus(selectedBusKey);
 };
 function startBusVertexDrag(hit, ev) {
-  const path = ensureManualPath(hit.g, hit.geo);
-  selectedBusVertex = hit.i;
-  let moved = false; const sx = ev.clientX, sy = ev.clientY, [ox, oy] = path[hit.i];
+  const { g, geo, h } = hit;
+  let moved = false; const sx = ev.clientX, sy = ev.clientY;
+  let apply;
+  if (h.t === 'bar') {
+    const path = ensureManualPath(g, geo), [ox, oy] = path[h.i];
+    apply = (e) => {
+      const x = ox + (e.clientX - sx) / view.s, y = oy + (e.clientY - sy) / view.s;
+      const p = e.altKey ? { x: Math.round(x), y: Math.round(y) } : fineSnap(x, y);
+      path[h.i] = [p.x, p.y];
+    };
+  } else if (h.t === 'via') {
+    const o = stubOverride(g.key, h.id), [ox, oy] = o.via[h.j];
+    apply = (e) => {
+      const x = ox + (e.clientX - sx) / view.s, y = oy + (e.clientY - sy) / view.s;
+      const p = e.altKey ? { x: Math.round(x), y: Math.round(y) } : fineSnap(x, y);
+      o.via[h.j] = [p.x, p.y];
+    };
+  } else {
+    // ligação: o ponto onde ela toca a barra desliza pela barra; perto da posição reta, gruda nela
+    const st = geo.stubs.find((s) => s.id === h.id), from = st.pts[st.pts.length - 2];
+    const end0 = st.pts[st.pts.length - 1], ox = end0.x, oy = end0.y;
+    const o = stubOverride(g.key, h.id);
+    apply = (e) => {
+      const bar = busGeometry(g).bar;
+      const x = ox + (e.clientX - sx) / view.s, y = oy + (e.clientY - sy) / view.s;
+      const q = nearestOnPath(bar, x, y), reto = straightAttach(bar, from);
+      const stick = !e.altKey && Math.hypot(q.x - reto.x, q.y - reto.y) <= 8 / view.s;
+      const p = stick ? reto : q;
+      o.at = [Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10];
+    };
+  }
+  selectedBusHandle = h;
   try { stage.setPointerCapture(ev.pointerId); } catch (_) {}
   const mv = (e) => {
     if (!moved && Math.abs(e.clientX - sx) + Math.abs(e.clientY - sy) > 3) moved = true;
-    if (!moved) return;
-    const x = ox + (e.clientX - sx) / view.s, y = oy + (e.clientY - sy) / view.s;
-    const p = e.altKey ? { x: Math.round(x), y: Math.round(y) } : fineSnap(x, y);
-    path[hit.i] = [p.x, p.y];
+    if (moved) apply(e);
   };
   const up = () => {
     try { stage.releasePointerCapture(ev.pointerId); } catch (_) {}
     stage.removeEventListener('pointermove', mv); stage.removeEventListener('pointerup', up);
-    if (moved) saveBusConfig(); else selectBus(hit.g.key);
-    selectedBusVertex = hit.i; $('bus-mode').textContent = 'Desenhado à mão'; $('bus-reset').disabled = false;
+    // alça de ligação clicada sem arrastar não deixa ajuste vazio para trás
+    if (!moved && h.t === 'at' && !Object.keys(stubOverride(g.key, h.id)).length) dropStubOverride(g.key, h.id);
+    if (moved) saveBusConfig();
+    selectBus(g.key, h);
   };
   stage.addEventListener('pointermove', mv); stage.addEventListener('pointerup', up);
 }
 function addBusVertexAt(wx, wy) {
   const hit = hitTestBusAt(wx, wy); if (!hit) return false;
-  if (selectedBusKey !== hit.g.key) selectBus(hit.g.key);
+  if (hit.stub) {
+    // dobra numa ligação: entra entre os pontos do trecho clicado; o ponto na barra fica onde estava
+    const st = hit.stub, o = stubOverride(hit.g.key, st.id);
+    const end = st.pts[st.pts.length - 1];
+    if (!o.at) o.at = [Math.round(end.x * 10) / 10, Math.round(end.y * 10) / 10];
+    const p = fineSnap(hit.q.x, hit.q.y);
+    o.via = o.via || [];
+    const j = Math.min(hit.q.seg, o.via.length);
+    o.via.splice(j, 0, [p.x, p.y]);
+    saveBusConfig('Dobra criada na ligação. Arraste para moldar.');
+    selectBus(hit.g.key, { t: 'via', id: st.id, j });
+    return true;
+  }
   const path = ensureManualPath(hit.g, hit.geo);
   const bar = path.map(([x, y]) => ({ x, y }));
   const q = nearestOnPath(bar, wx, wy), p = fineSnap(q.x, q.y);
   path.splice(q.seg + 1, 0, [p.x, p.y]);
-  selectedBusVertex = q.seg + 1;
   saveBusConfig('Ponto de dobra criado. Arraste para moldar a barra.');
-  selectBus(hit.g.key); selectedBusVertex = q.seg + 1;
+  selectBus(hit.g.key, { t: 'bar', i: q.seg + 1 });
   return true;
 }
 function deleteSelectedBusVertex() {
-  const path = selectedBusKey && busConfig.paths[selectedBusKey];
-  if (!path || selectedBusVertex == null) return false;
+  const key = selectedBusKey, h = selectedBusHandle;
+  if (!key || !h) return false;
+  if (h.t === 'via') {
+    const o = busConfig.stubs[key]?.[h.id]; if (!o?.via) return false;
+    o.via.splice(h.j, 1); if (!o.via.length) delete o.via;
+    if (!o.via && !o.at) dropStubOverride(key, h.id);
+    saveBusConfig('Dobra removida.'); selectBus(key);
+    return true;
+  }
+  if (h.t === 'at') {
+    if (!busConfig.stubs[key]?.[h.id]) return false;
+    dropStubOverride(key, h.id);
+    saveBusConfig('Ligação de volta ao reto.'); selectBus(key);
+    return true;
+  }
+  const path = busConfig.paths[key];
+  if (!path) return false;
   if (path.length <= 2) { showMsg('A barra precisa de pelo menos dois pontos. Use "Restaurar automático" para recomeçar.'); return true; }
-  path.splice(selectedBusVertex, 1); selectedBusVertex = null;
-  saveBusConfig('Ponto removido.');
+  path.splice(h.i, 1);
+  saveBusConfig('Ponto removido.'); selectBus(key);
   return true;
 }
 
@@ -904,7 +1041,8 @@ setTimeout(() => {
     busDir = tree?.bus_dir || 'auto';
     requireCharLevel = !!tree?.require_char_level;
     hasBusConfig = !!tree && 'bus_config' in tree;
-    busConfig = { group: tree?.bus_config?.group === 'via' ? 'via' : 'level', paths: { ...(tree?.bus_config?.paths || {}) } };
+    busConfig = { group: tree?.bus_config?.group === 'via' ? 'via' : 'level', paths: { ...(tree?.bus_config?.paths || {}) },
+      stubs: JSON.parse(JSON.stringify(tree?.bus_config?.stubs || {})) };
     renderViaChips(); renderViaManager();
     bootStep('carregando status do sistema (listStats)');
     try { stats = await db.listStats(tree.system_id); } catch (_) { stats = []; } // sem atributos cadastrados ainda — ok
@@ -2097,7 +2235,7 @@ stage.addEventListener('pointerdown', async (ev) => {
   }
   if (tool === 'select' && isGM) {
     const hitBus = hitTestBusAt(p.x, p.y);
-    if (hitBus) { selectBus(hitBus.g.key); return; }
+    if (hitBus) { selectBus(hitBus.g.key, hitBus.stub ? { t: 'at', id: hitBus.stub.id } : null); return; }
     const hitEdge = hitTestEdgeAt(p.x, p.y);
     if (hitEdge) { deselectBus(); selectEdge(hitEdge); return; }
     if (selectedBusKey) deselectBus();

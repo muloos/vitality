@@ -394,13 +394,14 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
     <div class="fld"><label>Ligação</label><div id="bus-title" style="font-family:var(--serif);font-size:16px;color:var(--ink)"></div></div>
     <div class="fld"><label>Traçado</label><div id="bus-mode" style="font-family:var(--serif);font-size:14px;color:var(--ink-dim)"></div></div>
     <ul class="bus-help">
-      <li><b>Arraste</b> um ponto para mover. Ele encaixa na grade; segure <b>Alt</b> para mover livre.</li>
-      <li><b>Duplo clique</b> na barra cria um ponto de dobra.</li>
-      <li><b>Delete</b> apaga o ponto selecionado.</li>
-      <li>Cada habilidade se liga sozinha ao ponto mais perto da barra.</li>
+      <li><b>Arraste</b> um ponto da barra para mover. Ele encaixa na grade; segure <b>Alt</b> para mover livre.</li>
+      <li>Cada ligação tem uma <b>alça menor</b> no meio do trecho que chega na barra: arraste para deslizar o encontro pela barra. Ela gruda na posição reta.</li>
+      <li><b>Duplo clique</b> na barra ou numa ligação cria um ponto de dobra.</li>
+      <li><b>Delete</b> apaga o ponto selecionado. Numa ligação, ela volta a descer reta.</li>
     </ul>
     <p id="bus-nomig" class="bus-nomig" hidden>Para guardar o desenho, aplique a migração <b>20261001_arvore_barramento_editavel.sql</b> no Supabase.</p>
-    <div class="actions"><button type="button" class="btn" id="bus-reset" onclick="resetBusPath()">Restaurar automático</button>
+    <div class="actions"><button type="button" class="btn" id="bus-straighten" onclick="straightenBusStubs()">Endireitar ligações</button>
+      <button type="button" class="btn" id="bus-reset" onclick="resetBusPath()">Restaurar automático</button>
       <button type="button" class="btn" onclick="closeBusPanel()">Fechar</button></div>
   </div>
 </div>
@@ -486,6 +487,6 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
 <div class="count" id="count"></div>
 <div class="via-legend" id="via-legend" style="display:none"></div>
 
-<script src="arvore.js?v=31"></script>
+<script src="arvore.js?v=32"></script>
 </body>
 </html>

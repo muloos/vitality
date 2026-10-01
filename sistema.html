@@ -149,7 +149,7 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
 </div>
 
 <script type="module">
-import * as db from './lib/db.js?v=42';
+import * as db from './lib/db.js?v=43';
 import { CONDITION_ICONS, condIconKey, condIconHtml } from './lib/cond-icons.js?v=1';
 import { itemCard } from './lib/item-card.js?v=3';
 import { openHelpGuide, trapFocus, wireVerticalTablist, armEnter, toggleTheme, getTheme } from './lib/ui.js?v=10';
@@ -2576,7 +2576,9 @@ async function renderArvores(c) {
       'Editar árvores de habilidade aqui de dentro criaria uma árvore dentro de outra janela embutida. A própria mesa já tem uma aba Árvores com o caminho certo pra isso.');
     return;
   }
-  const [trees, classes] = await Promise.all([db.listSystemTrees(systemId), db.listClasses(systemId)]);
+  const [trees, classes, tplRes] = await Promise.all([db.listSystemTrees(systemId), db.listClasses(systemId),
+    db.listTreeTemplates().then((l) => ({ list: l }), (e) => ({ error: e }))]);
+  _treeTemplates = new Map((tplRes.list || []).map((t) => [t.id, t]));
   const label = (cl) => cl.parent_id ? `<span class="ic">${ICONS.cornerDownRight}</span>${esc(cl.name)}` : esc(cl.name);
   const sel = (on) => 'cursor:pointer;' + (on ? 'color:var(--on-primary);background:linear-gradient(90deg,var(--brass),#f3dca0)' : '');
   const treeCard = async (t) => {
@@ -2585,7 +2587,7 @@ async function renderArvores(c) {
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         ${DRAG_HANDLE_SVG}
         <input class="nm" value="${esc(t.name)}" onchange="updateTreeName('${t.id}', this.value)" style="flex:1;min-width:140px;background:transparent;border:0;color:var(--ink);font-family:var(--serif);font-size:15px">
-        <a class="btn sm go auto" style="text-decoration:none" href="arvore.html?tree=${t.id}&system=${systemId}&v=10"><span class="ic">${ICONS.externalLink}</span>Acessar árvore</a>
+        <a class="btn sm go auto" style="text-decoration:none" href="arvore.html?tree=${t.id}&system=${systemId}&v=11"><span class="ic">${ICONS.externalLink}</span>Acessar árvore</a>
         <button class="btn sm danger auto" onclick="delTree('${t.id}')">Excluir</button>
       </div>
       <div class="sub">Atribuir a classes/subclasses:</div>
@@ -2612,8 +2614,32 @@ async function renderArvores(c) {
         <input id="tr-name" placeholder="Nova árvore (ex.: Caminho da Máquina)" required maxlength="60">
         <button class="btn go auto" type="submit">+ Criar árvore</button>
       </div>
-    </form>`;
+    </form>
+    <div class="section-title" role="heading" aria-level="2" style="margin-top:24px">Importar árvore</div>
+    <p style="font-family:var(--mono);font-size:11px;color:var(--ink-dim);line-height:1.6;margin:0 0 14px">
+      Traz uma cópia de uma árvore salva na sua conta (Criação → Criar → Árvores). A cópia passa a ser deste sistema: editar uma não muda a outra.</p>
+    ${tplRes.error
+      ? `<p class="sub">Para importar árvores, aplique a migração <b>20261003_modelos_de_arvore.sql</b> no Supabase.</p>`
+      : tplRes.list.length
+        ? `<form class="inline-form" onsubmit="return importTreeTemplate(event)">
+            <select id="tpl-pick" class="fld-input" aria-label="Árvore para importar">${tplRes.list.map((t) => { const n = (t.data?.nodes || []).filter((x) => x.kind !== 'core').length; return `<option value="${t.id}">${esc(t.name)} · ${n} ${n === 1 ? 'habilidade' : 'habilidades'}</option>`; }).join('')}</select>
+            <button class="btn auto" type="submit"><span class="spin"></span>Importar</button>
+          </form>`
+        : `<p class="sub">Você ainda não tem árvores salvas na conta. <a href="app.html?criar=arvores">Criar uma em Criação → Criar → Árvores</a>.</p>`}`;
 }
+let _treeTemplates = new Map();
+window.importTreeTemplate = async (ev) => {
+  ev.preventDefault();
+  const tpl = _treeTemplates.get($('tpl-pick').value); if (!tpl) return false;
+  const btn = ev.target.querySelector('button[type=submit]'); btn.classList.add('loading'); btn.disabled = true;
+  showMsg(`Importando "${tpl.name}"…`, 'ok');
+  try {
+    await db.createSystemTreeFromTemplate(systemId, tpl);
+    showMsg(`"${tpl.name}" importada. Clique em Acessar árvore para editar a cópia.`, 'ok');
+    openTab('arvores');
+  } catch (e) { showMsg('Não deu pra importar: ' + e.message); btn.classList.remove('loading'); btn.disabled = false; }
+  return false;
+};
 window.addTree = (ev) => { ev.preventDefault(); const n = $('tr-name').value.trim(); if (!n) return false;
   db.createSystemTree(systemId, n, $('tr-shape').value).then(() => openTab('arvores')).catch((e) => showMsg(e.message)); return false; };
 window.delTree = async (id) => {

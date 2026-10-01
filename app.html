@@ -31,6 +31,14 @@
     }
   /* linha de mesa: avatar · nome · meta · quando · selo · › */
   .mesa-rows{display:flex;flex-direction:column;gap:var(--space-2)}
+  .criar-tabs{margin:0 0 var(--space-4)}
+  .tpl-form{flex-wrap:wrap}
+  .tpl-form input{flex:1 1 240px;min-width:0}
+  .tpl-form select{flex:0 0 auto;width:auto}
+  @media (max-width:600px){ .tpl-form select{flex:1 1 auto} }
+  .tpl-row{padding-right:var(--space-3)}
+  .tpl-row .tpl-open{display:flex;align-items:center;gap:var(--space-3);flex:1 1 auto;min-width:0;color:inherit;text-decoration:none;align-self:stretch}
+  .tpl-row .tpl-open .grow{min-width:0}
   .mesa-row{min-height:72px;height:72px}
   .mesa-row .mesa-row-name{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .mesa-row .mesa-row-meta{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -117,7 +125,7 @@
   <aside class="ffx-side">
     <div class="ffx-menu" id="home-menu" role="tablist" aria-orientation="vertical" aria-label="Seções da plataforma">
       <button type="button" role="tab" id="tab-mesas" data-sec="mesas" class="on" aria-selected="true" aria-controls="sec-mesas" onclick="showSec('mesas')"><span>Mesas</span><span class="count" id="cnt-mesas"></span></button>
-      <button type="button" role="tab" id="tab-sistemas" data-sec="sistemas" aria-selected="false" aria-expanded="false" aria-controls="sec-sistemas" onclick="showSec('sistemas')"><span>Sistemas</span><span class="count" id="cnt-sistemas"></span></button>
+      <button type="button" role="tab" id="tab-sistemas" data-sec="sistemas" aria-selected="false" aria-expanded="false" aria-controls="sec-sistemas" onclick="showSec('sistemas')"><span>Criação</span><span class="count" id="cnt-sistemas"></span></button>
       <button type="button" role="tab" class="sub" id="tab-sys-loja" data-parent="sistemas" data-sub="loja" aria-selected="false" aria-controls="sys-loja" hidden onclick="showSysSub('loja')">Loja</button>
       <button type="button" role="tab" class="sub" id="tab-sys-favoritos" data-parent="sistemas" data-sub="favoritos" aria-selected="false" aria-controls="sys-favoritos" hidden onclick="showSysSub('favoritos')">Favoritos</button>
       <button type="button" role="tab" class="sub" id="tab-sys-criar" data-parent="sistemas" data-sub="criar" aria-selected="false" aria-controls="sys-criar" hidden onclick="showSysSub('criar')">Criar</button>
@@ -177,8 +185,13 @@
       <div id="fav-systems" class="grid"><div class="empty loading" role="status"><span>Carregando…</span></div></div>
     </div>
 
-    <!-- ---------- CRIAR (sistemas do próprio usuário) ---------- -->
+    <!-- ---------- CRIAR: sistemas e modelos de árvore do próprio usuário ---------- -->
     <div id="sys-criar" role="tabpanel" aria-labelledby="tab-sys-criar" style="display:none">
+      <div class="sub-tabs criar-tabs" id="criar-tabs" role="tablist" aria-label="O que criar">
+        <button type="button" role="tab" id="ct-sistemas" data-c="sistemas" class="on" aria-selected="true" aria-controls="criar-sistemas" onclick="setCriarTab('sistemas')">Sistemas</button>
+        <button type="button" role="tab" id="ct-arvores" data-c="arvores" aria-selected="false" aria-controls="criar-arvores" tabindex="-1" onclick="setCriarTab('arvores')">Árvores</button>
+      </div>
+      <div id="criar-sistemas" role="tabpanel" aria-labelledby="ct-sistemas">
       <div class="action-row">
         <div class="action-card" style="flex:1">
           <h4>Criar sistema de RPG</h4>
@@ -191,6 +204,26 @@
       </div>
       <div class="section-title" role="heading" aria-level="2">Meus sistemas</div>
       <div id="systems" class="grid"><div class="empty loading" role="status"><span>Carregando…</span></div></div>
+      </div>
+      <div id="criar-arvores" role="tabpanel" aria-labelledby="ct-arvores" hidden>
+        <div class="action-row">
+          <div class="action-card" style="flex:1">
+            <h4>Criar árvore</h4>
+            <p>Desenhe uma árvore de habilidades sem precisar de um sistema. Ela fica salva na sua conta e pode ser importada em qualquer sistema seu, na aba Árvores. Cada importação é uma cópia que você edita à vontade.</p>
+            <form class="inline-form tpl-form" onsubmit="return doCreateTreeTemplate(event)">
+              <input id="tpl-new-name" placeholder="Nome da árvore (ex.: Defensor)" required maxlength="80" aria-label="Nome da árvore">
+              <select id="tpl-new-shape" class="fld-input" aria-label="Formato da grade">
+                <option value="octagon">Octógono</option>
+                <option value="hexagon">Hexágono</option>
+                <option value="linear">Linear (quadrado)</option>
+              </select>
+              <button class="btn go auto" type="submit"><span class="spin"></span>Criar e abrir</button>
+            </form>
+          </div>
+        </div>
+        <div class="section-title" role="heading" aria-level="2">Minhas árvores</div>
+        <div id="tree-templates"><div class="empty loading" role="status"><span>Carregando…</span></div></div>
+      </div>
     </div>
   </section>
 
@@ -307,7 +340,7 @@
 </div>
 
 <script type="module">
-import * as db from './lib/db.js?v=42';
+import * as db from './lib/db.js?v=43';
 import { itemCard, openItemDetail as openItemDetailModal, detailAttrs } from './lib/item-card.js?v=3';
 import { mountThemeToggle, openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus, wireVerticalTablist, playEnter } from './lib/ui.js?v=10';
 
@@ -438,6 +471,9 @@ async function startHome() {
   $('home').style.visibility = 'visible';
   renderMesas();
   renderSystems();
+  renderTreeTemplates();
+  // volta do editor de modelo (arvore.html?template=…): abre direto em Criação → Criar → Árvores
+  if (new URLSearchParams(location.search).get('criar') === 'arvores') { showSysSub('criar'); setCriarTab('arvores'); history.replaceState(null, '', 'app.html'); }
   try { _favIds = await db.listFavoriteItemIds(); } catch (e) { console.error('[favoritos]', e); }
   renderItems();
   renderStore();
@@ -495,7 +531,7 @@ window.doLogout = async () => {
 let _sec = 'mesas', _sysSub = 'loja', _itemSub = 'loja';
 const SEC_COPY = {
   mesas: ['Lobby', ''],
-  sistemas: ['Lobby · Sistemas', 'Explore os sistemas publicados, guarde os favoritos ou monte o seu.'],
+  sistemas: ['Lobby · Criação', 'Explore os sistemas publicados, guarde os favoritos ou crie os seus sistemas e árvores.'],
   itens: ['Lobby · Itens', 'Itens da loja, seus favoritos e a sua biblioteca — prontos para copiar para os seus sistemas.'],
 };
 const syncMenuTabindex = wireVerticalTablist($('home-menu'));
@@ -516,7 +552,7 @@ function paintMenu() {
     }
   });
   const [eyebrow, intro] = SEC_COPY[_sec];
-  const titles = { mesas: 'Minhas mesas', sistemas: 'Sistemas', itens: 'Itens' };
+  const titles = { mesas: 'Minhas mesas', sistemas: 'Criação', itens: 'Itens' };
   $('sec-eyebrow').textContent = eyebrow;
   $('greet').textContent = titles[_sec];
   $('sec-intro').textContent = intro; $('sec-intro').hidden = !intro;
@@ -612,6 +648,71 @@ async function renderSystems() {
 window.doCreateSystem = (ev) => { ev.preventDefault(); const name = $('sys-name').value.trim(); if (!name) return false; busy(ev.target, true);
   db.createSystem(name).then((s) => { location.href = 'sistema.html?id=' + s.id; }).catch((e) => { showMsg('Não deu pra criar o sistema: ' + friendlyError(e)); busy(ev.target, false); }); return false; };
 
+/* ---------- Criar: Sistemas | Árvores ---------- */
+let _criarTab = 'sistemas';
+window.setCriarTab = (t) => {
+  _criarTab = t;
+  document.querySelectorAll('#criar-tabs [role="tab"]').forEach((b) => {
+    const on = b.dataset.c === t; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); b.tabIndex = on ? 0 : -1;
+  });
+  $('criar-sistemas').hidden = t !== 'sistemas';
+  $('criar-arvores').hidden = t !== 'arvores';
+};
+// setas ←/→ entre as duas abas (padrão de tablist)
+$('criar-tabs').addEventListener('keydown', (e) => {
+  if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+  e.preventDefault();
+  const next = _criarTab === 'sistemas' ? 'arvores' : 'sistemas';
+  setCriarTab(next); $('ct-' + next).focus();
+});
+
+/* ---------- modelos de árvore (tree_templates) ---------- */
+const TREE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="18" r="2.2"/><circle cx="6" cy="7" r="2.2"/><circle cx="18" cy="7" r="2.2"/><path d="M12 15.8V12M12 12 7.4 8.6M12 12l4.6-3.4"/></svg>';
+const missingTemplates = (e) => /tree_templates/.test(e?.message || '') || e?.code === '42P01' || e?.code === 'PGRST205';
+async function renderTreeTemplates() {
+  const box = $('tree-templates');
+  try {
+    const list = await db.listTreeTemplates();
+    if (!list.length) { box.className = ''; box.innerHTML = emptyState(TREE_ICON, 'Nenhuma árvore ainda',
+      'Crie a primeira no campo acima. Depois é só importar ela na aba Árvores de qualquer sistema seu.'); return; }
+    box.className = 'mesa-rows';
+    box.innerHTML = list.map((t) => {
+      const n = (t.data?.nodes || []).filter((x) => x.kind !== 'core').length;
+      return `<div class="list-row mesa-row tpl-row">
+        <a class="tpl-open" href="arvore.html?template=${t.id}" title="Abrir ${esc(t.name)}">
+          <span class="mesa-av" aria-hidden="true">${esc((t.name || '?').trim().charAt(0).toUpperCase() || '?')}</span>
+          <span class="grow">
+            <span class="mesa-row-name">${esc(t.name)}</span>
+            <span class="mesa-row-meta"><span>${pl(n, 'habilidade', 'habilidades')}</span><span>salva ${esc(relTime(t.updated_at))}</span></span>
+          </span>
+        </a>
+        <button type="button" class="btn sm danger auto" onclick="deleteTreeTemplate('${t.id}')" aria-label="Excluir ${esc(t.name)}">Excluir</button>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    box.className = '';
+    box.innerHTML = missingTemplates(e)
+      ? emptyState(TREE_ICON, 'Falta preparar o banco', 'Para criar árvores na conta, aplique a migração 20261003_modelos_de_arvore.sql no Supabase.')
+      : '<div class="empty">Erro: ' + esc(friendlyError(e)) + '</div>';
+  }
+}
+window.doCreateTreeTemplate = (ev) => {
+  ev.preventDefault();
+  const name = $('tpl-new-name').value.trim(); if (!name) return false;
+  busy(ev.target, true);
+  const shape = $('tpl-new-shape').value;
+  db.createTreeTemplate(name, { tree: { grid_shape: shape }, nodes: [], edges: [] })
+    .then((t) => { location.href = 'arvore.html?template=' + t.id; })
+    .catch((e) => { showMsg(missingTemplates(e) ? 'Para criar árvores na conta, aplique a migração 20261003_modelos_de_arvore.sql no Supabase.' : 'Não deu pra criar a árvore: ' + friendlyError(e)); busy(ev.target, false); });
+  return false;
+};
+window.deleteTreeTemplate = async (id) => {
+  const ok = await confirmModal({ title: 'Excluir árvore', desc: 'Apaga este modelo da sua conta. As árvores que você já importou nos sistemas continuam lá. Não dá pra desfazer.', confirmLabel: 'Excluir' });
+  if (!ok) return;
+  try { await db.deleteTreeTemplate(id); renderTreeTemplates(); showMsg('Árvore excluída.'); }
+  catch (e) { showMsg('Não deu pra excluir: ' + friendlyError(e)); }
+};
+
 /* ---------- card de sistema (Loja/Favoritos — não navega, abre modal de detalhe) ---------- */
 function systemCardHtml(s, featured) {
   const isFav = _favSysIds.has(s.id);
@@ -705,7 +806,7 @@ function renderOnboard() {
     <div class="ohead"><h3><span class="ic" style="vertical-align:-2px">${ICON.spark}</span>Primeiros passos</h3><button class="x" title="Dispensar" onclick="hideOnboard()">×</button></div>
     <div class="steps">
       ${step(1, _sysCount > 0, 'Crie seu sistema', 'Status, fórmulas, classes, árvores e itens do seu RPG.',
-        `<button class="btn sm auto" onclick="showSec('sistemas')">Ir para Sistemas</button>`)}
+        `<button class="btn sm auto" onclick="showSysSub('criar')">Ir para Criação</button>`)}
       ${step(2, _mesaCount > 0, 'Crie uma mesa', 'Escolha o sistema, dê um nome e ganhe um código de convite.',
         `<button class="btn sm auto" onclick="showSec('mesas');openCreateDialog()">Criar mesa</button>`)}
       ${step(3, false, 'Convide os jogadores', 'Compartilhe o código da mesa — cada um entra como Jogador e monta a ficha.', '')}
@@ -808,7 +909,7 @@ window.doCreate = (ev) => { ev.preventDefault(); const name = $('new-name').valu
   if (!name) { $('new-name').focus(); return false; }
   const sysSel = $('new-system'); sysSel.classList.remove('invalid'); sysSel.removeAttribute('aria-invalid'); $('new-system-err').classList.remove('show');
   if (!systemId) {
-    if (sysSel.disabled) { closeDialog('dlg-create'); showMsg('Crie um sistema primeiro (aba Sistemas) para usar na mesa.'); showSec('sistemas'); return false; }
+    if (sysSel.disabled) { closeDialog('dlg-create'); showMsg('Crie um sistema primeiro (Criação → Criar) para usar na mesa.'); showSysSub('criar'); return false; }
     sysSel.classList.add('invalid'); sysSel.setAttribute('aria-invalid', 'true'); $('new-system-err').classList.add('show'); sysSel.focus();
     return false;
   }
@@ -1268,7 +1369,7 @@ window.deletePackage = async (id) => {
 <!-- celular: barra inferior com os 4 destinos -->
 <nav class="bottom-nav" aria-label="Navegação principal">
   <button type="button" data-sec="mesas" onclick="showSec('mesas')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg><span>Mesas</span></button>
-  <button type="button" data-sec="sistemas" onclick="showSec('sistemas')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 21 12 12 21 3 12Z"/></svg><span>Sistemas</span></button>
+  <button type="button" data-sec="sistemas" onclick="showSec('sistemas')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 21 12 12 21 3 12Z"/></svg><span>Criação</span></button>
   <button type="button" data-sec="itens" onclick="showSec('itens')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8h12l-1 12H7L6 8Z"/><path d="M9 8a3 3 0 0 1 6 0"/></svg><span>Itens</span></button>
   <button type="button" onclick="toggleUserMenu()"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-4 3.4-6 7-6s6.2 2 7 6"/></svg><span>Conta</span></button>
 </nav>

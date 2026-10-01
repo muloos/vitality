@@ -31,7 +31,7 @@ function showBootError(msg) {
 // no banner central acima, com a mensagem exata, em vez de travar tudo em silêncio.
 let db, mountHelp, mountThemeToggle, openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus;
 try {
-  db = await import('./lib/db.js?v=40');
+  db = await import('./lib/db.js?v=43');
   ({ mountHelp, mountThemeToggle, openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus } = await import('./lib/ui.js?v=7'));
 } catch (e) {
   showBootError(`Não deu pra carregar os módulos da página (db.js/ui.js): ${e && e.message ? e.message : e}`);
@@ -253,7 +253,10 @@ const ICONS = {
   sparkle: ic('<path d="M12 3v3M12 18v3M3 12h3M18 12h3M6 6l2 2M16 16l2 2M18 6l-2 2M8 16l-2 2"/><circle cx="12" cy="12" r="2.4"/>'),
 };
 const params = new URLSearchParams(location.search);
-const treeId = params.get('tree'), systemId = params.get('system');
+// ?template=<id>: modelo de árvore da conta (Criação → Criar → Árvores), sem sistema — o editor é o
+// mesmo, mas trabalha numa cópia na memória e só grava na conta com "Salvar modelo" (ver setupTemplateMode)
+const templateParam = params.get('template'), isTemplate = !!templateParam;
+const treeId = params.get('tree') || (isTemplate ? 'modelo' : null), systemId = params.get('system');
 // kind ('ok'/undefined=erro) só estiliza a cor — várias chamadas já passavam isso mas era
 // ignorado, então sucesso e erro apareciam idênticos
 const showMsg = (t, kind) => { const el = $('count'); el.textContent = t; el.className = 'count' + (kind === 'ok' ? ' ok' : ' err'); setTimeout(() => refreshCount(), 2500); };
@@ -1322,13 +1325,91 @@ setTimeout(() => {
   if (_bootDone) return;
   showBootError(`Travou na etapa "${_bootStep}" por mais de 10s (sem erro nenhum lançado — provavelmente uma chamada de rede que não voltou).`);
 }, 10000);
+/* ---------- modelo de árvore (Criação → Criar → Árvores) ----------
+   O editor continua chamando db.insertTreeNode/updateTreeNode/... como sempre; aqui essas funções
+   trocam o banco por uma cópia do modelo na memória (tplStore). "Salvar modelo" grava a cópia inteira
+   na conta (tree_templates.data). Sair com alterações não salvas pede confirmação. */
+let tplId = null, tplDirty = false, tplStore = null, tplReal = null;
+async function setupTemplateMode() {
+  tplReal = db;
+  const row = await db.getTreeTemplate(templateParam);
+  if (!row) throw new Error('Modelo de árvore não encontrado. Ele pode ter sido excluído.');
+  tplId = row.id;
+  const d = row.data || {};
+  const base = { grid_shape: 'octagon', edge_style: 'lines', bus_dir: 'auto', require_char_level: false, bus_config: {} };
+  const nodeDefaults = { size: 'small', shape: 'circle', color: null, cost: 1, descr: '', level: null, enabled: true };
+  tplStore = {
+    tree: { ...base, ...(d.tree || {}), id: treeId, name: row.name },
+    nodes: (d.nodes || []).map((n) => ({ ...nodeDefaults, ...n })),
+    edges: (d.edges || []).map((e) => ({ ...e })),
+  };
+  const uid = () => 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  const touch = () => { tplDirty = true; paintTemplateBar(); };
+  const copy = (o) => JSON.parse(JSON.stringify(o));
+  db = {
+    ...tplReal,
+    getSystemTree: async () => copy(tplStore.tree),
+    loadSystemTree: async () => ({ nodes: copy(tplStore.nodes), edges: copy(tplStore.edges) }),
+    listStats: async () => [],
+    insertTreeNode: async (_t, node) => { const n = { ...nodeDefaults, ...copy(node), id: uid() }; tplStore.nodes.push(n); touch(); return { ...n }; },
+    updateTreeNode: async (id, patch) => { const n = tplStore.nodes.find((x) => x.id === id); if (n) Object.assign(n, copy(patch)); touch(); return n ? { ...n } : null; },
+    deleteTreeNode: async (id) => { tplStore.nodes = tplStore.nodes.filter((x) => x.id !== id); tplStore.edges = tplStore.edges.filter((e) => e.a !== id && e.b !== id); touch(); },
+    insertTreeEdge: async (_t, a, b) => {
+      if (tplStore.edges.some((e) => (e.a === a && e.b === b) || (e.a === b && e.b === a))) return null;
+      const e = { id: uid(), a, b }; tplStore.edges.push(e); touch(); return { ...e };
+    },
+    deleteTreeEdge: async (id) => { tplStore.edges = tplStore.edges.filter((e) => e.id !== id); touch(); },
+    updateSystemTree: async (_id, patch) => { Object.assign(tplStore.tree, copy(patch)); touch(); return copy(tplStore.tree); },
+  };
+  $('tpl-bar').hidden = false;
+  $('tpl-name').value = row.name;
+  addEventListener('beforeunload', (ev) => { if (tplDirty) { ev.preventDefault(); ev.returnValue = ''; } });
+}
+function paintTemplateBar() {
+  const st = $('tpl-state'); if (!st) return;
+  st.textContent = tplDirty ? 'Alterações não salvas' : 'Salvo na sua conta';
+  st.classList.toggle('dirty', tplDirty);
+}
+window.markTemplateDirty = () => { tplDirty = true; paintTemplateBar(); };
+const missingTemplatesTable = (e) => /tree_templates/.test(e?.message || '') || e?.code === '42P01' || e?.code === 'PGRST205';
+window.saveTemplate = async () => {
+  if (!isTemplate || !tplStore) return;
+  const name = ($('tpl-name').value || '').trim();
+  if (!name) { showMsg('Dê um nome ao modelo antes de salvar.'); $('tpl-name').focus(); return; }
+  // o desenho do barramento grava com atraso (saveBusConfig); aqui pega sempre o que está na tela
+  if (hasBusConfig) tplStore.tree.bus_config = JSON.parse(JSON.stringify(busConfig));
+  const btn = $('tpl-save'); btn.classList.add('loading'); btn.disabled = true;
+  try {
+    await tplReal.updateTreeTemplate(tplId, { name, data: tplReal.treeTemplateData(tplStore.tree, tplStore.nodes, tplStore.edges) });
+    tplStore.tree.name = name;
+    $('tree-name').innerHTML = esc(name) + '<small>MODELO DE ÁRVORE</small>';
+    tplDirty = false; paintTemplateBar();
+    showMsg('Modelo salvo na sua conta.', 'ok');
+  } catch (e) {
+    showMsg(missingTemplatesTable(e) ? 'Para salvar modelos, aplique a migração 20261003_modelos_de_arvore.sql no Supabase.' : 'Não deu pra salvar: ' + e.message);
+  } finally { btn.classList.remove('loading'); btn.disabled = false; }
+};
+// árvore de um sistema → modelo novo na conta, com o desenho atual (o original não muda)
+window.saveAsTemplate = async () => {
+  if (!isGM || isTemplate) return;
+  const btn = $('as-template'); if (btn) { btn.classList.add('loading'); btn.disabled = true; }
+  try {
+    const tree = await db.getSystemTree(treeId);
+    const data = db.treeTemplateData({ ...tree, vias, bus_config: hasBusConfig ? busConfig : tree.bus_config }, nodes, edges);
+    const row = await db.createTreeTemplate(tree.name || 'Árvore', data);
+    showMsg(`Modelo "${row.name}" salvo. Ele fica em Criação → Criar → Árvores.`, 'ok');
+  } catch (e) {
+    showMsg(missingTemplatesTable(e) ? 'Para salvar modelos, aplique a migração 20261003_modelos_de_arvore.sql no Supabase.' : 'Não deu pra salvar o modelo: ' + e.message);
+  } finally { if (btn) { btn.classList.remove('loading'); btn.disabled = false; } }
+};
+
 (async () => {
   bootStep('checando parâmetros da URL');
   if (!treeId) { location.href = 'app.html'; return; }
   // sempre volta pra tela inicial do app — o link antigo mandava pra dentro do sistema do Mestre
   // mesmo quando quem clicou era um jogador (mesa.html sempre manda "system=" no link,
   // GM ou não), o que abria a tela de edição do sistema pra gente sem permissão nenhuma
-  $('back').href = 'app.html';
+  $('back').href = isTemplate ? 'app.html?criar=arvores' : 'app.html';
   bootStep('confirmando sessão');
   const session = await db.requireSession();
   if (!session) return;
@@ -1339,16 +1420,22 @@ setTimeout(() => {
   $('who').textContent = myName;
   $('nav-av').textContent = myName.trim().charAt(0).toUpperCase() || '?';
   try {
+    if (isTemplate) { bootStep('carregando o modelo de árvore'); await setupTemplateMode(); }
     bootStep('buscando a árvore (getSystemTree)');
     const tree = await db.getSystemTree(treeId);
-    bootStep('confirmando posse do sistema (getSystem)');
-    try {
-      const sys = await db.getSystem(tree.system_id);
-      isGM = !!(sys && sys.owner_id === session.user.id);
-    } catch (_) { isGM = false; } // falhou em confirmar posse — trata como jogador (falha segura)
+    if (isTemplate) isGM = true; // modelo é sempre da própria conta (a RLS só devolve os seus)
+    else {
+      bootStep('confirmando posse do sistema (getSystem)');
+      try {
+        const sys = await db.getSystem(tree.system_id);
+        isGM = !!(sys && sys.owner_id === session.user.id);
+      } catch (_) { isGM = false; } // falhou em confirmar posse — trata como jogador (falha segura)
+    }
     document.body.classList.toggle('is-gm', isGM);
+    document.body.classList.toggle('is-template', isTemplate);
     updateEpanelOffset();
-    $('tree-name').innerHTML = esc(tree?.name || 'Árvore') + '<small>' + (isGM ? 'EDITOR DA ÁRVORE DE ESFERAS' : 'ÁRVORE DE ESFERAS') + '</small>';
+    $('tree-name').innerHTML = esc(tree?.name || 'Árvore') + '<small>' + (isTemplate ? 'MODELO DE ÁRVORE' : isGM ? 'EDITOR DA ÁRVORE DE ESFERAS' : 'ÁRVORE DE ESFERAS') + '</small>';
+    const asTpl = $('as-template'); if (asTpl) asTpl.hidden = !isGM || isTemplate || embedded;
     applyBg(tree?.bg_color || '#1b1536');
     $('bg-color').value = tree?.bg_color || '#1b1536';
     gridShape = tree?.grid_shape || 'octagon'; $('shape-select').value = gridShape;
@@ -1366,7 +1453,7 @@ setTimeout(() => {
       buses: Array.isArray(tree?.bus_config?.buses) ? JSON.parse(JSON.stringify(tree.bus_config.buses)) : null };
     renderViaChips(); renderViaManager();
     bootStep('carregando status do sistema (listStats)');
-    try { stats = await db.listStats(tree.system_id); } catch (_) { stats = []; } // sem atributos cadastrados ainda — ok
+    try { stats = isTemplate ? [] : await db.listStats(tree.system_id); } catch (_) { stats = []; } // sem atributos cadastrados ainda — ok
     bootStep('carregando esferas e conexões (loadSystemTree)');
     const data = await db.loadSystemTree(treeId);
     nodes = data.nodes.map((n) => ({ ...n }));
@@ -1400,6 +1487,7 @@ setTimeout(() => {
   // câmera ainda não tiver sido posicionada, o cálculo do que está "visível" sairia errado logo
   // no primeiro carregamento (culling tudo, ou a área errada).
   applyView(); render(); updateCoreAnchor(); requestAnimationFrame(tick);
+  if (isTemplate) { tplDirty = false; paintTemplateBar(); } // o Núcleo criado sozinho num modelo vazio não conta como alteração
   _bootDone = true;
   console.log(BOOT_LOG, 'concluído — W/H =', W, H, '· view =', view);
 })();

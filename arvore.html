@@ -196,6 +196,13 @@
     letter-spacing:0;text-transform:none;color:var(--ink-dim);white-space:nowrap}
   .bus-help{margin:4px 0 14px;padding-left:18px;font-family:var(--serif);font-size:13px;line-height:1.6;color:var(--ink-dim)}
   .bus-help b{color:var(--ink);font-weight:600}
+  .tpl-bar{display:flex;align-items:center;gap:8px;margin-left:8px;min-width:0}
+  .tpl-bar[hidden],#as-template[hidden]{display:none}
+  .tpl-bar input{width:220px;min-width:0;height:34px}
+  .tpl-state{font-family:var(--mono);font-size:11px;color:var(--ink-dim);white-space:nowrap}
+  .tpl-state.dirty{color:var(--warning)}
+  body.is-template #tree-name{display:none}
+  @media (max-width:820px){ .tpl-state,#as-template{display:none} .tpl-bar input{width:130px} }
   .batch-count{font-family:var(--mono);font-size:11px;color:var(--ink-dim);margin:0 0 4px;line-height:1.6}
   .batch-summary{font-family:var(--serif);font-size:15px;color:var(--ink);margin:0 0 12px}
   .batch-grow{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px}
@@ -270,7 +277,14 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
   <a class="topbar-brand" href="app.html"><img class="mark logo" src="lib/logo.png" alt="" aria-hidden="true">VITALITY</a>
   <a class="iconbtn" id="back" href="app.html" title="Voltar" style="text-decoration:none"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="M11 18l-6-6 6-6"/></svg></a>
   <div class="title" id="tree-name" style="font-size:14px">…</div>
+  <div class="tpl-bar" id="tpl-bar" hidden>
+    <label class="sr-only" for="tpl-name">Nome do modelo</label>
+    <input id="tpl-name" class="ffx-field" maxlength="80" placeholder="Nome do modelo" oninput="markTemplateDirty()">
+    <span class="tpl-state" id="tpl-state" role="status" aria-live="polite"></span>
+    <button type="button" class="btn go sm auto" id="tpl-save" onclick="saveTemplate()">Salvar modelo</button>
+  </div>
   <div class="spacer"></div>
+  <button type="button" class="btn sm auto" id="as-template" hidden onclick="saveAsTemplate()" title="Guarda uma cópia desta árvore na sua conta, para importar em outros sistemas">Salvar como modelo</button>
   <div class="nav-user" id="nav-user">
     <button type="button" class="chip" id="nav-user-btn" aria-haspopup="menu" aria-expanded="false" onclick="toggleUserMenu()">
       <span class="av" id="nav-av">?</span><b id="who">…</b><span style="color:var(--ink-faint)">▾</span>
@@ -508,6 +522,6 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
 <div class="count" id="count"></div>
 <div class="via-legend" id="via-legend" style="display:none"></div>
 
-<script src="arvore.js?v=35"></script>
+<script src="arvore.js?v=36"></script>
 </body>
 </html>

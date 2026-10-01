@@ -196,6 +196,14 @@
     letter-spacing:0;text-transform:none;color:var(--ink-dim);white-space:nowrap}
   .bus-help{margin:4px 0 14px;padding-left:18px;font-family:var(--serif);font-size:13px;line-height:1.6;color:var(--ink-dim)}
   .bus-help b{color:var(--ink);font-weight:600}
+  .batch-count{font-family:var(--mono);font-size:11px;color:var(--ink-dim);margin:0 0 4px;line-height:1.6}
+  .batch-summary{font-family:var(--serif);font-size:15px;color:var(--ink);margin:0 0 12px}
+  .batch-grow{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px}
+  .batch-tip{font-family:var(--serif);font-size:13px;line-height:1.5;color:var(--ink-dim);margin:0 0 14px}
+  .batch-tip b{color:var(--ink);font-weight:600}
+  .batch-cut{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:0 0 16px;padding:10px 12px;--fill:var(--surface-2);--frame:var(--warning)}
+  .batch-cut[hidden],.batch-summary[hidden]{display:none}
+  .batch-cut p{flex:1 1 180px;margin:0;font-family:var(--serif);font-size:13px;line-height:1.5;color:var(--ink)}
   .bus-nomig{font-family:var(--serif);font-size:13px;line-height:1.5;color:var(--warning,#e3ad48);margin:0 0 12px}
   .via-row.via-lvl{flex-wrap:wrap;justify-content:space-between;gap:6px 10px;margin:-2px 0 10px 35px}
   .via-lvl .tool{padding:6px 9px;white-space:nowrap}
@@ -425,7 +433,17 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
 <div class="epanel" id="batchpanel">
   <div class="hd"><span class="eye">Seleção de habilidades</span><button class="x" onclick="clearAreaSelection()">×</button></div>
   <div class="bd">
-    <p id="batch-count" style="font-family:var(--mono);font-size:11px;color:var(--ink-dim);margin:0 0 14px;line-height:1.6">0 habilidades selecionadas</p>
+    <p id="batch-count" class="batch-count">0 habilidades selecionadas</p>
+    <p id="batch-summary" class="batch-summary" hidden></p>
+    <div class="batch-grow">
+      <button type="button" class="tool" onclick="selectWholeBranch()" title="Seleciona todas as habilidades dos ramos do Núcleo que já estão na seleção">Ramo inteiro</button>
+      <button type="button" class="tool lvl-only" onclick="selectSameLevel()" title="Soma à seleção as habilidades do mesmo nível, nos mesmos ramos">Mesmo nível</button>
+    </div>
+    <p class="batch-tip"><b>Shift</b> + clique soma ou tira uma habilidade. Na Área, <b>Shift</b> + arrasto soma, <b>Alt</b> + arrasto tira. Arraste uma habilidade selecionada para mover todas.</p>
+    <div id="batch-cut" class="batch-cut cf-m" hidden>
+      <p id="batch-cut-text"></p>
+      <button type="button" class="btn sm" onclick="cutSelectionLinks()">Cortar ligações</button>
+    </div>
     <div class="section-title" style="margin:0 0 10px">Editar seleção</div>
     <div class="fld"><label>Via / afinidade</label><div class="chips" id="batch-fac"></div></div>
     <div class="fld"><label>Cor <span style="font-weight:400;color:var(--ink-faint);text-transform:none">(opcional — sobrescreve a via nas selecionadas)</span></label>
@@ -435,15 +453,15 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
       </div>
     </div>
     <div class="fld"><label>Tamanho</label><div class="chips" id="batch-size">
-      <div class="chip" onclick="batchSet('size','small')">Pequena</div>
-      <div class="chip" onclick="batchSet('size','medium')">Média</div>
-      <div class="chip" onclick="batchSet('size','large')">Grande</div></div></div>
+      <div class="chip" data-s="small" onclick="batchSet('size','small')">Pequena</div>
+      <div class="chip" data-s="medium" onclick="batchSet('size','medium')">Média</div>
+      <div class="chip" data-s="large" onclick="batchSet('size','large')">Grande</div></div></div>
     <div class="fld"><label>Forma</label><div class="chips" id="batch-shape">
-      <div class="chip" onclick="batchSet('shape','circle')">Círculo</div>
-      <div class="chip" onclick="batchSet('shape','diamond')">Losango</div>
-      <div class="chip" onclick="batchSet('shape','triangle')">Triângulo</div>
-      <div class="chip" onclick="batchSet('shape','square')">Quadrado</div>
-      <div class="chip" onclick="batchSet('shape','hexagon')">Hexágono</div></div></div>
+      <div class="chip" data-sh="circle" onclick="batchSet('shape','circle')">Círculo</div>
+      <div class="chip" data-sh="diamond" onclick="batchSet('shape','diamond')">Losango</div>
+      <div class="chip" data-sh="triangle" onclick="batchSet('shape','triangle')">Triângulo</div>
+      <div class="chip" data-sh="square" onclick="batchSet('shape','square')">Quadrado</div>
+      <div class="chip" data-sh="hexagon" onclick="batchSet('shape','hexagon')">Hexágono</div></div></div>
     <div class="fld lvl-only"><label for="batch-level">Nível</label>
       <div style="display:flex;gap:8px;align-items:center">
         <input id="batch-level" type="number" min="1" max="99" inputmode="numeric" placeholder="—" style="max-width:90px">
@@ -451,8 +469,8 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
         <button type="button" class="tool" onclick="autoLevels()">Numerar pela camada</button>
       </div></div>
     <div class="fld"><label>Estado (linhas ligadas ficam vivas/apagadas)</label><div class="chips" id="batch-enabled">
-      <div class="chip" onclick="batchSet('enabled',true)">Ativada</div>
-      <div class="chip" onclick="batchSet('enabled',false)">Desativada</div></div></div>
+      <div class="chip" data-e="1" onclick="batchSet('enabled',true)">Ativada</div>
+      <div class="chip" data-e="0" onclick="batchSet('enabled',false)">Desativada</div></div></div>
     <div class="section-title" id="dup-title" style="margin:16px 0 10px">Duplicar seleção</div>
     <div class="chips" id="dup-color-mode">
       <div class="chip on" data-dcm="same" onclick="setDupColorMode('same')">Manter cor</div>
@@ -487,6 +505,6 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
 <div class="count" id="count"></div>
 <div class="via-legend" id="via-legend" style="display:none"></div>
 
-<script src="arvore.js?v=32"></script>
+<script src="arvore.js?v=33"></script>
 </body>
 </html>

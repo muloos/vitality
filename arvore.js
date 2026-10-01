@@ -386,7 +386,7 @@ function renderViaChips() {
   if (selected) $('e-fac').querySelectorAll('.chip').forEach((c) => c.classList.toggle('on', c.dataset.f === selected.fac));
   // mesmos chips, no painel de edição em lote — aplica a via pra toda a seleção de área de uma vez
   $('batch-fac').innerHTML = vias.map((v) =>
-    `<div class="chip" style="--vc:${v.color}" onclick="batchSet('fac','${v.key}')">${esc(v.name)}</div>`).join('');
+    `<div class="chip" data-f="${v.key}" style="--vc:${v.color}" onclick="batchSet('fac','${v.key}')">${esc(v.name)}</div>`).join('');
   renderViaLegend();
 }
 // legenda fixa "nome da via — cor" num canto do canvas — antes só dava pra saber a via de uma
@@ -506,8 +506,8 @@ function linearDir(P, C) {
 const TO_LOCAL = { down: (p) => ({ l: p.x, d: p.y }), up: (p) => ({ l: p.x, d: -p.y }), right: (p) => ({ l: p.y, d: p.x }), left: (p) => ({ l: p.y, d: -p.x }) };
 const TO_WORLD = { down: (l, d) => ({ x: l, y: d }), up: (l, d) => ({ x: l, y: -d }), right: (l, d) => ({ x: d, y: l }), left: (l, d) => ({ x: -d, y: l }) };
 
-// "Nível pelo anel" / "pela fileira": numera as camadas de cada via a partir do Núcleo (1, 2, 3…),
-// sem buracos — anéis ou fileiras vazias não viram níveis
+// "Nível pelo anel" / "pela fileira": numera as camadas de cada via, em cada ramo do Núcleo, a partir
+// dele (1, 2, 3…), sem buracos — anéis ou fileiras vazias não viram níveis
 window.autoLevels = async () => {
   if (!isGM || !hasLevelCol) return;
   const core = coreNode || nodes.find((n) => n.kind === 'core');
@@ -521,7 +521,7 @@ window.autoLevels = async () => {
     return Math.round((TO_LOCAL[dir](n).d - base) / LINEAR_STEP);
   };
   const byVia = new Map();
-  pool.forEach((n) => { const k = n.fac || ''; (byVia.get(k) || byVia.set(k, []).get(k)).push(n); });
+  pool.forEach((n) => { const k = branchOf.get(n.id) + '|' + (n.fac || ''); (byVia.get(k) || byVia.set(k, []).get(k)).push(n); });
   const next = new Map();
   byVia.forEach((list) => {
     const layers = [...new Set(list.map(layer))].sort((a, b) => a - b);
@@ -530,7 +530,7 @@ window.autoLevels = async () => {
   const changed = pool.filter((n) => (n.level ?? null) !== next.get(n.id));
   if (!changed.length) { showMsg('Os níveis já estão numerados assim.', 'ok'); return; }
   const ok = await confirmModal({ title: linear ? 'Nível pela fileira' : 'Nível pelo anel', danger: false, confirmLabel: 'Numerar',
-    desc: `Define o nível de ${changed.length} habilidade(s) ${areaSelection.size ? 'selecionada(s)' : 'da árvore'} pela ${linear ? 'fileira' : 'distância do Núcleo'}, contando 1, 2, 3… em cada via. Os níveis que você já tinha colocado nelas serão trocados.` });
+    desc: `Define o nível de ${changed.length} habilidade(s) ${areaSelection.size ? 'selecionada(s)' : 'da árvore'} pela ${linear ? 'fileira' : 'distância do Núcleo'}, contando 1, 2, 3… em cada via${branchCount > 1 ? ' e em cada ramo do Núcleo' : ''}. Os níveis que você já tinha colocado nelas serão trocados.` });
   if (!ok) return;
   changed.forEach((n) => { n.level = next.get(n.id); });
   busDirty = true;
@@ -539,20 +539,28 @@ window.autoLevels = async () => {
 };
 
 // "Ligar nível a nível": cada esfera de nível N da via se liga a todas as de nível N+1 (o que já estiver
-// ligado fica como está); nível 1 sem nenhuma conexão se liga ao Núcleo
+// ligado fica como está); nível 1 sem nenhuma conexão se liga ao Núcleo. Nunca liga um ramo do Núcleo a
+// outro (isso juntaria os dois): com seleção de área, só liga dentro dela; sem seleção, só dentro de
+// cada ramo. Uma coluna nova, ainda solta, se liga selecionando ela com a Área.
 window.linkViaLevels = async (key) => {
   if (!isGM || !hasLevelCol) return;
   const via = viaByKey(key);
-  const list = nodes.filter((n) => n.fac === key && n.kind !== 'core' && n.level != null);
+  const list = nodes.filter((n) => n.fac === key && n.kind !== 'core' && n.level != null && (!areaSelection.size || areaSelection.has(n.id)));
   if (!list.length) { showMsg(`Defina o nível das habilidades de "${via?.name || 'desta via'}" primeiro.`); return; }
   const has = (a, b) => edges.some((e) => (e.a === a && e.b === b) || (e.a === b && e.b === a));
   const pairs = [];
-  list.forEach((p) => list.forEach((c) => { if (c.level === p.level + 1 && !has(p.id, c.id)) pairs.push([p.id, c.id]); }));
+  const ok2 = (p, c) => areaSelection.size || sameBranch(p, c);
+  let skipped = 0;
+  list.forEach((p) => list.forEach((c) => { if (c.level === p.level + 1 && !has(p.id, c.id)) { if (ok2(p, c)) pairs.push([p.id, c.id]); else skipped++; } }));
   const core = coreNode || nodes.find((n) => n.kind === 'core');
   if (core) list.filter((n) => n.level === 1 && !edges.some((e) => e.a === n.id || e.b === n.id)).forEach((n) => pairs.push([core.id, n.id]));
-  if (!pairs.length) { showMsg('Os níveis desta via já estão todos ligados.', 'ok'); return; }
+  if (!pairs.length) {
+    showMsg(skipped ? 'Nada a ligar dentro dos ramos. Para ligar uma coluna ainda solta, selecione ela com a ferramenta Área e use "Ligar nível a nível" de novo.'
+      : 'Os níveis desta via já estão todos ligados.', skipped ? undefined : 'ok');
+    return;
+  }
   const ok = await confirmModal({ title: 'Ligar nível a nível', danger: false, confirmLabel: 'Ligar',
-    desc: `Cria ${pairs.length} conexão(ões) em "${via?.name || 'esta via'}": cada habilidade passa a levar a todas as do nível seguinte.` });
+    desc: `Cria ${pairs.length} conexão(ões) em "${via?.name || 'esta via'}"${areaSelection.size ? ', só entre as habilidades selecionadas' : ''}: cada habilidade passa a levar a todas as do nível seguinte${!areaSelection.size && branchCount > 1 ? ' do mesmo ramo' : ''}.` });
   if (!ok) return;
   try {
     const made = await Promise.all(pairs.map(([a, b]) => db.insertTreeEdge(treeId, a, b)));
@@ -562,10 +570,43 @@ window.linkViaLevels = async (key) => {
   } catch (e) { showMsg(e.message); }
 };
 
-// ---------- barramento: um grupo = (via, nível N → N+1) em que TODA esfera de N liga a TODA de N+1 ----------
+// ---------- ramos do Núcleo ----------
+// Um ramo é o que continua ligado entre si quando se tira o Núcleo: cada coluna/galho que sai dele
+// (Defensor de um lado, Atacante do outro). Níveis, barramento e "uma escolha por nível" valem dentro
+// do ramo — o nível 2 de um ramo não tem nada a ver com o nível 2 de outro. Sem marcação nenhuma:
+// basta as colunas só se encontrarem no Núcleo. A etiqueta do ramo é o menor id dele; o número
+// ("Ramo 1, 2…") segue a volta em torno do Núcleo, começando em cima e indo no sentido do relógio.
+let branchOf = new Map(), branchNo = new Map(), branchCount = 0;
+function computeBranches() {
+  const parent = new Map();
+  const find = (x) => { while (parent.get(x) !== x) { parent.set(x, parent.get(parent.get(x))); x = parent.get(x); } return x; };
+  for (const n of nodes) if (n.kind !== 'core') parent.set(n.id, n.id);
+  for (const e of edges) if (parent.has(e.a) && parent.has(e.b)) { const ra = find(e.a), rb = find(e.b); if (ra !== rb) parent.set(ra, rb); }
+  const tag = new Map(), members = new Map();
+  for (const id of parent.keys()) {
+    const r = find(id), s = String(id);
+    if (!tag.has(r) || s < tag.get(r)) tag.set(r, s);
+    (members.get(r) || members.set(r, []).get(r)).push(id);
+  }
+  branchOf = new Map([...parent.keys()].map((id) => [id, tag.get(find(id))]));
+  const cx = coreNode ? coreNode.x : 0, cy = coreNode ? coreNode.y : 0;
+  const order = [...members.entries()].map(([r, ids]) => {
+    const ns = ids.map(byId).filter(Boolean);
+    const mx = ns.reduce((s, n) => s + n.x, 0) / ns.length - cx, my = ns.reduce((s, n) => s + n.y, 0) / ns.length - cy;
+    return { t: tag.get(r), a: Math.atan2(mx, -my) };
+  }).sort((p, q) => p.a - q.a);
+  branchNo = new Map(order.map((b, i) => [b.t, i + 1]));
+  branchCount = order.length;
+}
+const sameBranch = (a, b) => branchOf.get(a.id) === branchOf.get(b.id);
+// esferas do mesmo ramo (o Núcleo não pertence a nenhum)
+const branchMembers = (tag) => nodes.filter((n) => n.kind !== 'core' && branchOf.get(n.id) === tag);
+
+// ---------- barramento: um grupo = (ramo, via, nível N → N+1) ----------
 let busGroups = [], busEdges = new Set(), busDirty = true;
-// grupo = (nível N → N+1) e, no modo "por via", a via. Entra toda ligação entre esferas de níveis
-// vizinhos do mesmo grupo — o barramento é um desenho, não muda quem liga em quem.
+// grupo = (ramo do Núcleo, nível N → N+1) e, no modo "por via", a via. Entra toda ligação entre
+// esferas de níveis vizinhos do mesmo grupo — o barramento é um desenho, não muda quem liga em quem.
+// Chave: "r<ramo>/<via ou *>|<nível>"; com um ramo só, "<via ou *>|<nível>" (o formato de antes).
 function computeBusGroups() {
   busGroups = []; busEdges = new Set();
   if (edgeStyle !== 'bus') return;
@@ -576,12 +617,50 @@ function computeBusGroups() {
     if (Math.abs(A.level - B.level) !== 1) continue;
     if (busConfig.group === 'via' && A.fac !== B.fac) continue;
     const [p, c] = A.level < B.level ? [A, B] : [B, A];
-    const key = (busConfig.group === 'via' ? (p.fac || '') : '*') + '|' + p.level;
-    let g = byKey.get(key);
-    if (!g) { g = { key, level: p.level, fac: busConfig.group === 'via' ? p.fac : null, parents: new Set(), children: new Set() }; byKey.set(key, g); }
+    const branch = branchOf.get(p.id);
+    const sub = (busConfig.group === 'via' ? (p.fac || '') : '*') + '|' + p.level;
+    const k = branch + '\n' + sub;
+    let g = byKey.get(k);
+    if (!g) { g = { sub, branch, level: p.level, fac: busConfig.group === 'via' ? p.fac : null, parents: new Set(), children: new Set() }; byKey.set(k, g); }
     g.parents.add(p.id); g.children.add(c.id); busEdges.add(e);
   }
-  byKey.forEach((g) => busGroups.push({ ...g, parents: [...g.parents], children: [...g.children] }));
+  const multi = new Set([...byKey.values()].map((g) => g.branch)).size > 1;
+  byKey.forEach((g) => busGroups.push({ ...g, key: multi ? `r${g.branch}/${g.sub}` : g.sub, parents: [...g.parents], children: [...g.children] }));
+  adoptOrphanBusKeys();
+}
+// desenhos guardados com uma chave que não existe mais (a árvore ganhou ramos, ou o ramo mudou de
+// etiqueta porque ganhou/perdeu esferas): a barra vai para o grupo do mesmo nível mais perto dela que
+// ainda não tem desenho, e o ajuste de cada ligação vai para o grupo que tem aquela esfera.
+// Só na memória — grava junto na próxima edição do Mestre.
+function adoptOrphanBusKeys() {
+  const live = new Map(busGroups.map((g) => [g.key, g]));
+  const subOf = (key) => key.slice(key.indexOf('/') + 1);
+  for (const key of Object.keys(busConfig.paths)) {
+    if (live.has(key)) continue;
+    const path = busConfig.paths[key];
+    if (!Array.isArray(path) || !path.length) continue;
+    const px = path.reduce((s, p) => s + p[0], 0) / path.length, py = path.reduce((s, p) => s + p[1], 0) / path.length;
+    let best = null, bestD = Infinity;
+    for (const g of busGroups) {
+      if (g.sub !== subOf(key) || busConfig.paths[g.key]) continue;
+      const ns = [...g.parents, ...g.children].map(byId).filter(Boolean); if (!ns.length) continue;
+      const d = Math.hypot(ns.reduce((s, n) => s + n.x, 0) / ns.length - px, ns.reduce((s, n) => s + n.y, 0) / ns.length - py);
+      if (d < bestD) { bestD = d; best = g; }
+    }
+    if (best) { busConfig.paths[best.key] = path; delete busConfig.paths[key]; }
+  }
+  for (const key of Object.keys(busConfig.stubs)) {
+    if (live.has(key)) continue;
+    const moved = busConfig.stubs[key];
+    for (const id of Object.keys(moved)) {
+      const g = busGroups.find((x) => x.parents.some((p) => String(p) === id) || x.children.some((c) => String(c) === id));
+      if (!g) continue;
+      const dest = busConfig.stubs[g.key] || (busConfig.stubs[g.key] = {});
+      if (!dest[id]) dest[id] = moved[id];
+      delete moved[id];
+    }
+    if (!Object.keys(moved).length) delete busConfig.stubs[key];
+  }
 }
 // ponto mais próximo de (px,py) num traçado (lista de pontos) — devolve o ponto, o trecho e a distância
 function nearestOnPath(pts, px, py) {
@@ -827,7 +906,8 @@ function selectBus(key, handle = null) {
   closeOtherPanels('buspanel');
   const g = busGroupByKey(key);
   const via = g?.fac != null ? viaByKey(g.fac) : null;
-  $('bus-title').textContent = g ? `Nível ${g.level} → ${g.level + 1}${via ? ' · ' + via.name : ''}` : 'Barramento';
+  const ramo = g && branchCount > 1 ? `Ramo ${branchNo.get(g.branch) || '?'} · ` : '';
+  $('bus-title').textContent = g ? `${ramo}Nível ${g.level} → ${g.level + 1}${via ? ' · ' + via.name : ''}` : 'Barramento';
   refreshBusPanel();
   $('bus-nomig').hidden = hasBusConfig;
   $('buspanel').classList.add('open');
@@ -1477,6 +1557,7 @@ function render() {
   busDirty = true;
   coreNode = nodes.find((n) => n.kind === 'core') || null;
   rebuildIndexes();
+  computeBranches();
   computeNodeDists();
   refreshCount();
   buildRings(); // o alcance dos anéis decorativos depende de onde as esferas estão — ver ringExtent()
@@ -1861,22 +1942,45 @@ function hitTestEdgeAt(wx, wy) {
 // arrastar esfera (Mestre) — chamado pelo pointerdown de "stage" quando o hit-test acha uma esfera.
 // Sem setAttribute/updateEdges nenhum: só muda n.x/n.y, o próximo quadro de drawWorld() já desenha
 // a posição atual. Mantém o caso especial do Núcleo (a âncora dos anéis/grade decorativos).
-function startNodeDrag(n, ev) {
+// arrastar uma esfera que faz parte da seleção de área leva a seleção inteira junto (a esfera pega
+// encaixa na grade e as outras andam o mesmo tanto); as barras do barramento desenhadas à mão cujas
+// esferas estão todas na seleção vão junto também
+function startNodeDrag(n, ev, onClick) {
   let moved = false; const sx = ev.clientX, sy = ev.clientY, ox = n.x, oy = n.y;
+  const group = areaSelection.size > 1 && areaSelection.has(n.id) ? nodes.filter((x) => x !== n && x.kind !== 'core' && areaSelection.has(x.id)) : [];
+  const orig = new Map(group.map((x) => [x, { x: x.x, y: x.y }]));
+  const busKeys = group.length ? busGroups.filter((g) => [...g.parents, ...g.children].every((id) => areaSelection.has(id))).map((g) => g.key) : [];
+  const busOrig = JSON.parse(JSON.stringify({ paths: Object.fromEntries(busKeys.filter((k) => busConfig.paths[k]).map((k) => [k, busConfig.paths[k]])),
+    stubs: Object.fromEntries(busKeys.filter((k) => busConfig.stubs[k]).map((k) => [k, busConfig.stubs[k]])) }));
+  const shift = ([x, y], dx, dy) => [x + dx, y + dy];
   try { stage.setPointerCapture(ev.pointerId); } catch (_) {}
   const mv = (e) => { const dx = (e.clientX-sx)/view.s, dy = (e.clientY-sy)/view.s;
     if (!moved && Math.abs(e.clientX-sx)+Math.abs(e.clientY-sy) > 4) { moved = true; if (n.kind !== 'core') gridPolarEl.classList.add('show'); }
     if (!moved) return;
     const snapped = gridSnap(ox+dx, oy+dy, n.kind === 'core');
-    n.x = snapped.x; n.y = snapped.y; if (n.kind === 'core') updateCoreAnchor(); };
+    n.x = snapped.x; n.y = snapped.y; if (n.kind === 'core') updateCoreAnchor();
+    if (!group.length) return;
+    const gx = n.x - ox, gy = n.y - oy;
+    group.forEach((x) => { const o = orig.get(x); x.x = o.x + gx; x.y = o.y + gy; });
+    for (const [k, path] of Object.entries(busOrig.paths)) busConfig.paths[k] = path.map((pt) => shift(pt, gx, gy));
+    for (const [k, all] of Object.entries(busOrig.stubs)) {
+      busConfig.stubs[k] = Object.fromEntries(Object.entries(all).map(([id, o]) => [id, {
+        ...(o.at ? { at: shift(o.at, gx, gy) } : {}), ...(o.via ? { via: o.via.map((pt) => shift(pt, gx, gy)) } : {}) }]));
+    }
+  };
   const up = () => { try { stage.releasePointerCapture(ev.pointerId); } catch(_){}
     stage.removeEventListener('pointermove', mv); stage.removeEventListener('pointerup', up);
     // só esconde a grade se a ferramenta "esfera" não estiver mais ativa — ela já é quem decide se
     // a grade fica visível (ver setTool). Escondendo sempre aqui, incondicionalmente, a grade sumia
     // depois de soltar uma esfera arrastada mesmo com a ferramenta "esfera" ainda ligada.
     if (tool !== 'add') gridPolarEl.classList.remove('show');
-    if (moved) { db.updateTreeNode(n.id, { x: n.x, y: n.y }).catch((e) => showMsg(e.message)); buildRings(); computeNodeDists(); }
-    else selectNode(n); };
+    if (moved) {
+      Promise.all([n, ...group].map((x) => db.updateTreeNode(x.id, { x: x.x, y: x.y })))
+        .then(() => { if (group.length) showMsg(`${group.length + 1} habilidades movidas.`, 'ok'); }).catch((e) => showMsg(e.message));
+      if (Object.keys(busOrig.paths).length || Object.keys(busOrig.stubs).length) saveBusConfig();
+      buildRings(); computeNodeDists();
+    }
+    else (onClick || selectNode)(n); };
   stage.addEventListener('pointermove', mv); stage.addEventListener('pointerup', up);
 }
 async function selectNode(n) {
@@ -1886,6 +1990,9 @@ async function selectNode(n) {
     discardEditorDraft();
   }
   deselectEdge();
+  // uma seleção só por vez: clicar numa esfera troca a seleção de área por ela
+  if (isGM && areaSelection.size) { areaSelection = new Set(); updateBatchPanel(); }
+  if (selectedBusKey) deselectBus();
   selected = n;
   focusedNodeId = n.id; // clique de mouse também move o "foco lógico" de teclado (sem roubar o foco visual à toa)
   if (isGM) openEditor(n); else openViewer(n);
@@ -2046,7 +2153,7 @@ function isNodeUnlocked(n) { return n.kind === 'core' || unlockedIds.has(n.id); 
 function lockedBy(n) {
   if (isGM || n.level == null || n.kind === 'core' || isNodeUnlocked(n)) return null;
   if (!viaByKey(n.fac)?.lock) return null;
-  return nodes.find((x) => x !== n && x.kind !== 'core' && x.fac === n.fac && x.level === n.level && unlockedIds.has(x.id)) || null;
+  return nodes.find((x) => x !== n && x.kind !== 'core' && x.fac === n.fac && x.level === n.level && sameBranch(x, n) && unlockedIds.has(x.id)) || null;
 }
 // "exigir nível do personagem": a esfera de nível N só abre com o personagem no nível N
 function levelBlocked(n) {
@@ -2107,7 +2214,7 @@ function openViewer(n) {
       btn.disabled = !check.ok;
       btn.textContent = `Desbloquear (custo: ${n.cost || 0} ponto${n.cost === 1 ? '' : 's'})`;
       msg.textContent = check.ok ? ''
-        : check.reason === 'locked' ? `Você já escolheu "${check.by.name || 'outra habilidade'}" neste nível. Só dá para escolher uma por nível nesta via.`
+        : check.reason === 'locked' ? `Você já escolheu "${check.by.name || 'outra habilidade'}" neste nível. Só dá para escolher uma por nível ${branchCount > 1 ? 'neste ramo' : 'nesta via'}.`
         : check.reason === 'level' ? `Exige o nível ${n.level}. Seu personagem está no nível ${charLevel}.`
         : check.reason === 'connectivity' ? 'Conecte a uma habilidade já desbloqueada primeiro.'
         : `Pontos insuficientes (você tem ${Math.max(0, check.remaining)} disponível).`;
@@ -2177,7 +2284,7 @@ function deleteSelectedEdge() {
 // drawWorld) e girar a textura/pulsar uma conexão custa quase nada — deixar tudo sempre ligado,
 // inclusive durante o gesto, não compete com mais nada.
 let panning = false, pStart, vStart;
-let areaDragging = false, areaScreenStart = null;
+let areaDragging = false, areaScreenStart = null, areaMode = 'set';
 // pinch-to-zoom: nenhum gesto de toque tinha suporte antes (só wheel do mouse e os botões +/− do
 // HUD) — num tablet/celular, dar zoom exigia cutucar um botão pequeno repetidas vezes. Rastreado
 // por pointerId (não só "o último pointermove") porque sem isso um segundo dedo tocando a tela
@@ -2209,16 +2316,24 @@ stage.addEventListener('pointerdown', async (ev) => {
   if (activePointers.size > 1) return; // dedo extra durante outro gesto — ignora
 
   const p = toWorld(ev.clientX, ev.clientY);
-  // ferramenta "área" + Ctrl/Cmd: clicar numa habilidade alterna ela na seleção uma a uma, sem
-  // precisar arrastar um retângulo em volta dela. Sem Ctrl, continua ignorando habilidades no
-  // hit-test de propósito (clicar nelas só inicia o marquee a partir dali, como sempre foi).
-  if (tool === 'area' && isGM && (ev.ctrlKey || ev.metaKey)) {
+  // seleção múltipla: Shift ou Ctrl/Cmd + clique numa habilidade soma ou tira ela da seleção, com
+  // Selecionar ou Área (a esfera que estava aberta sozinha entra junto na seleção)
+  const multiKey = ev.shiftKey || ev.ctrlKey || ev.metaKey;
+  if (isGM && multiKey && (tool === 'select' || tool === 'area')) {
     const hit = hitTestNodeAt(p.x, p.y);
     if (hit && hit.kind !== 'core') {
-      if (areaSelection.has(hit.id)) areaSelection.delete(hit.id); else areaSelection.add(hit.id);
-      updateBatchPanel();
+      const next = new Set(areaSelection);
+      if (selected && selected.kind !== 'core') next.add(selected.id);
+      if (areaSelection.has(hit.id)) next.delete(hit.id); else next.add(hit.id);
+      setAreaSelection(next);
       return;
     }
+  }
+  // Área: apertar numa habilidade já selecionada arrasta a seleção toda; um clique sem arrastar
+  // deixa só ela selecionada
+  if (tool === 'area' && isGM && !multiKey) {
+    const hit = hitTestNodeAt(p.x, p.y);
+    if (hit && hit.kind !== 'core' && areaSelection.has(hit.id)) { startNodeDrag(hit, ev, (x) => setAreaSelection([x.id])); return; }
   }
   // barra do barramento selecionada: as alças têm prioridade sobre tudo (são pequenas e ficam por cima)
   if (tool === 'select' && isGM && selectedBusKey) {
@@ -2246,6 +2361,8 @@ stage.addEventListener('pointerdown', async (ev) => {
     try { const saved = await db.insertTreeNode(treeId, node); node.id = saved.id; nodes.push(node); render(); selectNode(node); } catch (e) { showMsg(e.message); }
     return; }
   if (tool === 'area') {
+    // Shift/Ctrl soma a área à seleção, Alt tira; sem tecla, a área vira a seleção
+    areaMode = ev.altKey ? 'sub' : multiKey ? 'add' : 'set';
     areaDragging = true; areaScreenStart = { x: ev.clientX, y: ev.clientY };
     Object.assign(marqueeEl.style, { left: ev.clientX + 'px', top: ev.clientY + 'px', width: '0px', height: '0px', display: 'block' });
     return; }
@@ -2296,17 +2413,95 @@ addEventListener('pointerup', endPointer);
 addEventListener('pointercancel', endPointer);
 function finalizeAreaSelection(p1, p2) {
   const x1 = Math.min(p1.x, p2.x), x2 = Math.max(p1.x, p2.x), y1 = Math.min(p1.y, p2.y), y2 = Math.max(p1.y, p2.y);
-  if (x2 - x1 < 4 && y2 - y1 < 4) return; // arrasto quase nulo (clique) — ignora, não seleciona tudo sem querer
-  areaSelection = new Set(nodes.filter((n) => n.kind !== 'core' && n.x >= x1 && n.x <= x2 && n.y >= y1 && n.y <= y2).map((n) => n.id));
-  updateBatchPanel();
+  // arrasto quase nulo = clique: numa habilidade, seleciona só ela; no vazio, limpa a seleção
+  if (x2 - x1 < 4 / view.s && y2 - y1 < 4 / view.s) {
+    if (areaMode !== 'set') return;
+    const hit = hitTestNodeAt(p2.x, p2.y);
+    setAreaSelection(hit && hit.kind !== 'core' ? [hit.id] : []);
+    return;
+  }
+  const inside = nodes.filter((n) => n.kind !== 'core' && n.x >= x1 && n.x <= x2 && n.y >= y1 && n.y <= y2).map((n) => n.id);
+  const next = areaMode === 'set' ? new Set(inside) : new Set(areaSelection);
+  if (areaMode === 'add') inside.forEach((id) => next.add(id));
+  if (areaMode === 'sub') inside.forEach((id) => next.delete(id));
+  setAreaSelection(next);
 }
+// troca a seleção de área e fecha o que estiver selecionado sozinho (esfera, conexão, barra), para o
+// painel e o desenho mostrarem sempre a mesma coisa: o que está selecionado agora
+async function setAreaSelection(ids) {
+  if (isGM && selected) {
+    if (editorDirty) {
+      const ok = await confirmModal({ title: 'Descartar alterações', desc: `Você tem alterações não salvas em "${selected.name || 'esta habilidade'}". Trocar a seleção mesmo assim?`, confirmLabel: 'Descartar' });
+      if (!ok) return false;
+      discardEditorDraft();
+    }
+    $('editor').classList.remove('open'); selected = null;
+  }
+  deselectEdge(); if (selectedBusKey) deselectBus();
+  areaSelection = new Set(ids);
+  updateBatchPanel();
+  return true;
+}
+const linksLeavingSelection = () => edges.filter((e) => areaSelection.has(e.a) !== areaSelection.has(e.b) && byId(e.a)?.kind !== 'core' && byId(e.b)?.kind !== 'core');
+// o painel da seleção reflete a seleção atual: quantas, de que ramo e nível, e os valores que todas
+// têm em comum (chip aceso só quando todas têm o mesmo valor; misturado = nenhum aceso)
 function updateBatchPanel() {
-  const n = areaSelection.size;
+  const sel = nodes.filter((x) => areaSelection.has(x.id));
+  const n = sel.length;
   $('batch-count').textContent = n + (n === 1 ? ' habilidade selecionada' : ' habilidades selecionadas');
+  const parts = [];
+  if (branchCount > 1) {
+    const rs = [...new Set(sel.map((x) => branchNo.get(branchOf.get(x.id))).filter(Boolean))].sort((a, b) => a - b);
+    if (rs.length) parts.push(rs.length === 1 ? `Ramo ${rs[0]}` : `Ramos ${rs.join(', ')}`);
+  }
+  const lv = sel.map((x) => x.level).filter((v) => v != null);
+  if (hasLevelCol && n) parts.push(!lv.length ? 'sem nível' : Math.min(...lv) === Math.max(...lv) ? `nível ${lv[0]}` : `níveis ${Math.min(...lv)} a ${Math.max(...lv)}`);
+  $('batch-summary').textContent = parts.join(' · ');
+  $('batch-summary').hidden = !parts.length;
+  const common = (f) => { const vs = new Set(sel.map(f)); return vs.size === 1 ? [...vs][0] : undefined; };
+  const mark = (q, attr, v) => document.querySelectorAll(q).forEach((c) => { const on = v !== undefined && c.dataset[attr] === String(v); c.classList.toggle('on', on); c.setAttribute('aria-pressed', String(on)); });
+  mark('#batch-fac .chip', 'f', common((x) => x.fac));
+  mark('#batch-size .chip', 's', common((x) => x.size || 'small'));
+  mark('#batch-shape .chip', 'sh', common((x) => x.shape || 'circle'));
+  mark('#batch-enabled .chip', 'e', common((x) => (x.enabled === false ? '0' : '1')));
+  const li = $('batch-level');
+  if (li && document.activeElement !== li) { const cl = common((x) => x.level ?? null); li.value = cl ?? ''; li.placeholder = cl === undefined ? 'vários' : '—'; }
+  // ligações que prendem a seleção ao resto da árvore (fora as do Núcleo): cortar separa num ramo próprio
+  const out = linksLeavingSelection();
+  $('batch-cut').hidden = !out.length;
+  const fora = [...new Set(out.map((e) => (areaSelection.has(e.a) ? e.b : e.a)))].map(byId).filter(Boolean);
+  const nomes = fora.slice(0, 4).map((x) => `"${x.name || 'sem nome'}"`).join(', ') + (fora.length > 4 ? ` e mais ${fora.length - 4}` : '');
+  $('batch-cut-text').textContent = `${out.length === 1 ? '1 ligação prende' : `${out.length} ligações prendem`} a seleção a ${fora.length === 1 ? 'uma habilidade de fora' : `${fora.length} habilidades de fora`}: ${nomes}.`;
   if (n > 0) closeOtherPanels('batchpanel');
   batchPanelEl.classList.toggle('open', n > 0);
 }
 window.clearAreaSelection = () => { areaSelection = new Set(); batchPanelEl.classList.remove('open'); };
+// amplia a seleção: o ramo inteiro de cada habilidade selecionada / o mesmo nível dentro desses ramos
+window.selectWholeBranch = () => {
+  const tags = new Set([...areaSelection].map((id) => branchOf.get(id)));
+  setAreaSelection(nodes.filter((x) => x.kind !== 'core' && tags.has(branchOf.get(x.id))).map((x) => x.id));
+};
+window.selectSameLevel = () => {
+  const sel = nodes.filter((x) => areaSelection.has(x.id));
+  const keys = new Set(sel.filter((x) => x.level != null).map((x) => branchOf.get(x.id) + '|' + x.level));
+  if (!keys.size) { showMsg('As habilidades selecionadas ainda não têm nível.'); return; }
+  setAreaSelection(nodes.filter((x) => x.kind !== 'core' && (areaSelection.has(x.id) || keys.has(branchOf.get(x.id) + '|' + x.level))).map((x) => x.id));
+};
+// corta as ligações entre a seleção e o resto (as do Núcleo ficam): a seleção vira um ramo à parte
+window.cutSelectionLinks = async () => {
+  if (!isGM) return;
+  const out = linksLeavingSelection();
+  if (!out.length) return;
+  const ok = await confirmModal({ title: 'Separar a seleção', confirmLabel: 'Cortar ligações',
+    desc: `Apaga ${out.length === 1 ? 'a ligação' : `as ${out.length} ligações`} entre as habilidades selecionadas e as de fora. As ligações com o Núcleo ficam. A seleção passa a ser um ramo próprio, com níveis e barramento separados.` });
+  if (!ok) return;
+  try {
+    await Promise.all(out.map((e) => db.deleteTreeEdge(e.id)));
+    const gone = new Set(out); edges = edges.filter((e) => !gone.has(e));
+    render(); updateBatchPanel();
+    showMsg(`${out.length === 1 ? '1 ligação cortada' : `${out.length} ligações cortadas`}. A seleção agora é um ramo próprio.`, 'ok');
+  } catch (e) { showMsg(e.message); }
+};
 /* edição em lote — aplica um campo (via/tamanho/estado) a todas as esferas da seleção de área de uma vez */
 window.batchSet = (key, value) => {
   if (!isGM) return;
@@ -2316,6 +2511,7 @@ window.batchSet = (key, value) => {
   ids.forEach((id) => { const n = byId(id); if (n) n[key] = value; });
   busDirty = true;
   if (key === 'enabled') computeNodeDists(); // a onda de luz é cacheada e ignora conexões desativadas — ver computeNodeDists
+  updateBatchPanel();
   Promise.all(ids.map((id) => db.updateTreeNode(id, { [key]: value })))
     .then(() => showMsg(`${ids.length} habilidade(s) atualizada(s).`))
     .catch((e) => showMsg(e.message));

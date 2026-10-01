@@ -10,8 +10,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="lib/tokens.css?v=5">
-<link rel="stylesheet" href="lib/theme.css?v=53">
-<link rel="stylesheet" href="lib/components.css?v=16">
+<link rel="stylesheet" href="lib/theme.css?v=54">
+<link rel="stylesheet" href="lib/components.css?v=17">
 <style>
   /* Construtor — "Latão calmo" (docs/DESIGN-v2-LATAO-CALMO.md §3.4) */
   .sis-layout > .ffx-side{flex-basis:240px}
@@ -150,6 +150,7 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
 
 <script type="module">
 import * as db from './lib/db.js?v=43';
+import { drawTreeMini } from './lib/tree-mini.js?v=1';
 import { CONDITION_ICONS, condIconKey, condIconHtml } from './lib/cond-icons.js?v=1';
 import { itemCard } from './lib/item-card.js?v=3';
 import { openHelpGuide, trapFocus, wireVerticalTablist, armEnter, toggleTheme, getTheme } from './lib/ui.js?v=10';
@@ -2584,6 +2585,7 @@ async function renderArvores(c) {
   const treeCard = async (t) => {
     const assigned = await db.getTreeClasses(t.id);
     return `<div class="list-row" data-id="${t.id}" style="flex-direction:column;align-items:stretch;gap:10px">
+      <canvas class="tree-mini sm" id="smini-${t.id}" aria-hidden="true"></canvas>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         ${DRAG_HANDLE_SVG}
         <input class="nm" value="${esc(t.name)}" onchange="updateTreeName('${t.id}', this.value)" style="flex:1;min-width:140px;background:transparent;border:0;color:var(--ink);font-family:var(--serif);font-size:15px">
@@ -2621,24 +2623,28 @@ async function renderArvores(c) {
     ${tplRes.error
       ? `<p class="sub">Para importar árvores, aplique a migração <b>20261003_modelos_de_arvore.sql</b> no Supabase.</p>`
       : tplRes.list.length
-        ? `<form class="inline-form" onsubmit="return importTreeTemplate(event)">
-            <select id="tpl-pick" class="fld-input" aria-label="Árvore para importar">${tplRes.list.map((t) => { const n = (t.data?.nodes || []).filter((x) => x.kind !== 'core').length; return `<option value="${t.id}">${esc(t.name)} · ${n} ${n === 1 ? 'habilidade' : 'habilidades'}</option>`; }).join('')}</select>
-            <button class="btn auto" type="submit"><span class="spin"></span>Importar</button>
-          </form>`
+        ? `<div class="grid tree-cards">${tplRes.list.map((t) => { const n = (t.data?.nodes || []).filter((x) => x.kind !== 'core').length; return `
+            <div class="card-tile tree-card" style="cursor:default">
+              <canvas class="tree-mini" id="tplmini-${t.id}" aria-hidden="true"></canvas>
+              <h3>${esc(t.name)}</h3>
+              <div class="tree-prog">${n} ${n === 1 ? 'habilidade' : 'habilidades'}</div>
+              <button type="button" class="btn auto" onclick="importTreeTemplate('${t.id}', this)"><span class="spin"></span>Importar</button>
+            </div>`; }).join('')}</div>`
         : `<p class="sub">Você ainda não tem árvores salvas na conta. <a href="app.html?criar=arvores">Criar uma em Criação → Criar → Árvores</a>.</p>`}`;
+  // miniaturas: as do sistema vêm do banco; as dos modelos já estão no próprio modelo
+  trees.forEach((t) => db.loadSystemTree(t.id).then((d) => drawTreeMini($('smini-' + t.id), { nodes: d.nodes, edges: d.edges, vias: t.vias || [] })).catch(() => {}));
+  (tplRes.list || []).forEach((t) => drawTreeMini($('tplmini-' + t.id), { nodes: t.data?.nodes || [], edges: t.data?.edges || [], vias: t.data?.tree?.vias || [] }));
 }
 let _treeTemplates = new Map();
-window.importTreeTemplate = async (ev) => {
-  ev.preventDefault();
-  const tpl = _treeTemplates.get($('tpl-pick').value); if (!tpl) return false;
-  const btn = ev.target.querySelector('button[type=submit]'); btn.classList.add('loading'); btn.disabled = true;
+window.importTreeTemplate = async (id, btn) => {
+  const tpl = _treeTemplates.get(id); if (!tpl) return false;
+  btn.classList.add('loading'); btn.disabled = true;
   showMsg(`Importando "${tpl.name}"…`, 'ok');
   try {
     await db.createSystemTreeFromTemplate(systemId, tpl);
     showMsg(`"${tpl.name}" importada. Clique em Acessar árvore para editar a cópia.`, 'ok');
     openTab('arvores');
   } catch (e) { showMsg('Não deu pra importar: ' + e.message); btn.classList.remove('loading'); btn.disabled = false; }
-  return false;
 };
 window.addTree = (ev) => { ev.preventDefault(); const n = $('tr-name').value.trim(); if (!n) return false;
   db.createSystemTree(systemId, n, $('tr-shape').value).then(() => openTab('arvores')).catch((e) => showMsg(e.message)); return false; };

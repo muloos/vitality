@@ -10,8 +10,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="lib/tokens.css?v=5">
-<link rel="stylesheet" href="lib/theme.css?v=53">
-<link rel="stylesheet" href="lib/components.css?v=16">
+<link rel="stylesheet" href="lib/theme.css?v=54">
+<link rel="stylesheet" href="lib/components.css?v=17">
 <style>
   /* Lobby — "Latão calmo" (docs/DESIGN-v2-LATAO-CALMO.md §3.2) */
   .home-head{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--space-4);flex-wrap:wrap;margin:0 0 var(--space-5)}
@@ -39,6 +39,11 @@
   .tpl-row{padding-right:var(--space-3)}
   .tpl-row .tpl-open{display:flex;align-items:center;gap:var(--space-3);flex:1 1 auto;min-width:0;color:inherit;text-decoration:none;align-self:stretch}
   .tpl-row .tpl-open .grow{min-width:0}
+  .sdet-trees{margin:var(--space-4) 0 0}
+  .sdet-trees[hidden]{display:none}
+  .sdet-tree-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:var(--space-3)}
+  .sdet-tree{display:flex;flex-direction:column;gap:6px;font-family:var(--serif);font-size:var(--fs-small);color:var(--text-2)}
+  .sdet-tree .tree-mini{height:100px}
   .mesa-row{min-height:72px;height:72px}
   .mesa-row .mesa-row-name{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .mesa-row .mesa-row-meta{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -341,6 +346,7 @@
 
 <script type="module">
 import * as db from './lib/db.js?v=43';
+import { drawTreeMini } from './lib/tree-mini.js?v=1';
 import { itemCard, openItemDetail as openItemDetailModal, detailAttrs } from './lib/item-card.js?v=3';
 import { mountThemeToggle, openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus, wireVerticalTablist, playEnter } from './lib/ui.js?v=10';
 
@@ -680,7 +686,7 @@ async function renderTreeTemplates() {
       const n = (t.data?.nodes || []).filter((x) => x.kind !== 'core').length;
       return `<div class="list-row mesa-row tpl-row">
         <a class="tpl-open" href="arvore.html?template=${t.id}" title="Abrir ${esc(t.name)}">
-          <span class="mesa-av" aria-hidden="true">${esc((t.name || '?').trim().charAt(0).toUpperCase() || '?')}</span>
+          <canvas class="tree-mini xs" id="tplmini-${t.id}" aria-hidden="true"></canvas>
           <span class="grow">
             <span class="mesa-row-name">${esc(t.name)}</span>
             <span class="mesa-row-meta"><span>${pl(n, 'habilidade', 'habilidades')}</span><span>salva ${esc(relTime(t.updated_at))}</span></span>
@@ -689,6 +695,7 @@ async function renderTreeTemplates() {
         <button type="button" class="btn sm danger auto" onclick="deleteTreeTemplate('${t.id}')" aria-label="Excluir ${esc(t.name)}">Excluir</button>
       </div>`;
     }).join('');
+    list.forEach((t) => drawTreeMini($('tplmini-' + t.id), { nodes: t.data?.nodes || [], edges: t.data?.edges || [], vias: t.data?.tree?.vias || [] }));
   } catch (e) {
     box.className = '';
     box.innerHTML = missingTemplates(e)
@@ -777,6 +784,10 @@ window.openSystemDetail = (id) => {
     <div class="idet-badges">${isOwner ? `<span class="badge ${s.is_published ? 'mod' : 'cat'}">${s.is_published ? 'Publicado na loja' : 'Privado'}</span>` : ''}</div>
     ${s.description ? `<p class="gintro">${esc(s.description)}</p>` : `<p class="gintro" style="color:var(--ink-faint)">Sem descrição.</p>`}
     <div class="idet-creator">Criado por ${esc(s.creator_name || '—')}</div>
+    <div class="sdet-trees" id="sdet-trees" hidden>
+      <div class="section-title" role="heading" aria-level="4">Árvores de habilidade</div>
+      <div class="sdet-tree-grid" id="sdet-tree-grid"></div>
+    </div>
     <div class="idet-actions">
       <button class="btn auto ${isFav ? 'on' : ''}" id="sdet-fav">${isFav ? HEART_ICON + ' Remover dos favoritos' : HEART_ICON + ' Favoritar'}</button>
       ${isOwner ? `<a class="btn go auto" href="sistema.html?id=${s.id}">Abrir no construtor</a>` : ''}
@@ -791,7 +802,20 @@ window.openSystemDetail = (id) => {
   document.addEventListener('keydown', onEsc);
   document.body.appendChild(w);
   w.querySelector('.x').focus();
+  paintSystemTrees(id, w);
 };
+// árvores do sistema no detalhe (Loja/Favoritos): nome + miniatura; some se não der pra ler
+async function paintSystemTrees(id, w) {
+  try {
+    const trees = await db.listSystemTrees(id);
+    if (!trees.length || !w.isConnected) return;
+    const grid = w.querySelector('#sdet-tree-grid');
+    grid.innerHTML = trees.map((t) => `<div class="sdet-tree"><canvas class="tree-mini sm" id="sdmini-${t.id}" aria-hidden="true"></canvas><span>${esc(t.name)}</span></div>`).join('');
+    w.querySelector('#sdet-trees').hidden = false;
+    trees.forEach((t) => db.loadSystemTree(t.id)
+      .then((d) => drawTreeMini(w.querySelector('#sdmini-' + t.id), { nodes: d.nodes, edges: d.edges, vias: t.vias || [] })).catch(() => {}));
+  } catch (_) { /* sem permissão de ler as árvores deste sistema: o detalhe fica sem a seção */ }
+}
 
 /* ---------- mesas ---------- */
 let _mesaCount = null, _sysCount = null;

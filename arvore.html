@@ -10,8 +10,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="lib/tokens.css?v=5">
-<link rel="stylesheet" href="lib/theme.css?v=53">
-<link rel="stylesheet" href="lib/components.css?v=16">
+<link rel="stylesheet" href="lib/theme.css?v=54">
+<link rel="stylesheet" href="lib/components.css?v=17">
 <style>
   /* fundo cósmico original (sobrescreve o solido do tema, SÓ nesta tela) */
   /* body PRECISA ficar transparente aqui: #fallback e #fx (o canvas de partículas) usam z-index
@@ -82,7 +82,7 @@
   #marquee{position:fixed;z-index:32;display:none;border:1.5px dashed var(--brass);background:rgba(227,192,113,.08);pointer-events:none}
   @keyframes selpulse{0%,100%{opacity:.7;transform:scale(1)}50%{opacity:.2;transform:scale(1.15)}}
   @keyframes spin{to{transform:rotate(360deg)}}
-  /* anéis ornamentados do Crystarium — --ringc é o RGB customizável (aplicado via JS), com um
+  /* anéis ornamentados da árvore — --ringc é o RGB customizável (aplicado via JS), com um
      lilás-azulado como padrão antes disso rodar. */
   #rings{pointer-events:none}
   .ring{fill:none;stroke:rgba(var(--ringc,200,196,255),.6);stroke-width:1;

@@ -1690,7 +1690,7 @@ function tick(now) {
   requestAnimationFrame(tick);
 }
 
-/* ---------- anéis arcanos do Crystarium (giram e seguem o Núcleo) ----------
+/* ---------- anéis arcanos da árvore (giram e seguem o Núcleo) ----------
    os raios são proporcionais ao alcance de verdade da árvore (distância da esfera mais afastada
    até o Núcleo, em unidades de RING_STEP) — raios fixos (indo até 24 aneis = 1152 unidades)
    ficavam enormes e desproporcionais numa árvore pequena, com só 2-3 aneis de esferas de verdade

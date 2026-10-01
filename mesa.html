@@ -10,8 +10,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="lib/tokens.css?v=5">
-<link rel="stylesheet" href="lib/theme.css?v=53">
-<link rel="stylesheet" href="lib/components.css?v=16">
+<link rel="stylesheet" href="lib/theme.css?v=54">
+<link rel="stylesheet" href="lib/components.css?v=17">
 <style>
   /* Mesa — "Latão calmo" (docs/DESIGN-v2-LATAO-CALMO.md §3.3) */
   /* topbar: o grupo em avatares, traço verde = online */
@@ -177,6 +177,7 @@
 
 <script type="module">
 import * as db from './lib/db.js?v=43';
+import { drawTreeMini } from './lib/tree-mini.js?v=1';
 import { condIconHtml } from './lib/cond-icons.js?v=1';
 import { itemCard, openItemDetail as openItemDetailModal, detailAttrs } from './lib/item-card.js?v=3';
 import { openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus, wireVerticalTablist, armEnter } from './lib/ui.js?v=10';
@@ -1610,8 +1611,8 @@ async function renderArvores(c) {
           <canvas class="tree-mini" id="tmini-${t.id}" aria-hidden="true"></canvas>
           <h3>${esc(t.name)}</h3>
           <div class="tree-prog" id="tprog-${t.id}">&nbsp;</div>
-          <button class="btn go sm auto" onclick="viewTreeInline('${t.id}')">Abrir Crystarium</button></div>`).join('') : '<div class="empty">Este sistema não tem árvores.</div>'}</div>
-      <p class="tab-note">As árvores vêm do sistema da mesa. ${gm ? 'Abra o Crystarium pra editar esferas, conexões e custos.' : 'Abra o Crystarium pra ver o caminho e desbloquear habilidades com seus pontos.'}</p>`;
+          <button class="btn go sm auto" onclick="viewTreeInline('${t.id}')">Abrir árvore</button></div>`).join('') : '<div class="empty">Este sistema não tem árvores.</div>'}</div>
+      <p class="tab-note">As árvores vêm do sistema da mesa. ${gm ? 'Abra a árvore pra editar esferas, conexões e custos.' : 'Abra a árvore pra ver o caminho e desbloquear habilidades com seus pontos.'}</p>`;
     trees.forEach((t) => paintTreeCard(t, gm).catch(() => { const el = $('tprog-' + t.id); if (el) el.textContent = ''; }));
     return;
   }
@@ -1626,8 +1627,8 @@ async function renderArvores(c) {
       `O editor de árvores (com habilidades, custos e desbloqueio por pontos) não está disponível aqui. ${gm ? 'Vincule um sistema à mesa (ou crie uma mesa nova escolhendo um sistema) pra usar árvores de verdade.' : 'Fale com o Mestre sobre vincular um sistema à mesa.'}`)}
     ${trees.length ? `<div class="grid" id="arvores-grid" style="margin-top:18px">${trees.map((t) => treeCardHtml(t, gm)).join('')}</div>` : ''}`;
 }
-// miniatura do Crystarium no cartão da árvore (docs/MELHORIAS-v1.3.md P1-9): anéis finos em volta do
-// Núcleo, conexões e esferas — acesas (cor da via) as já liberadas; pro Mestre, a árvore inteira acesa.
+// miniatura da árvore no cartão (lib/tree-mini.js): anéis finos em volta do Núcleo, conexões e
+// esferas — acesas (cor da via) as já liberadas; pro Mestre, a árvore inteira acesa.
 // Embaixo, o progresso: "7 de 32 nós · 3 pontos livres" (mesma conta de pontos do arvore.js).
 async function paintTreeCard(t, gm) {
   const [data, unl, pts] = await Promise.all([
@@ -1642,33 +1643,7 @@ async function paintTreeCard(t, gm) {
   const prog = $('tprog-' + t.id);
   if (prog) prog.textContent = gm ? `${nodes.length} nós · ${edges.length} conexões`
     : `${litCount} de ${nodes.length} nós · ${Math.max(0, (pts || 0) - spent)} ponto${Math.max(0, (pts || 0) - spent) === 1 ? '' : 's'} livre${Math.max(0, (pts || 0) - spent) === 1 ? '' : 's'}`;
-  const cv = $('tmini-' + t.id); if (!cv || !nodes.length) return;
-  const dpr = Math.min(devicePixelRatio || 1, 2), W = cv.clientWidth || 240, H = cv.clientHeight || 140;
-  cv.width = W * dpr; cv.height = H * dpr;
-  const g = cv.getContext('2d'); g.scale(dpr, dpr);
-  const css = getComputedStyle(document.documentElement), tok = (k, f) => css.getPropertyValue(k).trim() || f;
-  const lineC = tok('--line2', 'rgba(233,221,201,.17)'), fieldC = tok('--field', 'rgba(40,32,23,.7)'), brass = tok('--brass', '#c9a45c');
-  const vias = t.vias || [];
-  const colorOf = (n) => n.color || (vias.find((v) => v.key === n.fac) || {}).color || brass;
-  const core = nodes.find((n) => n.kind === 'core') || nodes[0];
-  const maxD = Math.max(1, ...nodes.map((n) => Math.hypot(n.x - core.x, n.y - core.y)));
-  const k = (Math.min(W, H) / 2 - 10) / maxD, cx = W / 2, cy = H / 2;
-  const P = (n) => [cx + (n.x - core.x) * k, cy + (n.y - core.y) * k];
-  g.strokeStyle = lineC; g.lineWidth = 1;
-  [0.34, 0.67, 1].forEach((f) => { g.beginPath(); g.arc(cx, cy, maxD * k * f, 0, Math.PI * 2); g.stroke(); });
-  const byId = new Map(nodes.map((n) => [n.id, n]));
-  edges.forEach((e) => {
-    const A = byId.get(e.a), B = byId.get(e.b); if (!A || !B) return;
-    const on = lit(A) && lit(B);
-    g.strokeStyle = on ? colorOf(B) : lineC; g.globalAlpha = on ? .75 : 1; g.lineWidth = on ? 1.2 : 1;
-    g.beginPath(); g.moveTo(...P(A)); g.lineTo(...P(B)); g.stroke(); g.globalAlpha = 1;
-  });
-  nodes.forEach((n) => {
-    const [x, y] = P(n), r = n.kind === 'core' ? 4.5 : 2.6;
-    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2);
-    if (lit(n)) { g.shadowColor = colorOf(n); g.shadowBlur = 8; g.fillStyle = colorOf(n); g.fill(); g.shadowBlur = 0; }
-    else { g.fillStyle = fieldC; g.fill(); g.strokeStyle = lineC; g.stroke(); }
-  });
+  drawTreeMini($('tmini-' + t.id), { nodes, edges, vias: t.vias || [], lit });
 }
 function treeCardHtml(t, gm) {
   return `<div class="card-tile glass" style="cursor:default" data-id="${t.id}">

@@ -403,8 +403,9 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
     <ul class="bus-help">
       <li><b>Shift</b> + clique numa habilidade põe ou tira ela deste barramento. Quem está nele tem um anel tracejado.</li>
       <li><b>Arraste</b> um ponto da barra para mover. Ele encaixa na grade; segure <b>Alt</b> para mover livre.</li>
-      <li>Cada ligação tem uma <b>alça menor</b> no trecho que chega na barra: arraste para deslizar o encontro. Ela gruda na posição reta.</li>
-      <li><b>Duplo clique</b> na barra ou numa ligação cria um ponto de dobra. <b>Delete</b> apaga o ponto selecionado.</li>
+      <li>A <b>ponta</b> de cada ligação (losango menor, onde ela toca a barra) gruda num ponto da barra ou na posição reta: arraste até o ponto que quiser. Para grudar num lugar novo, crie antes um ponto na barra com <b>duplo clique</b>.</li>
+      <li>Ponta e ponto da barra no mesmo lugar: arrastar move o ponto, e as pontas grudadas vão junto. Para soltar uma ponta, clique antes na ligação.</li>
+      <li><b>Duplo clique</b> numa ligação cria uma dobra nela. <b>Delete</b> apaga o ponto selecionado; numa ponta, a ligação volta a descer reta.</li>
     </ul>
     <p id="bus-nomig" class="bus-nomig" hidden>Para guardar o desenho, aplique a migração <b>20261001_arvore_barramento_editavel.sql</b> no Supabase.</p>
     <div class="actions bus-actions">
@@ -507,6 +508,6 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
 <div class="count" id="count"></div>
 <div class="via-legend" id="via-legend" style="display:none"></div>
 
-<script src="arvore.js?v=34"></script>
+<script src="arvore.js?v=35"></script>
 </body>
 </html>

@@ -373,7 +373,7 @@ let myPoints = 0;
 let hasLevelCol = false, hasTreeOpts = false;
 let edgeStyle = 'lines', busDir = 'auto', requireCharLevel = false;
 // barramento editável (supabase/migrations/20261001_arvore_barramento_editavel.sql): group + paths
-let hasBusConfig = false, busConfig = { group: 'level', paths: {}, stubs: {} };
+let hasBusConfig = false, busConfig = { group: 'level', paths: {}, stubs: {}, buses: null };
 // nível do personagem: a mesa passa &lvl= ao embutir a árvore (o servidor confere de novo ao desbloquear)
 const charLevel = params.get('lvl') ? Math.max(1, parseInt(params.get('lvl'), 10) || 1) : null;
 const statById = (id) => stats.find((s) => s.id === id);
@@ -470,7 +470,7 @@ window.deleteVia = async (key) => {
 function syncLevelUi() {
   document.body.classList.toggle('no-levels', !hasLevelCol);
   document.body.classList.toggle('no-tree-opts', !hasTreeOpts);
-  const es = $('edge-style'); if (es) { es.value = edgeStyle === 'bus' && busConfig.group === 'via' ? 'bus_via' : edgeStyle; const o = es.querySelector('option[value="bus_via"]'); if (o) o.hidden = !hasBusConfig; }
+  const es = $('edge-style'); if (es) es.value = edgeStyle;
   const bd = $('bus-dir'); if (bd) { bd.value = busDir; bd.hidden = !(edgeStyle === 'bus' && gridShape === 'linear'); }
   const rc = $('req-char-level'); if (rc) rc.checked = requireCharLevel;
   const al = $('auto-levels-btn'); if (al) al.textContent = gridShape === 'linear' ? 'Nível pela fileira' : 'Nível pelo anel';
@@ -481,12 +481,8 @@ function saveTreeOpt(patchObj, okMsg) {
 }
 window.setEdgeStyle = (v) => {
   edgeStyle = v === 'lines' ? 'lines' : 'bus';
-  const group = v === 'bus_via' ? 'via' : 'level';
-  const groupChanged = hasBusConfig && edgeStyle === 'bus' && group !== busConfig.group;
-  if (groupChanged) busConfig.group = group;
   busDirty = true; deselectBus(); syncLevelUi();
-  saveTreeOpt({ edge_style: edgeStyle, ...(groupChanged ? { bus_config: busConfig } : {}) },
-    edgeStyle === 'lines' ? 'Todas as linhas.' : group === 'via' ? 'Barramento por nível, separado por via.' : 'Barramento por nível.');
+  saveTreeOpt({ edge_style: edgeStyle }, edgeStyle === 'lines' ? 'Todas as linhas.' : 'Barramentos ligados. Crie um novo selecionando habilidades com a Área.');
 };
 window.setBusDir = (v) => { busDir = v; syncLevelUi(); saveTreeOpt({ bus_dir: v }, 'Direção salva.'); };
 window.setRequireCharLevel = (on) => { requireCharLevel = !!on; saveTreeOpt({ require_char_level: requireCharLevel }, on ? 'A árvore agora exige o nível do personagem.' : 'Nível do personagem não é mais exigido.'); };
@@ -602,14 +598,34 @@ const sameBranch = (a, b) => branchOf.get(a.id) === branchOf.get(b.id);
 // esferas do mesmo ramo (o Núcleo não pertence a nenhum)
 const branchMembers = (tag) => nodes.filter((n) => n.kind !== 'core' && branchOf.get(n.id) === tag);
 
-// ---------- barramento: um grupo = (ramo, via, nível N → N+1) ----------
+// ---------- barramentos ----------
+// Cada barramento é criado pelo Mestre (Área → selecionar → "Criar barramento") e guarda quem fica em
+// cima (nível N; o Núcleo conta como nível 0) e quem fica embaixo (nível N+1). O barramento É a
+// ligação: toda esfera de cima leva a toda de baixo, e só essas ligações viram barra — qualquer outra
+// continua sendo linha comum. Dois barramentos nunca se juntam sozinhos, mesmo no mesmo nível.
+// Guardado em bus_config.buses = [{ id, top: [ids], bottom: [ids] }]; o desenho de cada um fica em
+// bus_config.paths / bus_config.stubs com a chave "b:<id>".
 let busGroups = [], busEdges = new Set(), busDirty = true;
-// grupo = (ramo do Núcleo, nível N → N+1) e, no modo "por via", a via. Entra toda ligação entre
-// esferas de níveis vizinhos do mesmo grupo — o barramento é um desenho, não muda quem liga em quem.
-// Chave: "r<ramo>/<via ou *>|<nível>"; com um ramo só, "<via ou *>|<nível>" (o formato de antes).
+const nodeLevel = (n) => (!n ? null : n.kind === 'core' ? 0 : n.level ?? null);
+const levelName = (lv) => (lv === 0 ? 'Núcleo' : `Nível ${lv}`);
+const genBusId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 function computeBusGroups() {
   busGroups = []; busEdges = new Set();
   if (edgeStyle !== 'bus') return;
+  if (!Array.isArray(busConfig.buses)) seedBusesFromLevels();
+  for (const b of busConfig.buses) {
+    const parents = b.top.filter((id) => nodeById.has(id)), children = b.bottom.filter((id) => nodeById.has(id));
+    if (!parents.length || !children.length) continue;
+    busGroups.push({ key: 'b:' + b.id, bus: b, level: nodeLevel(byId(parents[0])), parents, children, pset: new Set(parents), cset: new Set(children) });
+  }
+  for (const e of edges) for (const g of busGroups) {
+    if ((g.pset.has(e.a) && g.cset.has(e.b)) || (g.pset.has(e.b) && g.cset.has(e.a))) { busEdges.add(e); break; }
+  }
+}
+const busLinks = (g) => edges.filter((e) => (g.pset.has(e.a) && g.cset.has(e.b)) || (g.pset.has(e.b) && g.cset.has(e.a)));
+// árvores que usavam o barramento automático (uma barra por nível e ramo): na primeira vez, cada barra
+// que aparecia vira um barramento próprio, levando junto o desenho que o Mestre já tinha feito nela
+function seedBusesFromLevels() {
   const byKey = new Map();
   for (const e of edges) {
     const A = nodeById.get(e.a), B = nodeById.get(e.b);
@@ -621,19 +637,27 @@ function computeBusGroups() {
     const sub = (busConfig.group === 'via' ? (p.fac || '') : '*') + '|' + p.level;
     const k = branch + '\n' + sub;
     let g = byKey.get(k);
-    if (!g) { g = { sub, branch, level: p.level, fac: busConfig.group === 'via' ? p.fac : null, parents: new Set(), children: new Set() }; byKey.set(k, g); }
-    g.parents.add(p.id); g.children.add(c.id); busEdges.add(e);
+    if (!g) { g = { sub, branch, parents: new Set(), children: new Set() }; byKey.set(k, g); }
+    g.parents.add(p.id); g.children.add(c.id);
   }
   const multi = new Set([...byKey.values()].map((g) => g.branch)).size > 1;
-  byKey.forEach((g) => busGroups.push({ ...g, key: multi ? `r${g.branch}/${g.sub}` : g.sub, parents: [...g.parents], children: [...g.children] }));
-  adoptOrphanBusKeys();
+  const groups = [...byKey.values()].map((g) => ({ ...g, key: multi ? `r${g.branch}/${g.sub}` : g.sub, parents: [...g.parents], children: [...g.children] }));
+  adoptOrphanBusKeys(groups);
+  busConfig.buses = [];
+  const paths = {}, stubs = {};
+  for (const g of groups) {
+    const id = genBusId() + busConfig.buses.length;
+    busConfig.buses.push({ id, top: g.parents, bottom: g.children });
+    if (busConfig.paths[g.key]) paths['b:' + id] = busConfig.paths[g.key];
+    if (busConfig.stubs[g.key]) stubs['b:' + id] = busConfig.stubs[g.key];
+  }
+  busConfig.paths = paths; busConfig.stubs = stubs;
+  if (isGM && hasBusConfig && busConfig.buses.length) saveBusConfig();
 }
-// desenhos guardados com uma chave que não existe mais (a árvore ganhou ramos, ou o ramo mudou de
-// etiqueta porque ganhou/perdeu esferas): a barra vai para o grupo do mesmo nível mais perto dela que
-// ainda não tem desenho, e o ajuste de cada ligação vai para o grupo que tem aquela esfera.
-// Só na memória — grava junto na próxima edição do Mestre.
-function adoptOrphanBusKeys() {
-  const live = new Map(busGroups.map((g) => [g.key, g]));
+// desenho guardado com uma chave antiga que não bate com nenhuma barra: vai para a barra do mesmo nível
+// mais perto dela que ainda não tem desenho; o ajuste de cada ligação vai para a barra daquela esfera
+function adoptOrphanBusKeys(groups) {
+  const live = new Map(groups.map((g) => [g.key, g]));
   const subOf = (key) => key.slice(key.indexOf('/') + 1);
   for (const key of Object.keys(busConfig.paths)) {
     if (live.has(key)) continue;
@@ -641,7 +665,7 @@ function adoptOrphanBusKeys() {
     if (!Array.isArray(path) || !path.length) continue;
     const px = path.reduce((s, p) => s + p[0], 0) / path.length, py = path.reduce((s, p) => s + p[1], 0) / path.length;
     let best = null, bestD = Infinity;
-    for (const g of busGroups) {
+    for (const g of groups) {
       if (g.sub !== subOf(key) || busConfig.paths[g.key]) continue;
       const ns = [...g.parents, ...g.children].map(byId).filter(Boolean); if (!ns.length) continue;
       const d = Math.hypot(ns.reduce((s, n) => s + n.x, 0) / ns.length - px, ns.reduce((s, n) => s + n.y, 0) / ns.length - py);
@@ -653,7 +677,7 @@ function adoptOrphanBusKeys() {
     if (live.has(key)) continue;
     const moved = busConfig.stubs[key];
     for (const id of Object.keys(moved)) {
-      const g = busGroups.find((x) => x.parents.some((p) => String(p) === id) || x.children.some((c) => String(c) === id));
+      const g = groups.find((x) => x.parents.some((p) => String(p) === id) || x.children.some((c) => String(c) === id));
       if (!g) continue;
       const dest = busConfig.stubs[g.key] || (busConfig.stubs[g.key] = {});
       if (!dest[id]) dest[id] = moved[id];
@@ -662,6 +686,124 @@ function adoptOrphanBusKeys() {
     if (!Object.keys(moved).length) delete busConfig.stubs[key];
   }
 }
+// "Criar barramento" (painel da seleção): a seleção precisa ter dois níveis seguidos; só nível 1 liga
+// ao Núcleo. Cria as ligações que faltam entre cima e embaixo.
+window.createBusFromSelection = async () => {
+  if (!isGM) return;
+  if (!hasBusConfig) { showMsg('Para criar barramentos, aplique a migração 20261001 no Supabase.'); return; }
+  const sel = nodes.filter((n) => areaSelection.has(n.id) && n.kind !== 'core');
+  if (!sel.length) return;
+  const semNivel = sel.filter((n) => n.level == null);
+  if (semNivel.length) { showMsg(`${semNivel.length === 1 ? '1 habilidade selecionada está' : `${semNivel.length} habilidades selecionadas estão`} sem nível. Defina o nível (campo Nível) e tente de novo.`); return; }
+  const levels = [...new Set(sel.map((n) => n.level))].sort((a, b) => a - b);
+  let top, bottom;
+  if (levels.length === 1 && levels[0] === 1 && coreNode) { top = [coreNode]; bottom = sel; }
+  else if (levels.length === 2 && levels[1] === levels[0] + 1) { top = sel.filter((n) => n.level === levels[0]); bottom = sel.filter((n) => n.level === levels[1]); }
+  else {
+    showMsg(`Selecione habilidades de dois níveis seguidos (ex.: 2 e 3), ou só de nível 1 para ligar ao Núcleo. A seleção tem ${levels.length === 1 ? 'o nível' : 'os níveis'} ${levels.join(', ')}.`);
+    return;
+  }
+  const has = (a, b) => edges.some((e) => (e.a === a && e.b === b) || (e.a === b && e.b === a));
+  const pairs = [];
+  top.forEach((p) => bottom.forEach((c) => { if (!has(p.id, c.id)) pairs.push([p.id, c.id]); }));
+  const lv = nodeLevel(top[0]);
+  // as selecionadas que já estão em outro barramento destes níveis saem de lá, e as ligações delas com
+  // quem ficou lá são cortadas — é assim que uma coluna se separa da outra
+  const topIds = new Set(top.map((n) => n.id)), botIds = new Set(bottom.map((n) => n.id));
+  const moving = new Set(sel.map((n) => n.id));
+  const inNew = (a, b) => (topIds.has(a) && botIds.has(b)) || (topIds.has(b) && botIds.has(a));
+  const touched = busGroups.filter((g) => g.level === lv && [...g.parents, ...g.children].some((id) => moving.has(id)));
+  const cut = new Set();
+  for (const g of touched) {
+    for (const e of busLinks(g)) {
+      const am = moving.has(e.a), bm = moving.has(e.b);
+      if (am !== bm && !inNew(e.a, e.b)) cut.add(e);
+    }
+  }
+  const ok = await confirmModal({ title: 'Criar barramento', danger: false, confirmLabel: 'Criar',
+    desc: `Liga ${lv === 0 ? 'o Núcleo' : `${top.length === 1 ? '1 habilidade' : `${top.length} habilidades`} do nível ${lv}`} a ${bottom.length === 1 ? '1 habilidade' : `${bottom.length} habilidades`} do nível ${lv + 1} por uma barra própria${pairs.length ? ` (${pairs.length === 1 ? '1 ligação nova' : `${pairs.length} ligações novas`})` : ''}. Ela não se junta com nenhum outro barramento.` +
+      (touched.length ? ` As selecionadas saem ${touched.length === 1 ? 'do barramento em que estavam' : `dos ${touched.length} barramentos em que estavam`}${cut.size ? `, e ${cut.size === 1 ? 'a ligação delas' : `as ${cut.size} ligações delas`} com as habilidades que ficaram lá ${cut.size === 1 ? 'é apagada' : 'são apagadas'}` : ''}.` : '') });
+  if (!ok) return;
+  try {
+    if (cut.size) {
+      await Promise.all([...cut].map((e) => db.deleteTreeEdge(e.id)));
+      edges = edges.filter((e) => !cut.has(e));
+    }
+    for (const g of touched) {
+      g.bus.top = g.bus.top.filter((id) => !moving.has(id));
+      g.bus.bottom = g.bus.bottom.filter((id) => !moving.has(id));
+      if (!g.bus.top.some((id) => nodeById.has(id)) || !g.bus.bottom.some((id) => nodeById.has(id))) removeBus(g.key);
+      else if (busConfig.stubs[g.key]) moving.forEach((id) => dropStubOverride(g.key, id));
+    }
+    const made = await Promise.all(pairs.map(([a, b]) => db.insertTreeEdge(treeId, a, b)));
+    made.forEach((e) => { if (e) edges.push({ id: e.id, a: e.a, b: e.b }); });
+    if (!Array.isArray(busConfig.buses)) busConfig.buses = [];
+    const id = genBusId();
+    busConfig.buses.push({ id, top: top.map((n) => n.id), bottom: bottom.map((n) => n.id) });
+    if (edgeStyle !== 'bus') { edgeStyle = 'bus'; syncLevelUi(); saveTreeOpt({ edge_style: 'bus' }, 'Barramentos ligados.'); }
+    saveBusConfig('Barramento criado.');
+    clearAreaSelection(); render();
+    computeBusGroups(); busDirty = false;
+    selectBus('b:' + id);
+  } catch (e) { showMsg(e.message); }
+};
+// Shift + clique numa esfera com um barramento selecionado: põe ou tira ela dele (cria ou apaga as
+// ligações dela com o outro lado do barramento)
+async function toggleBusMember(g, n) {
+  const b = g.bus, nm = n.kind === 'core' ? 'Núcleo' : `"${n.name || 'sem nome'}"`;
+  const topLv = nodeLevel(byId(g.parents[0])), botLv = nodeLevel(byId(g.children[0]));
+  const inTop = g.pset.has(n.id), inBot = g.cset.has(n.id);
+  try {
+    if (inTop || inBot) {
+      if ((inTop ? g.parents : g.children).length <= 1) { showMsg('O barramento precisa de pelo menos uma habilidade em cima e uma embaixo. Para desfazer ele, use os botões do painel.'); return; }
+      const other = inTop ? g.cset : g.pset;
+      const gone = edges.filter((e) => (e.a === n.id && other.has(e.b)) || (e.b === n.id && other.has(e.a)));
+      await Promise.all(gone.map((e) => db.deleteTreeEdge(e.id)));
+      const goneSet = new Set(gone); edges = edges.filter((e) => !goneSet.has(e));
+      const side = inTop ? b.top : b.bottom; side.splice(side.findIndex((id) => id === n.id), 1);
+      dropStubOverride(g.key, n.id);
+      showMsg(`${nm} saiu do barramento.`, 'ok');
+    } else {
+      const lv = nodeLevel(n);
+      if (lv == null) { showMsg(`${nm} ainda não tem nível. Defina o nível dela primeiro.`); return; }
+      const toTop = lv === topLv, toBot = lv === botLv;
+      if (!toTop && !toBot) { showMsg(`Este barramento liga ${levelName(topLv).toLowerCase()} ao nível ${botLv}. ${nm} é ${levelName(lv).toLowerCase()}.`); return; }
+      const other = toTop ? g.children : g.parents;
+      const has = (a, c) => edges.some((e) => (e.a === a && e.b === c) || (e.a === c && e.b === a));
+      const made = await Promise.all(other.filter((id) => !has(n.id, id)).map((id) => db.insertTreeEdge(treeId, toTop ? n.id : id, toTop ? id : n.id)));
+      made.forEach((e) => { if (e) edges.push({ id: e.id, a: e.a, b: e.b }); });
+      (toTop ? b.top : b.bottom).push(n.id);
+      showMsg(`${nm} entrou no barramento.`, 'ok');
+    }
+    render(); computeBusGroups(); busDirty = false;
+    saveBusConfig(); selectBus(g.key);
+  } catch (e) { showMsg(e.message); }
+}
+function removeBus(key) {
+  busConfig.buses = (busConfig.buses || []).filter((b) => 'b:' + b.id !== key);
+  delete busConfig.paths[key]; delete busConfig.stubs[key];
+}
+// desfaz o barramento: as ligações ficam, só voltam a ser linhas comuns
+window.unbundleBus = () => {
+  if (!isGM || !selectedBusKey) return;
+  removeBus(selectedBusKey); deselectBus(); busDirty = true;
+  saveBusConfig('Barramento desfeito. As ligações continuam, agora como linhas.');
+};
+// exclui o barramento e as ligações dele
+window.deleteBusWithLinks = async () => {
+  if (!isGM || !selectedBusKey) return;
+  const g = busGroupByKey(selectedBusKey); if (!g) return;
+  const links = busLinks(g);
+  const ok = await confirmModal({ title: 'Excluir barramento', confirmLabel: 'Excluir',
+    desc: `Apaga o barramento e ${links.length === 1 ? 'a ligação dele' : `as ${links.length} ligações dele`}. As habilidades ficam. Não dá pra desfazer.` });
+  if (!ok) return;
+  try {
+    await Promise.all(links.map((e) => db.deleteTreeEdge(e.id)));
+    const gone = new Set(links); edges = edges.filter((e) => !gone.has(e));
+    removeBus(g.key); deselectBus(); render();
+    saveBusConfig('Barramento excluído.');
+  } catch (e) { showMsg(e.message); }
+};
 // ponto mais próximo de (px,py) num traçado (lista de pontos) — devolve o ponto, o trecho e a distância
 function nearestOnPath(pts, px, py) {
   let best = { x: pts[0].x, y: pts[0].y, seg: 0, d: Infinity };
@@ -691,14 +833,14 @@ function busAutoGeometry(g) {
     const outward = rc.reduce((s, v) => s + v, 0) / rc.length >= rp.reduce((s, v) => s + v, 0) / rp.length;
     const pEdge = outward ? Math.max(...rp) : Math.min(...rp), cEdge = outward ? Math.min(...rc) : Math.max(...rc);
     const rb = (pEdge + cEdge) / 2;
-    const near = P.filter((n) => Math.abs(rad(n) - pEdge) <= RING_STEP * .5);
+    const near = P.filter((n) => n.kind !== 'core' && Math.abs(rad(n) - pEdge) <= RING_STEP * .5);
     const spanA = [...C, ...near].map((n) => rel(ang(n)));
     const a0 = Math.min(...spanA), a1 = Math.max(...spanA);
     const at = (a) => ({ x: core.x + rb * Math.cos(ref + a), y: core.y + rb * Math.sin(ref + a) });
     const steps = Math.max(1, Math.ceil(((a1 - a0) * rb) / 10));
     const bar = []; for (let i = 0; i <= steps; i++) bar.push(at(a0 + (a1 - a0) * i / steps));
     const eps = 1e-3;
-    P.forEach((n) => { const a = rel(ang(n)); stubs.push({ pts: [n, at(a >= a0 - eps && a <= a1 + eps ? a : (a < a0 ? a0 : a1))], id: n.id }); });
+    P.forEach((n) => { const a = n.kind === 'core' ? (a0 + a1) / 2 : rel(ang(n)); stubs.push({ pts: [n, at(a >= a0 - eps && a <= a1 + eps ? a : (a < a0 ? a0 : a1))], id: n.id }); });
     C.forEach((n) => stubs.push({ pts: [n, at(rel(ang(n)))], id: n.id }));
     // pontos editáveis: as pontas e onde cada esfera toca o arco — vira um polígono que acompanha o anel
     const hs = [...new Set([a0, a1, ...spanA].map((a) => +a.toFixed(4)))].sort((x, y) => x - y);
@@ -818,6 +960,13 @@ function drawBusSelection(ctx) {
       ctx.globalAlpha = on ? .9 : .45; ctx.lineWidth = (on ? 3 : 1.6) * lw; line(st.pts);
     }
     ctx.globalAlpha = .9; ctx.lineWidth = 3 * lw; line(geo.bar); ctx.globalAlpha = 1;
+    // quem faz parte deste barramento ganha um anel tracejado (Shift + clique põe ou tira)
+    ctx.setLineDash([4 * lw, 3 * lw]); ctx.lineWidth = 1.6 * lw;
+    for (const id of [...g.parents, ...g.children]) {
+      const n = byId(id); if (!n) continue;
+      ctx.beginPath(); ctx.arc(n.x, n.y, nodeRadius(n) + 6 * lw, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.setLineDash([]);
     // alças: losango cheio = ponto da barra; losango menor = ligação (meio do trecho final) e dobras
     for (const h of busHandles(geo)) {
       const hsz = (h.t === 'bar' ? 6 : 5) / view.s;
@@ -894,7 +1043,7 @@ function saveBusConfig(msg) {
 function refreshBusPanel() {
   const key = selectedBusKey; if (!key) return;
   const nStubs = Object.keys(busConfig.stubs[key] || {}).length;
-  $('bus-mode').textContent = (busConfig.paths[key] ? 'Barra desenhada à mão' : 'Barra automática')
+  $('bus-mode').textContent = (busConfig.paths[key] ? 'Traçado desenhado à mão' : 'Traçado automático')
     + (nStubs ? ` · ${nStubs} ${nStubs > 1 ? 'ligações ajustadas' : 'ligação ajustada'}` : '');
   $('bus-reset').disabled = !busConfig.paths[key] && !nStubs;
   $('bus-straighten').disabled = !nStubs;
@@ -905,9 +1054,7 @@ function selectBus(key, handle = null) {
   if (selected) { $('editor').classList.remove('open'); selected = null; }
   closeOtherPanels('buspanel');
   const g = busGroupByKey(key);
-  const via = g?.fac != null ? viaByKey(g.fac) : null;
-  const ramo = g && branchCount > 1 ? `Ramo ${branchNo.get(g.branch) || '?'} · ` : '';
-  $('bus-title').textContent = g ? `${ramo}Nível ${g.level} → ${g.level + 1}${via ? ' · ' + via.name : ''}` : 'Barramento';
+  $('bus-title').textContent = g ? `${levelName(g.level)} → nível ${g.level + 1} · ${g.parents.length} em cima, ${g.children.length} embaixo` : 'Barramento';
   refreshBusPanel();
   $('bus-nomig').hidden = hasBusConfig;
   $('buspanel').classList.add('open');
@@ -920,7 +1067,7 @@ window.closeBusPanel = () => deselectBus();
 window.resetBusPath = () => {
   if (!isGM || !selectedBusKey) return;
   delete busConfig.paths[selectedBusKey]; delete busConfig.stubs[selectedBusKey];
-  saveBusConfig('Barra e ligações de volta ao automático.'); selectBus(selectedBusKey);
+  saveBusConfig('Traçado de volta ao automático.'); selectBus(selectedBusKey);
 };
 window.straightenBusStubs = () => {
   if (!isGM || !selectedBusKey) return;
@@ -1122,7 +1269,8 @@ setTimeout(() => {
     requireCharLevel = !!tree?.require_char_level;
     hasBusConfig = !!tree && 'bus_config' in tree;
     busConfig = { group: tree?.bus_config?.group === 'via' ? 'via' : 'level', paths: { ...(tree?.bus_config?.paths || {}) },
-      stubs: JSON.parse(JSON.stringify(tree?.bus_config?.stubs || {})) };
+      stubs: JSON.parse(JSON.stringify(tree?.bus_config?.stubs || {})),
+      buses: Array.isArray(tree?.bus_config?.buses) ? JSON.parse(JSON.stringify(tree.bus_config.buses)) : null };
     renderViaChips(); renderViaManager();
     bootStep('carregando status do sistema (listStats)');
     try { stats = await db.listStats(tree.system_id); } catch (_) { stats = []; } // sem atributos cadastrados ainda — ok
@@ -2316,6 +2464,11 @@ stage.addEventListener('pointerdown', async (ev) => {
   if (activePointers.size > 1) return; // dedo extra durante outro gesto — ignora
 
   const p = toWorld(ev.clientX, ev.clientY);
+  // barramento selecionado + Shift/Ctrl + clique numa habilidade: põe ou tira ela do barramento
+  if (isGM && tool === 'select' && selectedBusKey && (ev.shiftKey || ev.ctrlKey || ev.metaKey)) {
+    const hit = hitTestNodeAt(p.x, p.y), g = busGroupByKey(selectedBusKey);
+    if (hit && g) { toggleBusMember(g, hit); return; }
+  }
   // seleção múltipla: Shift ou Ctrl/Cmd + clique numa habilidade soma ou tira ela da seleção, com
   // Selecionar ou Área (a esfera que estava aberta sozinha entra junto na seleção)
   const multiKey = ev.shiftKey || ev.ctrlKey || ev.metaKey;
@@ -2442,7 +2595,6 @@ async function setAreaSelection(ids) {
   updateBatchPanel();
   return true;
 }
-const linksLeavingSelection = () => edges.filter((e) => areaSelection.has(e.a) !== areaSelection.has(e.b) && byId(e.a)?.kind !== 'core' && byId(e.b)?.kind !== 'core');
 // o painel da seleção reflete a seleção atual: quantas, de que ramo e nível, e os valores que todas
 // têm em comum (chip aceso só quando todas têm o mesmo valor; misturado = nenhum aceso)
 function updateBatchPanel() {
@@ -2466,12 +2618,6 @@ function updateBatchPanel() {
   mark('#batch-enabled .chip', 'e', common((x) => (x.enabled === false ? '0' : '1')));
   const li = $('batch-level');
   if (li && document.activeElement !== li) { const cl = common((x) => x.level ?? null); li.value = cl ?? ''; li.placeholder = cl === undefined ? 'vários' : '—'; }
-  // ligações que prendem a seleção ao resto da árvore (fora as do Núcleo): cortar separa num ramo próprio
-  const out = linksLeavingSelection();
-  $('batch-cut').hidden = !out.length;
-  const fora = [...new Set(out.map((e) => (areaSelection.has(e.a) ? e.b : e.a)))].map(byId).filter(Boolean);
-  const nomes = fora.slice(0, 4).map((x) => `"${x.name || 'sem nome'}"`).join(', ') + (fora.length > 4 ? ` e mais ${fora.length - 4}` : '');
-  $('batch-cut-text').textContent = `${out.length === 1 ? '1 ligação prende' : `${out.length} ligações prendem`} a seleção a ${fora.length === 1 ? 'uma habilidade de fora' : `${fora.length} habilidades de fora`}: ${nomes}.`;
   if (n > 0) closeOtherPanels('batchpanel');
   batchPanelEl.classList.toggle('open', n > 0);
 }
@@ -2486,21 +2632,6 @@ window.selectSameLevel = () => {
   const keys = new Set(sel.filter((x) => x.level != null).map((x) => branchOf.get(x.id) + '|' + x.level));
   if (!keys.size) { showMsg('As habilidades selecionadas ainda não têm nível.'); return; }
   setAreaSelection(nodes.filter((x) => x.kind !== 'core' && (areaSelection.has(x.id) || keys.has(branchOf.get(x.id) + '|' + x.level))).map((x) => x.id));
-};
-// corta as ligações entre a seleção e o resto (as do Núcleo ficam): a seleção vira um ramo à parte
-window.cutSelectionLinks = async () => {
-  if (!isGM) return;
-  const out = linksLeavingSelection();
-  if (!out.length) return;
-  const ok = await confirmModal({ title: 'Separar a seleção', confirmLabel: 'Cortar ligações',
-    desc: `Apaga ${out.length === 1 ? 'a ligação' : `as ${out.length} ligações`} entre as habilidades selecionadas e as de fora. As ligações com o Núcleo ficam. A seleção passa a ser um ramo próprio, com níveis e barramento separados.` });
-  if (!ok) return;
-  try {
-    await Promise.all(out.map((e) => db.deleteTreeEdge(e.id)));
-    const gone = new Set(out); edges = edges.filter((e) => !gone.has(e));
-    render(); updateBatchPanel();
-    showMsg(`${out.length === 1 ? '1 ligação cortada' : `${out.length} ligações cortadas`}. A seleção agora é um ramo próprio.`, 'ok');
-  } catch (e) { showMsg(e.message); }
 };
 /* edição em lote — aplica um campo (via/tamanho/estado) a todas as esferas da seleção de área de uma vez */
 window.batchSet = (key, value) => {
@@ -2565,7 +2696,11 @@ window.duplicateSelection = async (op) => {
   const customColor = dupColorMode === 'custom' ? ($('dup-color-swatch').style.getPropertyValue('--sw').trim() || null) : null;
   const idSet = new Set(ids);
   const internalEdges = edges.filter((e) => idSet.has(e.a) && idSet.has(e.b));
-  const boundaryEdges = edges.filter((e) => idSet.has(e.a) !== idSet.has(e.b));
+  // da fronteira só copia a ligação com o Núcleo: copiar as outras prendia a cópia nas esferas
+  // originais (espelhar uma coluna fazia a coluna nova nascer ligada à antiga)
+  const boundaryEdges = edges.filter((e) => idSet.has(e.a) !== idSet.has(e.b) && byId(idSet.has(e.a) ? e.b : e.a)?.kind === 'core');
+  const inSel = (id) => idSet.has(id) || id === core.id;
+  const dupBuses = (busConfig.buses || []).filter((b) => [...b.top, ...b.bottom].every(inSel) && [...b.top, ...b.bottom].some((id) => idSet.has(id)));
   showMsg('Duplicando…');
   try {
     // esferas primeiro, em paralelo (cada uma é independente das outras) — antes era um await por
@@ -2593,6 +2728,21 @@ window.duplicateSelection = async (op) => {
       })),
     ]);
     [...internalSaved, ...boundarySaved].forEach((saved) => { if (saved) edges.push({ id: saved.id, a: saved.a, b: saved.b }); });
+    if (dupBuses.length) {
+      const mapId = (id) => (id === core.id ? id : idMap.get(id));
+      const tp = ([x, y]) => { const t = transformPoint(x, y, core.x, core.y, op); return [Math.round(t.x), Math.round(t.y)]; };
+      for (const b of dupBuses) {
+        const nb = { id: genBusId() + busConfig.buses.length, top: b.top.map(mapId).filter(Boolean), bottom: b.bottom.map(mapId).filter(Boolean) };
+        busConfig.buses.push(nb);
+        const k = 'b:' + b.id, nk = 'b:' + nb.id;
+        if (busConfig.paths[k]) busConfig.paths[nk] = busConfig.paths[k].map(tp);
+        if (busConfig.stubs[k]) busConfig.stubs[nk] = Object.fromEntries(Object.entries(busConfig.stubs[k]).map(([id, o]) => {
+          const nid = idMap.get(id) || idMap.get(isNaN(id) ? id : Number(id)) || id;
+          return [nid, { ...(o.at ? { at: tp(o.at) } : {}), ...(o.via ? { via: o.via.map(tp) } : {}) }];
+        }));
+      }
+      saveBusConfig();
+    }
     render(); applyView(); clearAreaSelection();
     showMsg(`${ids.length} habilidade(s) duplicada(s).`);
   } catch (e) { showMsg('Erro ao duplicar: ' + e.message); }

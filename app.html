@@ -36,9 +36,11 @@
   .tpl-form input{flex:1 1 240px;min-width:0}
   .tpl-form select{flex:0 0 auto;width:auto}
   @media (max-width:600px){ .tpl-form select{flex:1 1 auto} }
-  .tpl-row{padding-right:var(--space-3)}
-  .tpl-row .tpl-open{display:flex;align-items:center;gap:var(--space-3);flex:1 1 auto;min-width:0;color:inherit;text-decoration:none;align-self:stretch}
-  .tpl-row .tpl-open .grow{min-width:0}
+  /* cartão de árvore no lobby: o .card-tile daqui tem 20px de respiro (não 18) — a miniatura sangra até a borda igual */
+  body.home-page .tree-card{min-height:0;padding:0 20px 20px}
+  body.home-page .tree-card .tree-mini{width:calc(100% + 40px);margin:0 -20px 4px}
+  .tree-actions{display:flex;flex-wrap:wrap;gap:var(--space-2);margin-top:4px}
+  .tree-actions .btn{margin-top:0;text-decoration:none}
   .sdet-trees{margin:var(--space-4) 0 0}
   .sdet-trees[hidden]{display:none}
   .sdet-tree-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:var(--space-3)}
@@ -681,18 +683,18 @@ async function renderTreeTemplates() {
     const list = await db.listTreeTemplates();
     if (!list.length) { box.className = ''; box.innerHTML = emptyState(TREE_ICON, 'Nenhuma árvore ainda',
       'Crie a primeira no campo acima. Depois é só importar ela na aba Árvores de qualquer sistema seu.'); return; }
-    box.className = 'mesa-rows';
+    // mesmo cartão da aba Árvores da mesa: miniatura grande no topo, nome, resumo e ações
+    box.className = 'grid tree-cards';
     box.innerHTML = list.map((t) => {
       const n = (t.data?.nodes || []).filter((x) => x.kind !== 'core').length;
-      return `<div class="list-row mesa-row tpl-row">
-        <a class="tpl-open" href="arvore.html?template=${t.id}" title="Abrir ${esc(t.name)}">
-          <canvas class="tree-mini xs" id="tplmini-${t.id}" aria-hidden="true"></canvas>
-          <span class="grow">
-            <span class="mesa-row-name">${esc(t.name)}</span>
-            <span class="mesa-row-meta"><span>${pl(n, 'habilidade', 'habilidades')}</span><span>salva ${esc(relTime(t.updated_at))}</span></span>
-          </span>
-        </a>
-        <button type="button" class="btn sm danger auto" onclick="deleteTreeTemplate('${t.id}')" aria-label="Excluir ${esc(t.name)}">Excluir</button>
+      return `<div class="card-tile tree-card" style="cursor:default">
+        <canvas class="tree-mini" id="tplmini-${t.id}" aria-hidden="true"></canvas>
+        <h3>${esc(t.name)}</h3>
+        <div class="tree-prog">${pl(n, 'habilidade', 'habilidades')} · salva ${esc(relTime(t.updated_at))}</div>
+        <div class="tree-actions">
+          <a class="btn go sm auto" href="arvore.html?template=${t.id}">Abrir árvore</a>
+          <button type="button" class="btn sm danger auto" onclick="deleteTreeTemplate('${t.id}')" aria-label="Excluir ${esc(t.name)}">Excluir</button>
+        </div>
       </div>`;
     }).join('');
     list.forEach((t) => drawTreeMini($('tplmini-' + t.id), { nodes: t.data?.nodes || [], edges: t.data?.edges || [], vias: t.data?.tree?.vias || [] }));

@@ -194,6 +194,9 @@
   body.no-tree-opts .tree-opts-missing{display:inline}
   .tree-opt-check,.fld label.via-lock{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-family:var(--serif);font-size:13px;
     letter-spacing:0;text-transform:none;color:var(--ink-dim);white-space:nowrap}
+  .bus-help{margin:4px 0 14px;padding-left:18px;font-family:var(--serif);font-size:13px;line-height:1.6;color:var(--ink-dim)}
+  .bus-help b{color:var(--ink);font-weight:600}
+  .bus-nomig{font-family:var(--serif);font-size:13px;line-height:1.5;color:var(--warning,#e3ad48);margin:0 0 12px}
   .via-row.via-lvl{flex-wrap:wrap;justify-content:space-between;gap:6px 10px;margin:-2px 0 10px 35px}
   .via-lvl .tool{padding:6px 9px;white-space:nowrap}
   .via-del,.via-add-btn{flex:0 0 auto;width:28px;height:28px;--fill:var(--surface-2);--frame:var(--border);color:var(--ink-faint);cursor:pointer;font-size:13px;line-height:1}
@@ -309,6 +312,7 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
       style="color:var(--ink);font-family:var(--mono);font-size:11px;padding:6px 8px;cursor:pointer">
       <option value="lines">Todas as linhas</option>
       <option value="bus">Barramento por nível</option>
+      <option value="bus_via">Barramento por nível e via</option>
     </select>
     <select id="bus-dir" onchange="setBusDir(this.value)" aria-label="Para que lado a árvore cresce" hidden
       style="color:var(--ink);font-family:var(--mono);font-size:11px;padding:6px 8px;cursor:pointer">
@@ -381,6 +385,23 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
     <div class="actions"><button class="btn danger" onclick="deleteSelected()">Excluir</button>
       <button class="btn go" id="node-save-btn" style="display:none" onclick="saveNodeEditor()"><span class="spin"></span>Salvar</button>
       <button class="btn" onclick="closePanel()">Fechar</button></div>
+  </div>
+</div>
+
+<div class="epanel" id="buspanel">
+  <div class="hd"><span class="eye">Barramento</span><button class="x" onclick="closeBusPanel()" aria-label="Fechar">×</button></div>
+  <div class="bd">
+    <div class="fld"><label>Ligação</label><div id="bus-title" style="font-family:var(--serif);font-size:16px;color:var(--ink)"></div></div>
+    <div class="fld"><label>Traçado</label><div id="bus-mode" style="font-family:var(--serif);font-size:14px;color:var(--ink-dim)"></div></div>
+    <ul class="bus-help">
+      <li><b>Arraste</b> um ponto para mover. Ele encaixa na grade; segure <b>Alt</b> para mover livre.</li>
+      <li><b>Duplo clique</b> na barra cria um ponto de dobra.</li>
+      <li><b>Delete</b> apaga o ponto selecionado.</li>
+      <li>Cada habilidade se liga sozinha ao ponto mais perto da barra.</li>
+    </ul>
+    <p id="bus-nomig" class="bus-nomig" hidden>Para guardar o desenho, aplique a migração <b>20261001_arvore_barramento_editavel.sql</b> no Supabase.</p>
+    <div class="actions"><button type="button" class="btn" id="bus-reset" onclick="resetBusPath()">Restaurar automático</button>
+      <button type="button" class="btn" onclick="closeBusPanel()">Fechar</button></div>
   </div>
 </div>
 
@@ -465,6 +486,6 @@ try { if (new URLSearchParams(location.search).get('embed') === '1') document.bo
 <div class="count" id="count"></div>
 <div class="via-legend" id="via-legend" style="display:none"></div>
 
-<script src="arvore.js?v=30"></script>
+<script src="arvore.js?v=31"></script>
 </body>
 </html>

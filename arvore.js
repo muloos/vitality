@@ -372,6 +372,8 @@ let myPoints = 0;
 // dizem se a migração já rodou — sem ela os controles novos ficam escondidos e nada do resto muda.
 let hasLevelCol = false, hasTreeOpts = false;
 let edgeStyle = 'lines', busDir = 'auto', requireCharLevel = false;
+// barramento editável (supabase/migrations/20261001_arvore_barramento_editavel.sql): group + paths
+let hasBusConfig = false, busConfig = { group: 'level', paths: {} };
 // nível do personagem: a mesa passa &lvl= ao embutir a árvore (o servidor confere de novo ao desbloquear)
 const charLevel = params.get('lvl') ? Math.max(1, parseInt(params.get('lvl'), 10) || 1) : null;
 const statById = (id) => stats.find((s) => s.id === id);
@@ -468,7 +470,7 @@ window.deleteVia = async (key) => {
 function syncLevelUi() {
   document.body.classList.toggle('no-levels', !hasLevelCol);
   document.body.classList.toggle('no-tree-opts', !hasTreeOpts);
-  const es = $('edge-style'); if (es) es.value = edgeStyle;
+  const es = $('edge-style'); if (es) { es.value = edgeStyle === 'bus' && busConfig.group === 'via' ? 'bus_via' : edgeStyle; const o = es.querySelector('option[value="bus_via"]'); if (o) o.hidden = !hasBusConfig; }
   const bd = $('bus-dir'); if (bd) { bd.value = busDir; bd.hidden = !(edgeStyle === 'bus' && gridShape === 'linear'); }
   const rc = $('req-char-level'); if (rc) rc.checked = requireCharLevel;
   const al = $('auto-levels-btn'); if (al) al.textContent = gridShape === 'linear' ? 'Nível pela fileira' : 'Nível pelo anel';
@@ -477,7 +479,15 @@ function saveTreeOpt(patchObj, okMsg) {
   if (!isGM || !hasTreeOpts) return;
   db.updateSystemTree(treeId, patchObj).then(() => showMsg(okMsg, 'ok')).catch((e) => showMsg(e.message));
 }
-window.setEdgeStyle = (v) => { edgeStyle = v === 'bus' ? 'bus' : 'lines'; busDirty = true; syncLevelUi(); saveTreeOpt({ edge_style: edgeStyle }, edgeStyle === 'bus' ? 'Barramento por nível ativado.' : 'Todas as linhas.'); };
+window.setEdgeStyle = (v) => {
+  edgeStyle = v === 'lines' ? 'lines' : 'bus';
+  const group = v === 'bus_via' ? 'via' : 'level';
+  const groupChanged = hasBusConfig && edgeStyle === 'bus' && group !== busConfig.group;
+  if (groupChanged) busConfig.group = group;
+  busDirty = true; deselectBus(); syncLevelUi();
+  saveTreeOpt({ edge_style: edgeStyle, ...(groupChanged ? { bus_config: busConfig } : {}) },
+    edgeStyle === 'lines' ? 'Todas as linhas.' : group === 'via' ? 'Barramento por nível, separado por via.' : 'Barramento por nível.');
+};
 window.setBusDir = (v) => { busDir = v; syncLevelUi(); saveTreeOpt({ bus_dir: v }, 'Direção salva.'); };
 window.setRequireCharLevel = (on) => { requireCharLevel = !!on; saveTreeOpt({ require_char_level: requireCharLevel }, on ? 'A árvore agora exige o nível do personagem.' : 'Nível do personagem não é mais exigido.'); };
 window.toggleViaLock = (key, on) => {
@@ -554,39 +564,46 @@ window.linkViaLevels = async (key) => {
 
 // ---------- barramento: um grupo = (via, nível N → N+1) em que TODA esfera de N liga a TODA de N+1 ----------
 let busGroups = [], busEdges = new Set(), busDirty = true;
+// grupo = (nível N → N+1) e, no modo "por via", a via. Entra toda ligação entre esferas de níveis
+// vizinhos do mesmo grupo — o barramento é um desenho, não muda quem liga em quem.
 function computeBusGroups() {
   busGroups = []; busEdges = new Set();
   if (edgeStyle !== 'bus') return;
-  const layers = new Map();
-  for (const n of nodes) {
-    if (n.kind === 'core' || n.level == null) continue;
-    const k = (n.fac || '') + '|' + n.level;
-    (layers.get(k) || layers.set(k, []).get(k)).push(n);
+  const byKey = new Map();
+  for (const e of edges) {
+    const A = nodeById.get(e.a), B = nodeById.get(e.b);
+    if (!A || !B || A.kind === 'core' || B.kind === 'core' || A.level == null || B.level == null) continue;
+    if (Math.abs(A.level - B.level) !== 1) continue;
+    if (busConfig.group === 'via' && A.fac !== B.fac) continue;
+    const [p, c] = A.level < B.level ? [A, B] : [B, A];
+    const key = (busConfig.group === 'via' ? (p.fac || '') : '*') + '|' + p.level;
+    let g = byKey.get(key);
+    if (!g) { g = { key, level: p.level, fac: busConfig.group === 'via' ? p.fac : null, parents: new Set(), children: new Set() }; byKey.set(key, g); }
+    g.parents.add(p.id); g.children.add(c.id); busEdges.add(e);
   }
-  const edgeOf = new Map();
-  for (const e of edges) { edgeOf.set(e.a + '|' + e.b, e); edgeOf.set(e.b + '|' + e.a, e); }
-  for (const [k, parents] of layers) {
-    const cut = k.lastIndexOf('|'), fac = k.slice(0, cut), lvl = +k.slice(cut + 1);
-    const children = layers.get(fac + '|' + (lvl + 1)); if (!children) continue;
-    const found = [];
-    let complete = true;
-    for (const p of parents) {
-      for (const c of children) { const e = edgeOf.get(p.id + '|' + c.id); if (!e) { complete = false; break; } found.push(e); }
-      if (!complete) break;
-    }
-    if (!complete) continue;
-    busGroups.push({ fac, parents: parents.map((n) => n.id), children: children.map((n) => n.id) });
-    found.forEach((e) => busEdges.add(e));
-  }
+  byKey.forEach((g) => busGroups.push({ ...g, parents: [...g.parents], children: [...g.children] }));
 }
-// geometria: a barra fica no meio do caminho entre os dois níveis e vai de ponta a ponta das esferas
-// de baixo e das de cima que estão na fileira/anel mais perto; quem está nessa faixa desce reto,
-// quem está fora (ou desalinhado para o lado) chega em diagonal até a ponta mais próxima
-function busGeometry(g) {
+// ponto mais próximo de (px,py) num traçado (lista de pontos) — devolve o ponto, o trecho e a distância
+function nearestOnPath(pts, px, py) {
+  let best = { x: pts[0].x, y: pts[0].y, seg: 0, d: Infinity };
+  for (let i = 1; i < pts.length; i++) {
+    const A = pts[i - 1], B = pts[i], dx = B.x - A.x, dy = B.y - A.y, L2 = dx * dx + dy * dy;
+    const t = L2 ? Math.max(0, Math.min(1, ((px - A.x) * dx + (py - A.y) * dy) / L2)) : 0;
+    const x = A.x + t * dx, y = A.y + t * dy, d = Math.hypot(px - x, py - y);
+    if (d < best.d) best = { x, y, seg: i - 1, d };
+  }
+  if (pts.length === 1) best.d = Math.hypot(px - pts[0].x, py - pts[0].y);
+  return best;
+}
+// geometria AUTOMÁTICA: a barra fica no meio do caminho entre os dois níveis e vai de ponta a ponta
+// das esferas de baixo e das de cima que estão na fileira/anel mais perto; quem está nessa faixa desce
+// reto, quem está fora (ou desalinhado para o lado) chega em diagonal até a ponta mais próxima.
+// Devolve também "handles": os pontos que viram editáveis se o Mestre mexer nesta barra.
+function busAutoGeometry(g) {
   const P = g.parents.map(byId).filter(Boolean), C = g.children.map(byId).filter(Boolean);
   if (!P.length || !C.length) return null;
   const core = coreNode;
-  const lines = [];
+  const stubs = [];
   if (gridShape !== 'linear' && core) {
     const ang = (n) => Math.atan2(n.y - core.y, n.x - core.x), rad = (n) => Math.hypot(n.x - core.x, n.y - core.y);
     const ref = Math.atan2(C.reduce((s, n) => s + Math.sin(ang(n)), 0), C.reduce((s, n) => s + Math.cos(ang(n)), 0));
@@ -595,57 +612,197 @@ function busGeometry(g) {
     const outward = rc.reduce((s, v) => s + v, 0) / rc.length >= rp.reduce((s, v) => s + v, 0) / rp.length;
     const pEdge = outward ? Math.max(...rp) : Math.min(...rp), cEdge = outward ? Math.min(...rc) : Math.max(...rc);
     const rb = (pEdge + cEdge) / 2;
-    const tol = RING_STEP * .5;
-    const near = P.filter((n) => Math.abs(rad(n) - pEdge) <= tol);
+    const near = P.filter((n) => Math.abs(rad(n) - pEdge) <= RING_STEP * .5);
     const spanA = [...C, ...near].map((n) => rel(ang(n)));
     const a0 = Math.min(...spanA), a1 = Math.max(...spanA);
     const at = (a) => ({ x: core.x + rb * Math.cos(ref + a), y: core.y + rb * Math.sin(ref + a) });
     const steps = Math.max(1, Math.ceil(((a1 - a0) * rb) / 10));
     const bar = []; for (let i = 0; i <= steps; i++) bar.push(at(a0 + (a1 - a0) * i / steps));
-    if (a1 - a0 > 1e-4) lines.push({ pts: bar, id: null });
     const eps = 1e-3;
-    P.forEach((n) => { const a = rel(ang(n)); lines.push({ pts: [n, at(a >= a0 - eps && a <= a1 + eps ? a : (a < a0 ? a0 : a1))], id: n.id }); });
-    C.forEach((n) => lines.push({ pts: [at(rel(ang(n))), n], id: n.id }));
-    return lines;
+    P.forEach((n) => { const a = rel(ang(n)); stubs.push({ pts: [n, at(a >= a0 - eps && a <= a1 + eps ? a : (a < a0 ? a0 : a1))], id: n.id }); });
+    C.forEach((n) => stubs.push({ pts: [at(rel(ang(n))), n], id: n.id }));
+    // pontos editáveis: as pontas e onde cada esfera toca o arco — vira um polígono que acompanha o anel
+    const hs = [...new Set([a0, a1, ...spanA].map((a) => +a.toFixed(4)))].sort((x, y) => x - y);
+    return { bar, stubs, handles: hs.map(at) };
   }
   const dir = linearDir(P, C), L = TO_LOCAL[dir], Wd = TO_WORLD[dir];
   const lp = P.map((n) => ({ n, ...L(n) })), lc = C.map((n) => ({ n, ...L(n) }));
   const pEdge = Math.max(...lp.map((p) => p.d)), cEdge = Math.min(...lc.map((c) => c.d));
   const db = (pEdge + cEdge) / 2;
-  const tol = LINEAR_STEP * .5;
-  const span = [...lc, ...lp.filter((p) => Math.abs(p.d - pEdge) <= tol)].map((q) => q.l);
+  const span = [...lc, ...lp.filter((p) => Math.abs(p.d - pEdge) <= LINEAR_STEP * .5)].map((q) => q.l);
   const l0 = Math.min(...span), l1 = Math.max(...span);
-  if (l1 - l0 > .5) lines.push({ pts: [Wd(l0, db), Wd(l1, db)], id: null });
-  lp.forEach((p) => lines.push({ pts: [p.n, Wd(p.l >= l0 - .5 && p.l <= l1 + .5 ? p.l : (p.l < l0 ? l0 : l1), db)], id: p.n.id }));
-  lc.forEach((c) => lines.push({ pts: [Wd(c.l, db), c.n], id: c.n.id }));
-  return lines;
+  const bar = [Wd(l0, db), Wd(l1, db)];
+  lp.forEach((p) => stubs.push({ pts: [p.n, Wd(p.l >= l0 - .5 && p.l <= l1 + .5 ? p.l : (p.l < l0 ? l0 : l1), db)], id: p.n.id }));
+  lc.forEach((c) => stubs.push({ pts: [Wd(c.l, db), c.n], id: c.n.id }));
+  return { bar, stubs, handles: bar.map((p) => ({ ...p })) };
+}
+// geometria final: se o Mestre desenhou a barra (bus_config.paths), ela manda; cada esfera do grupo
+// se liga com um traço reto até o ponto mais próximo dela
+function busGeometry(g) {
+  const manual = busConfig.paths[g.key];
+  if (!manual || manual.length < 2) return busAutoGeometry(g);
+  const bar = manual.map(([x, y]) => ({ x, y }));
+  const stubs = [...g.parents, ...g.children].map(byId).filter(Boolean)
+    .map((n) => { const q = nearestOnPath(bar, n.x, n.y); return { pts: [n, { x: q.x, y: q.y }], id: n.id }; });
+  return { bar, stubs, handles: bar, manual: true };
+}
+function strokeGlowPath(ctx, pts, color, off) {
+  const [er, eg, eb] = hexToRgb(color);
+  if (!off) {
+    for (let i = 1; i < pts.length; i++) {
+      const A = pts[i - 1], B = pts[i], dx = B.x - A.x, dy = B.y - A.y, len = Math.hypot(dx, dy);
+      if (len < .5) continue;
+      ctx.save(); ctx.translate(A.x, A.y); ctx.rotate(Math.atan2(dy, dx)); ctx.globalAlpha = EDGE_GLOW_ALPHA;
+      ctx.drawImage(edgeGlowStripFor(color), 0, -EDGE_GLOW_THICKNESS / 2, len, EDGE_GLOW_THICKNESS);
+      ctx.restore();
+    }
+  }
+  ctx.strokeStyle = `rgba(${er},${eg},${eb},${off ? .3 : .85})`; ctx.lineWidth = off ? 1.4 : 1.8;
+  ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+  ctx.stroke();
 }
 function drawBus(ctx, g, visible) {
   if (!g.parents.some((id) => visible.has(id)) && !g.children.some((id) => visible.has(id))) return;
-  const lines = busGeometry(g); if (!lines) return;
+  const geo = busGeometry(g); if (!geo) return;
   const color = edgeColor; // mesma "Cor das linhas" da árvore que as conexões normais usam
-  const [er, eg, eb] = hexToRgb(color);
   const allOff = [...g.parents, ...g.children].every((id) => byId(id)?.enabled === false);
   ctx.save();
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  for (const ln of lines) {
-    const off = ln.id ? byId(ln.id)?.enabled === false : allOff;
-    // brilho: o mesmo sprite das conexões normais, esticado em cada trecho reto
-    if (!off) {
-      for (let i = 1; i < ln.pts.length; i++) {
-        const A = ln.pts[i - 1], B = ln.pts[i], dx = B.x - A.x, dy = B.y - A.y, len = Math.hypot(dx, dy);
-        if (len < .5) continue;
-        ctx.save(); ctx.translate(A.x, A.y); ctx.rotate(Math.atan2(dy, dx)); ctx.globalAlpha = EDGE_GLOW_ALPHA;
-        ctx.drawImage(edgeGlowStripFor(color), 0, -EDGE_GLOW_THICKNESS / 2, len, EDGE_GLOW_THICKNESS);
-        ctx.restore();
-      }
-    }
-    ctx.strokeStyle = `rgba(${er},${eg},${eb},${off ? .3 : .85})`; ctx.lineWidth = off ? 1.4 : 1.8;
-    ctx.beginPath(); ctx.moveTo(ln.pts[0].x, ln.pts[0].y);
-    for (let i = 1; i < ln.pts.length; i++) ctx.lineTo(ln.pts[i].x, ln.pts[i].y);
-    ctx.stroke();
+  for (const st of geo.stubs) strokeGlowPath(ctx, st.pts, color, byId(st.id)?.enabled === false);
+  if (geo.bar.length > 1) strokeGlowPath(ctx, geo.bar, color, allOff);
+  ctx.restore();
+}
+
+// barra selecionada pelo Mestre: realce em latão + alças — desenhado DEPOIS das esferas, para a alça
+// nunca sumir embaixo de uma esfera quando o ponto cai em cima dela
+function drawBusSelection(ctx) {
+  if (!isGM || !selectedBusKey) return;
+  const g = busGroupByKey(selectedBusKey); if (!g) return;
+  const geo = busGeometry(g); if (!geo) return;
+  ctx.save();
+  {
+    const brass = cssVar('--brass', '#c9a45c');
+    ctx.strokeStyle = brass; ctx.lineWidth = 3 / Math.max(view.s, .4); ctx.globalAlpha = .9;
+    ctx.beginPath(); ctx.moveTo(geo.bar[0].x, geo.bar[0].y);
+    for (let i = 1; i < geo.bar.length; i++) ctx.lineTo(geo.bar[i].x, geo.bar[i].y);
+    ctx.stroke(); ctx.globalAlpha = 1;
+    const hsz = 6 / view.s;
+    geo.handles.forEach((h, i) => {
+      ctx.save(); ctx.translate(h.x, h.y); ctx.rotate(Math.PI / 4);
+      ctx.fillStyle = geo.manual && i === selectedBusVertex ? brass : 'rgba(15,16,18,.9)';
+      ctx.strokeStyle = brass; ctx.lineWidth = 1.6 / view.s;
+      ctx.fillRect(-hsz / 2, -hsz / 2, hsz, hsz); ctx.strokeRect(-hsz / 2, -hsz / 2, hsz, hsz);
+      ctx.restore();
+    });
   }
   ctx.restore();
+}
+/* ---------- edição do barramento pelo Mestre ----------
+   Clicar numa barra (ferramenta Selecionar) seleciona; arrastar uma alça move o ponto (encaixa numa
+   grade mais fina que a das esferas; Alt solta livre); duplo clique na barra cria um ponto de dobra;
+   Delete apaga o ponto selecionado; "Restaurar automático" volta ao traçado calculado. */
+let selectedBusKey = null, selectedBusVertex = null, _busSaveT = null;
+const busGroupByKey = (key) => busGroups.find((g) => g.key === key) || null;
+function fineSnap(x, y) {
+  if (gridShape === 'linear' || !coreNode) { const st = LINEAR_STEP / 2; return { x: Math.round(x / st) * st, y: Math.round(y / st) * st }; }
+  const core = coreNode, dx = x - core.x, dy = y - core.y, half = RING_STEP / 2;
+  const r = Math.max(half, Math.round(Math.hypot(dx, dy) / half) * half);
+  const segs = (SHAPE_SEGMENTS[gridShape] || 8) * Math.max(1, Math.round(r / RING_STEP)) * 2;
+  const step = (Math.PI * 2) / segs, a = Math.round(Math.atan2(dy, dx) / step) * step;
+  return { x: Math.round(core.x + r * Math.cos(a)), y: Math.round(core.y + r * Math.sin(a)) };
+}
+function hitTestBusAt(wx, wy) {
+  if (edgeStyle !== 'bus') return null;
+  const tol = (EDGE_HIT_TOLERANCE + 3) / Math.max(view.s, .4);
+  let best = null, bestD = tol;
+  for (const g of busGroups) {
+    const geo = busGeometry(g); if (!geo || geo.bar.length < 2) continue;
+    const q = nearestOnPath(geo.bar, wx, wy);
+    if (q.d <= bestD) { bestD = q.d; best = { g, geo, q }; }
+  }
+  return best;
+}
+function busHandleAt(wx, wy) {
+  const g = selectedBusKey && busGroupByKey(selectedBusKey); if (!g) return null;
+  const geo = busGeometry(g); if (!geo) return null;
+  const tol = 9 / view.s;
+  let best = null, bestD = tol;
+  geo.handles.forEach((h, i) => { const d = Math.hypot(h.x - wx, h.y - wy); if (d <= bestD) { bestD = d; best = { g, geo, i }; } });
+  return best;
+}
+// converte a barra automática em pontos editáveis na primeira mexida
+function ensureManualPath(g, geo) {
+  if (!busConfig.paths[g.key]) busConfig.paths[g.key] = geo.handles.map((h) => [Math.round(h.x), Math.round(h.y)]);
+  return busConfig.paths[g.key];
+}
+function saveBusConfig(msg) {
+  if (!hasBusConfig) { showMsg('Para guardar o desenho da barra, aplique a migração 20261001 no Supabase.'); return; }
+  clearTimeout(_busSaveT);
+  _busSaveT = setTimeout(() => db.updateSystemTree(treeId, { bus_config: busConfig }).then(() => { if (msg) showMsg(msg, 'ok'); }).catch((e) => showMsg(e.message)), 350);
+}
+function selectBus(key) {
+  selectedBusKey = key; selectedBusVertex = null;
+  deselectEdge();
+  if (selected) { $('editor').classList.remove('open'); selected = null; }
+  closeOtherPanels('buspanel');
+  const g = busGroupByKey(key);
+  const via = g?.fac != null ? viaByKey(g.fac) : null;
+  $('bus-title').textContent = g ? `Nível ${g.level} → ${g.level + 1}${via ? ' · ' + via.name : ''}` : 'Barramento';
+  $('bus-mode').textContent = busConfig.paths[key] ? 'Desenhado à mão' : 'Automático';
+  $('bus-reset').disabled = !busConfig.paths[key];
+  $('bus-nomig').hidden = hasBusConfig;
+  $('buspanel').classList.add('open');
+}
+function deselectBus() {
+  selectedBusKey = null; selectedBusVertex = null;
+  $('buspanel')?.classList.remove('open');
+}
+window.closeBusPanel = () => deselectBus();
+window.resetBusPath = () => {
+  if (!isGM || !selectedBusKey) return;
+  delete busConfig.paths[selectedBusKey]; selectedBusVertex = null;
+  saveBusConfig('Barra de volta ao automático.'); selectBus(selectedBusKey);
+};
+function startBusVertexDrag(hit, ev) {
+  const path = ensureManualPath(hit.g, hit.geo);
+  selectedBusVertex = hit.i;
+  let moved = false; const sx = ev.clientX, sy = ev.clientY, [ox, oy] = path[hit.i];
+  try { stage.setPointerCapture(ev.pointerId); } catch (_) {}
+  const mv = (e) => {
+    if (!moved && Math.abs(e.clientX - sx) + Math.abs(e.clientY - sy) > 3) moved = true;
+    if (!moved) return;
+    const x = ox + (e.clientX - sx) / view.s, y = oy + (e.clientY - sy) / view.s;
+    const p = e.altKey ? { x: Math.round(x), y: Math.round(y) } : fineSnap(x, y);
+    path[hit.i] = [p.x, p.y];
+  };
+  const up = () => {
+    try { stage.releasePointerCapture(ev.pointerId); } catch (_) {}
+    stage.removeEventListener('pointermove', mv); stage.removeEventListener('pointerup', up);
+    if (moved) saveBusConfig(); else selectBus(hit.g.key);
+    selectedBusVertex = hit.i; $('bus-mode').textContent = 'Desenhado à mão'; $('bus-reset').disabled = false;
+  };
+  stage.addEventListener('pointermove', mv); stage.addEventListener('pointerup', up);
+}
+function addBusVertexAt(wx, wy) {
+  const hit = hitTestBusAt(wx, wy); if (!hit) return false;
+  if (selectedBusKey !== hit.g.key) selectBus(hit.g.key);
+  const path = ensureManualPath(hit.g, hit.geo);
+  const bar = path.map(([x, y]) => ({ x, y }));
+  const q = nearestOnPath(bar, wx, wy), p = fineSnap(q.x, q.y);
+  path.splice(q.seg + 1, 0, [p.x, p.y]);
+  selectedBusVertex = q.seg + 1;
+  saveBusConfig('Ponto de dobra criado. Arraste para moldar a barra.');
+  selectBus(hit.g.key); selectedBusVertex = q.seg + 1;
+  return true;
+}
+function deleteSelectedBusVertex() {
+  const path = selectedBusKey && busConfig.paths[selectedBusKey];
+  if (!path || selectedBusVertex == null) return false;
+  if (path.length <= 2) { showMsg('A barra precisa de pelo menos dois pontos. Use "Restaurar automático" para recomeçar.'); return true; }
+  path.splice(selectedBusVertex, 1); selectedBusVertex = null;
+  saveBusConfig('Ponto removido.');
+  return true;
 }
 
 /* ---------- tamanho da esfera ---------- */
@@ -746,6 +903,8 @@ setTimeout(() => {
     edgeStyle = tree?.edge_style === 'bus' ? 'bus' : 'lines';
     busDir = tree?.bus_dir || 'auto';
     requireCharLevel = !!tree?.require_char_level;
+    hasBusConfig = !!tree && 'bus_config' in tree;
+    busConfig = { group: tree?.bus_config?.group === 'via' ? 'via' : 'level', paths: { ...(tree?.bus_config?.paths || {}) } };
     renderViaChips(); renderViaManager();
     bootStep('carregando status do sistema (listStats)');
     try { stats = await db.listStats(tree.system_id); } catch (_) { stats = []; } // sem atributos cadastrados ainda — ok
@@ -1300,6 +1459,7 @@ function drawWorld(now) {
     if (!visible.has(n.id)) continue;
     drawNode(ctx, n, now);
   }
+  drawBusSelection(ctx);
   ctx.restore();
 }
 // brilho das conexões: sprite com gradiente CONTÍNUO (mesma ideia do halo das esferas, ver
@@ -1627,7 +1787,7 @@ function refreshEditorFields(n) {
 // dava pra ver o de baixo fechando o de cima manualmente. Cada função que abre um painel chama isso
 // primeiro, garantindo que só um fica visível de cada vez.
 function closeOtherPanels(keepId) {
-  ['editor', 'viewer', 'batchpanel'].forEach((id) => { if (id !== keepId) $(id).classList.remove('open'); });
+  ['editor', 'viewer', 'batchpanel', 'buspanel'].forEach((id) => { if (id !== keepId) $(id)?.classList.remove('open'); });
 }
 function openEditor(n) {
   closeOtherPanels('editor');
@@ -1922,7 +2082,13 @@ stage.addEventListener('pointerdown', async (ev) => {
       return;
     }
   }
+  // barra do barramento selecionada: as alças têm prioridade sobre tudo (são pequenas e ficam por cima)
+  if (tool === 'select' && isGM && selectedBusKey) {
+    const h = busHandleAt(p.x, p.y);
+    if (h) { startBusVertexDrag(h, ev); return; }
+  }
   const hitNode = tool !== 'area' ? hitTestNodeAt(p.x, p.y) : null;
+  if (hitNode && selectedBusKey) deselectBus();
   if (hitNode) {
     if (!isGM) { selectNode(hitNode); return; }
     if (tool === 'link') { handleLink(hitNode); return; }
@@ -1930,8 +2096,11 @@ stage.addEventListener('pointerdown', async (ev) => {
     return;
   }
   if (tool === 'select' && isGM) {
+    const hitBus = hitTestBusAt(p.x, p.y);
+    if (hitBus) { selectBus(hitBus.g.key); return; }
     const hitEdge = hitTestEdgeAt(p.x, p.y);
-    if (hitEdge) { selectEdge(hitEdge); return; }
+    if (hitEdge) { deselectBus(); selectEdge(hitEdge); return; }
+    if (selectedBusKey) deselectBus();
   }
   if (tool === 'add' && isGM) {
     const snapped = gridSnap(p.x, p.y);
@@ -1964,7 +2133,8 @@ stage.addEventListener('pointermove', (ev) => {
   if (activePointers.size < 2) {
     const wp = toWorld(ev.clientX, ev.clientY);
     hoveredNode = hitTestNodeAt(wp.x, wp.y);
-    stage.style.cursor = hoveredNode || (tool === 'select' && isGM && hitTestEdgeAt(wp.x, wp.y)) ? 'pointer' : '';
+    stage.style.cursor = (tool === 'select' && isGM && selectedBusKey && !hoveredNode && busHandleAt(wp.x, wp.y)) ? 'move'
+      : hoveredNode || (tool === 'select' && isGM && (hitTestBusAt(wp.x, wp.y) || hitTestEdgeAt(wp.x, wp.y))) ? 'pointer' : '';
   }
 });
 stage.addEventListener('pointerleave', () => { hoveredNode = null; stage.style.cursor = ''; });
@@ -2109,6 +2279,13 @@ window.deleteAreaSelection = async () => {
     showMsg(`${ids.length} habilidade(s) excluída(s).`);
   }).catch((e) => showMsg('Erro ao excluir: ' + e.message));
 };
+// duplo clique numa barra do barramento (Mestre, Selecionar): cria um ponto de dobra ali
+stage.addEventListener('dblclick', (ev) => {
+  if (!isGM || tool !== 'select' || edgeStyle !== 'bus') return;
+  const p = toWorld(ev.clientX, ev.clientY);
+  if (hitTestNodeAt(p.x, p.y)) return;
+  addBusVertexAt(p.x, p.y);
+});
 stage.addEventListener('wheel', (ev) => { ev.preventDefault(); zoomAt(ev.clientX, ev.clientY, ev.deltaY < 0 ? 1.12 : .89); }, { passive: false });
 function zoomAt(cx, cy, f) { const r = stage.getBoundingClientRect(); const wx = (cx-r.left-view.x)/view.s, wy = (cy-r.top-view.y)/view.s;
   view.s = Math.max(MINZOOM, Math.min(2.6, view.s*f)); view.x = cx-r.left-wx*view.s; view.y = cy-r.top-wy*view.s; applyView(); }
@@ -2119,8 +2296,8 @@ window.setTool = (t) => { if (!isGM) return; tool = t; linkSrc = null;
   stage.classList.toggle('adding', t === 'add');
   stage.classList.toggle('areaing', t === 'area'); gridPolarEl.classList.toggle('show', t === 'add'); if (t !== 'add') hideSnapMark(); };
 addEventListener('keydown', (ev) => {
-  if (ev.key === 'Delete' && isGM) { if (selected) deleteSelected(); else if (selectedEdge) deleteSelectedEdge(); }
-  if (ev.key === 'Escape') { linkSrc = null; if (areaSelection.size) clearAreaSelection(); deselectEdge(); closePanel(); closeViewer(); }
+  if (ev.key === 'Delete' && isGM) { if (selectedBusKey) deleteSelectedBusVertex(); else if (selected) deleteSelected(); else if (selectedEdge) deleteSelectedEdge(); }
+  if (ev.key === 'Escape') { linkSrc = null; if (areaSelection.size) clearAreaSelection(); deselectEdge(); deselectBus(); closePanel(); closeViewer(); }
 });
 addEventListener('resize', () => { W = innerWidth; H = innerHeight; fxResize(); resizeStage(); render(); });
 

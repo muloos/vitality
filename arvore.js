@@ -31,7 +31,7 @@ function showBootError(msg) {
 // no banner central acima, com a mensagem exata, em vez de travar tudo em silêncio.
 let db, mountHelp, mountThemeToggle, openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus;
 try {
-  db = await import('./lib/db.js?v=43');
+  db = await import('./lib/db.js?v=44');
   ({ mountHelp, mountThemeToggle, openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus } = await import('./lib/ui.js?v=7'));
 } catch (e) {
   showBootError(`Não deu pra carregar os módulos da página (db.js/ui.js): ${e && e.message ? e.message : e}`);

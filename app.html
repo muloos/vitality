@@ -347,7 +347,7 @@
 </div>
 
 <script type="module">
-import * as db from './lib/db.js?v=43';
+import * as db from './lib/db.js?v=44';
 import { drawTreeMini } from './lib/tree-mini.js?v=2';
 import { itemCard, openItemDetail as openItemDetailModal, detailAttrs } from './lib/item-card.js?v=3';
 import { mountThemeToggle, openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus, wireVerticalTablist, playEnter } from './lib/ui.js?v=10';
@@ -693,6 +693,7 @@ async function renderTreeTemplates() {
         <div class="tree-prog">${pl(n, 'habilidade', 'habilidades')} · salva ${esc(relTime(t.updated_at))}</div>
         <div class="tree-actions">
           <a class="btn go sm auto" href="arvore.html?template=${t.id}">Abrir árvore</a>
+          <button type="button" class="btn sm auto" onclick="duplicateTreeTemplate('${t.id}', this)" aria-label="Duplicar ${esc(t.name)}"><span class="spin"></span>Duplicar</button>
           <button type="button" class="btn sm danger auto" onclick="deleteTreeTemplate('${t.id}')" aria-label="Excluir ${esc(t.name)}">Excluir</button>
         </div>
       </div>`;
@@ -714,6 +715,11 @@ window.doCreateTreeTemplate = (ev) => {
     .then((t) => { location.href = 'arvore.html?template=' + t.id; })
     .catch((e) => { showMsg(missingTemplates(e) ? 'Para criar árvores na conta, aplique a migração 20261003_modelos_de_arvore.sql no Supabase.' : 'Não deu pra criar a árvore: ' + friendlyError(e)); busy(ev.target, false); });
   return false;
+};
+window.duplicateTreeTemplate = async (id, btn) => {
+  btn.classList.add('loading'); btn.disabled = true;
+  try { const t = await db.duplicateTreeTemplate(id); await renderTreeTemplates(); showMsg(`"${t.name}" criada. Abra para fazer as alterações.`, 'ok'); }
+  catch (e) { showMsg('Não deu pra duplicar: ' + friendlyError(e)); btn.classList.remove('loading'); btn.disabled = false; }
 };
 window.deleteTreeTemplate = async (id) => {
   const ok = await confirmModal({ title: 'Excluir árvore', desc: 'Apaga este modelo da sua conta. As árvores que você já importou nos sistemas continuam lá. Não dá pra desfazer.', confirmLabel: 'Excluir' });

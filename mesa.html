@@ -176,7 +176,7 @@
 </button>
 
 <script type="module">
-import * as db from './lib/db.js?v=43';
+import * as db from './lib/db.js?v=44';
 import { drawTreeMini } from './lib/tree-mini.js?v=2';
 import { condIconHtml } from './lib/cond-icons.js?v=1';
 import { itemCard, openItemDetail as openItemDetailModal, detailAttrs } from './lib/item-card.js?v=3';
@@ -1599,7 +1599,7 @@ async function renderArvores(c) {
       // arvore.html (aqui embaixo no href do link direto em sistema.html também).
       c.innerHTML = `
         <div class="arvore-embed-wrap">
-          <iframe class="arvore-embed-iframe" src="arvore.html?tree=${_arvoreViewingId}&system=${mesa.system_id}&embed=1${role !== 'gm' && character ? '&lvl=' + (character.level || 1) : ''}&v=11"
+          <iframe class="arvore-embed-iframe" src="arvore.html?tree=${_arvoreViewingId}&system=${mesa.system_id}&embed=1${role !== 'gm' && character ? '&lvl=' + (character.level || 1) : ''}&v=12"
             title="Árvore de habilidades"></iframe>
         </div>`;
       return;

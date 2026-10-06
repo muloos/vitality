@@ -165,7 +165,7 @@ Depois de trocar, confira: texto ≥ 4.5:1 e borda de controle ≥ 3:1, nos dois
      ├ .item-aura   (só Único: conic-gradient girando, atrás do conteúdo)
      └ .item-inner.cf   (--cut: 12px − 0.586×espessura; --surface-1)
          ├ .item-stage (aspect-ratio:1; halo radial da raridade; overflow:hidden)
-         │   ├ img (position:absolute; inset:14%; object-fit:contain)   ← nunca cortar
+         │   ├ img (position:absolute; inset:0; object-fit:cover) + vinheta (::after) escurecendo as bordas até --surface-1
          │   ├ .sweep · .twinkle ×3 (conforme o nível)
          │   └ selo da raridade (.cf-xs, mono 11, fundo rgba escuro, canto superior esquerdo)
          └ .item-info (border-top:2px da cor; nome em Fraunces 18 com clamp de 2 linhas; meta de 13px em 1 linha)

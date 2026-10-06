@@ -573,15 +573,21 @@ body.arvore-page #fx{z-index:0}
   clip-path:polygon(var(--ci) 0,100% 0,100% calc(100% - var(--ci)),calc(100% - var(--ci)) 100%,0 100%,0 var(--ci))}
 .item-stage{position:relative;aspect-ratio:1;overflow:hidden;
   background:radial-gradient(circle at 50% 55%,color-mix(in srgb,var(--rc) var(--halo),transparent),transparent 68%)}
-.item-stage img{position:absolute;inset:14%;width:72%;height:72%;object-fit:contain}
+/* a imagem preenche o palco inteiro (cover) e uma vinheta escurece as bordas até a cor do cartão, para
+   ela "assentar" no inventário em vez de parecer uma foto colada; selos e botões ficam por cima */
+.item-stage img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.item-stage:has(> img)::after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:
+    radial-gradient(ellipse 72% 72% at 50% 46%,transparent 52%,color-mix(in srgb,var(--surface-1) 55%,transparent) 78%,var(--surface-1) 100%),
+    linear-gradient(180deg,color-mix(in srgb,var(--surface-1) 45%,transparent) 0,transparent 22%,transparent 70%,var(--surface-1) 100%)}
 .item-ph{position:absolute;left:50%;top:50%;width:48px;height:48px;transform:translate(-50%,-50%) rotate(45deg);
   box-shadow:inset 0 0 0 1px var(--rc);display:flex;align-items:center;justify-content:center}
 .item-ph b{transform:rotate(-45deg);font-family:var(--disp);font-weight:400;font-size:20px;color:var(--rc)}
 :root[data-theme="light"] .item-ph b{color:color-mix(in srgb,var(--rc) 45%,var(--text))}
-.item-stage .sweep{position:absolute;top:0;bottom:0;left:0;width:40%;pointer-events:none;
+.item-stage .sweep{position:absolute;top:0;bottom:0;left:0;z-index:2;width:40%;pointer-events:none;
   background:linear-gradient(90deg,transparent,rgba(255,255,255,.16),transparent);transform:translateX(-160%) skewX(-18deg);
   animation:sweep var(--sweep-d,6s) ease-in-out infinite}
-.item-stage .twinkle{position:absolute;width:7px;height:7px;margin:-3px 0 0 -3px;background:#fff;opacity:0;pointer-events:none;
+.item-stage .twinkle{position:absolute;z-index:2;width:7px;height:7px;margin:-3px 0 0 -3px;background:#fff;opacity:0;pointer-events:none;
   box-shadow:0 0 6px var(--rc);animation:twinkle 2.4s ease-in-out infinite}
 /* selo da raridade: XS, mono 11, fundo escuro translúcido, canto superior esquerdo */
 .item-rar{position:absolute;top:8px;left:8px;z-index:2;padding:3px 7px;font-family:var(--mono);font-size:var(--fs-label);line-height:16px;

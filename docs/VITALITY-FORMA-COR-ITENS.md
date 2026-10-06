@@ -203,7 +203,7 @@ As animações de brilho usam **`filter`** (não `box-shadow`), porque o card é
 **Desktop:** modal com chanfro L, de 920×560 (máximo de 90vw × 85vh). Moldura com a linha de 2px na cor da raridade no topo (`--frame: linear-gradient(to bottom, var(--rc) 0 2px, var(--border) 2px)`). O wrapper tem `drop-shadow` flutuante + um brilho suave na cor da raridade.
 
 Duas colunas:
-- **Esquerda (420px):** palco com halo radial da raridade. A imagem ocupa `inset: 40px 40px 72px` com `object-fit: contain`, então **nunca é cortada**. No rodapé do palco: "◆ RARIDADE" à esquerda e o tipo à direita.
+- **Esquerda (420px):** palco com halo radial da raridade. A imagem preenche o palco (`inset: 0`, `object-fit: cover`) com uma vinheta que escurece as bordas até `--surface-1` (mais forte embaixo, sob o rodapé). No rodapé do palco: "◆ RARIDADE" à esquerda e o tipo à direita.
 - **Direita:**
   1. **Cabeçalho fixo:** nome em Fraunces 30 com `text-wrap: pretty`, a origem em 13px e o botão × de 40px (chanfro S).
   2. **Grade 2×2 de atributos:** células com borda, rótulo mono 11 e valor em Fraunces 20 que **quebra linha** (sem nowrap/ellipsis). Exemplos: Dano/Tipo/Slot/Qtd. para armas e Cura/Uso/Peso/Qtd. para consumíveis.

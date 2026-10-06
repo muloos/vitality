@@ -347,7 +347,7 @@
 </div>
 
 <script type="module">
-import * as db from './lib/db.js?v=44';
+import * as db from './lib/db.js?v=45';
 import { drawTreeMini } from './lib/tree-mini.js?v=2';
 import { itemCard, openItemDetail as openItemDetailModal, detailAttrs } from './lib/item-card.js?v=3';
 import { mountThemeToggle, openHelpGuide, openProfileModal, openSettingsModal, toggleTheme, getTheme, trapFocus, wireVerticalTablist, playEnter } from './lib/ui.js?v=10';
@@ -749,13 +749,11 @@ async function renderStoreSystems() {
       db.listStoreSystems(),
     ]);
     const featuredIds = new Set(featured.map((s) => s.id));
-    // o dono do sistema em destaque não aparece em listStoreSystems (que exclui os próprios
-    // sistemas de quem está olhando) — sem esse filtro aqui ele apareceria duplicado pra todo
-    // mundo que não é o dono
+    // os em destaque já vêm fixos no topo — tira eles do resto para não aparecerem duas vezes
     const rest = storeSystems.filter((s) => !featuredIds.has(s.id));
     const systems = cacheSystems([...featured, ...rest]);
     if (!systems.length) { box.className = ''; box.innerHTML = emptyState(ICON.gear, 'A loja ainda está vazia',
-      'Quando outros criadores publicarem sistemas, eles aparecem aqui pra você explorar.'); return; }
+      'Quando alguém publicar um sistema (incluindo você), ele aparece aqui pra explorar.'); return; }
     box.className = 'grid';
     box.innerHTML = featured.map((s) => systemCardHtml(s, true)).join('') + rest.map((s) => systemCardHtml(s, false)).join('');
   } catch (e) { box.className = ''; box.innerHTML = '<div class="empty">Erro: ' + esc(friendlyError(e)) + '</div>'; }
@@ -1120,7 +1118,7 @@ window.saveItem = (ev) => {
         is_published: $('it-published').checked,
       };
       await (editingItemId ? db.updateItem2(editingItemId, payload) : db.createItem(payload));
-      busy(ev.target, false); closeItemForm(); renderItems(); showMsg('Item salvo.', 'ok');
+      busy(ev.target, false); closeItemForm(); renderItems(); renderStore(); showMsg('Item salvo.', 'ok');
     } catch (e) { busy(ev.target, false); showMsg('Não foi possível salvar o item: ' + friendlyError(e)); }
   })();
   return false;
@@ -1182,7 +1180,7 @@ window.paintStore = () => {
   const box = $('store-items');
   const items = window._storeItems || [];
   if (!items.length) { box.className = ''; box.innerHTML = emptyState(ICON.dice, 'A loja ainda está vazia',
-    'Quando outros criadores publicarem itens na própria biblioteca, eles aparecem aqui pra você explorar e adicionar aos seus sistemas.'); return; }
+    'Quando alguém publicar itens da própria biblioteca (incluindo você), eles aparecem aqui pra explorar e adicionar aos sistemas.'); return; }
   const filtered = filterItems(items, 'store-q', 'store-cat-f');
   if (!filtered.length) { box.className = ''; box.innerHTML = emptyState(ICON.search, 'Nada encontrado',
     'Nenhum item corresponde à busca ou ao filtro. Tente outro termo ou limpe o filtro.'); return; }
@@ -1283,7 +1281,7 @@ window.delItem = async (id) => {
     danger: true,
   });
   if (!ok) return;
-  db.deleteItem2(id).then(() => { renderItems(); showMsg('Item excluído.', 'ok'); }).catch((e) => showMsg('Não foi possível excluir: ' + friendlyError(e)));
+  db.deleteItem2(id).then(() => { renderItems(); renderStore(); showMsg('Item excluído.', 'ok'); }).catch((e) => showMsg('Não foi possível excluir: ' + friendlyError(e)));
 };
 
 /* ---------- Pacotes de itens (agrupa itens da biblioteca pra importar de uma vez num sistema) ---------- */

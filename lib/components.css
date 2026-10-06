@@ -600,8 +600,10 @@ body.arvore-page #fx{z-index:0}
 .item-stage .poster-pub{position:absolute;top:auto;left:8px;right:auto;bottom:8px;z-index:2}
 .item-stage .card-drag{position:absolute;top:auto;left:auto;right:8px;bottom:8px;z-index:3;width:28px;height:28px;display:flex;align-items:center;justify-content:center}
 .item-info{display:flex;flex-direction:column;gap:2px;padding:10px 12px 12px;border-top:2px solid var(--rc);min-width:0}
+/* nome em UMA linha (com "…"): todos os cards da grade ficam da mesma altura; o nome completo aparece
+   no title (passar o mouse) e no detalhe do item */
 .item-name{margin:0;font-family:var(--disp);font-weight:400;font-size:18px;line-height:24px;color:var(--text);
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .item-meta{font-size:13px;line-height:20px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .item-extra{display:flex;flex-direction:column;gap:var(--space-2);padding:0 12px 12px;cursor:default}
 .item-extra .item-ctl .btn{padding:0 var(--space-2)}

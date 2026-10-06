@@ -31,6 +31,12 @@
     }
   /* linha de mesa: avatar · nome · meta · quando · selo · › */
   .mesa-rows{display:flex;flex-direction:column;gap:var(--space-2)}
+  .refresh-btn{display:inline-flex;align-items:center;gap:6px;flex:0 0 auto}
+  .refresh-btn svg{width:15px;height:15px}
+  .store-head{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3)}
+  .store-head .section-title{margin:0}
+  .store-head{margin:var(--space-2) 0 0}
+  .store-head + .grid{margin-top:var(--space-3)}
   .criar-tabs{margin:0 0 var(--space-4)}
   .tpl-form{flex-wrap:wrap}
   .tpl-form input{flex:1 1 240px;min-width:0}
@@ -182,7 +188,10 @@
 
     <!-- ---------- LOJA (sistemas publicados por outros criadores) ---------- -->
     <div id="sys-loja" role="tabpanel" aria-labelledby="tab-sys-loja">
-      <div class="section-title" role="heading" aria-level="2">Sistemas publicados</div>
+      <div class="store-head">
+        <div class="section-title" role="heading" aria-level="2">Sistemas publicados</div>
+        <button type="button" class="btn sm auto refresh-btn" onclick="refreshStore('sys-loja', this)" title="Buscar sistemas publicados agora"><span class="spin"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg>Atualizar</button>
+      </div>
       <div id="store-systems" class="grid"><div class="empty loading" role="status"><span>Carregando…</span></div></div>
     </div>
 
@@ -245,6 +254,7 @@
           <input id="store-q" placeholder="Buscar na loja por nome ou descrição..." oninput="paintStore()">
         </div>
         <select id="store-cat-f" class="fld-input" onchange="paintStore()"></select>
+        <button type="button" class="btn auto refresh-btn" onclick="refreshStore('itens-loja', this)" title="Buscar itens publicados agora"><span class="spin"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg>Atualizar</button>
       </div>
       <div id="store-items" class="item-grid"><div class="empty loading" role="status"><span>Carregando…</span></div></div>
     </div>
@@ -486,10 +496,12 @@ async function startHome() {
   renderItems();
   renderStore();
   renderFavorites();
+  _lastLoad['itens-loja'] = _lastLoad['itens-favoritos'] = Date.now();
   renderPackages();
   try { _favSysIds = await db.listFavoriteSystemIds(); } catch (e) { console.error('[favoritos]', e); }
   renderStoreSystems();
   renderFavSystems();
+  _lastLoad['sys-loja'] = _lastLoad['sys-favoritos'] = Date.now();
 }
 
 /* ---------- nav / nome ---------- */
@@ -586,6 +598,7 @@ window.showItemSub = (sub) => {
   $('itens-pacotes').style.display = sub === 'pacotes' ? '' : 'none';
   // chamado também de fora do menu (ex.: "Editar" no detalhe do item) — garante a seção certa aberta
   showSec('itens');
+  refreshVisible();
 };
 // contadores à direita de cada item do menu (§3.3) — mono, sempre com 2 dígitos, como "03"
 // atalho "Última mesa" no lugar da dica do menu (docs/MELHORIAS-v1.3.md P2-2) — mesa.html grava vt_last_mesa
@@ -621,6 +634,34 @@ window.showSysSub = (sub) => {
   $('sys-favoritos').style.display = sub === 'favoritos' ? '' : 'none';
   $('sys-criar').style.display = sub === 'criar' ? '' : 'none';
   showSec('sistemas');
+  refreshVisible();
+};
+/* ---------- Loja e Favoritos sempre frescos ----------
+   Itens e sistemas publicados por outras pessoas só chegavam com F5. Agora a lista aberta busca de
+   novo ao entrar nela (menu, ou voltando de outra seção) e ao voltar para a aba do navegador — no
+   máximo uma vez a cada 3 s por lista, para não repetir a busca em cliques seguidos. O botão
+   "Atualizar" busca na hora e diz se chegou coisa nova. */
+const _lastLoad = {};
+const REFRESHERS = { 'itens-loja': () => renderStore(), 'itens-favoritos': () => renderFavorites(), 'sys-loja': () => renderStoreSystems(), 'sys-favoritos': () => renderFavSystems() };
+const visibleList = () => (_sec === 'itens' ? 'itens-' + _itemSub : _sec === 'sistemas' ? 'sys-' + _sysSub : null);
+function refreshVisible(force) {
+  const key = visibleList(), fn = REFRESHERS[key]; if (!fn) return null;
+  if (!force && Date.now() - (_lastLoad[key] || 0) < 3000) return null;
+  _lastLoad[key] = Date.now();
+  return fn();
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshVisible(); });
+window.refreshStore = async (key, btn) => {
+  const ids = () => new Set((key === 'itens-loja' ? window._storeItems || [] : [..._systemById.values()].filter((s) => s.is_published)).map((x) => x.id));
+  const before = ids();
+  btn.classList.add('loading'); btn.disabled = true;
+  try {
+    _lastLoad[key] = Date.now();
+    await REFRESHERS[key]();
+    const fresh = [...ids()].filter((id) => !before.has(id)).length;
+    const what = key === 'itens-loja' ? ['item novo', 'itens novos'] : ['sistema novo', 'sistemas novos'];
+    showMsg(fresh ? `${fresh} ${fresh === 1 ? what[0] : what[1]} na loja.` : 'Loja atualizada. Nada novo por enquanto.', 'ok');
+  } finally { btn.classList.remove('loading'); btn.disabled = false; }
 };
 
 async function renderSystems() {
